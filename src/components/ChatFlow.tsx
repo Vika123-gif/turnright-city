@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from "react";
 import WelcomeStep from "./steps/WelcomeStep";
 import TimeStep from "./steps/TimeStep";
@@ -6,6 +5,7 @@ import GoalsStep from "./steps/GoalsStep";
 import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
+import { useOpenAI } from "@/hooks/useOpenAI";
 
 type StepKey = "welcome" | "time" | "goals" | "gpt" | "preview" | "purchase" | "done";
 type FlowState = {
@@ -38,9 +38,19 @@ export default function ChatFlow() {
   const [state, setState] = useState<FlowState>(initialState);
   const [loadingGPT, setLoadingGPT] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
+  const [openAIModal, setOpenAIModal] = React.useState(false);
+  const [openAIKey, setOpenAIKey] = React.useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+  const { generateRoute, loading: openAILoading, error: openAIError } = useOpenAI();
 
   // For scroll-to-latest interaction
   const scrollRef = useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const key = localStorage.getItem("openai_api_key");
+    if (key) setOpenAIKey(key);
+  }, []);
+
   React.useEffect(() => {
     setTimeout(() => {
       scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -58,15 +68,44 @@ export default function ChatFlow() {
     setState((s) => ({ ...s, gptResponse: null }));
   };
 
-  // Simulated GPT (replace with API call as needed)
+  // Updated GPT generation step
   const generateGPT = async () => {
+    if (!openAIKey) {
+      setOpenAIModal(true);
+      return;
+    }
     setLoadingGPT(true);
-    await new Promise((resolve) => setTimeout(resolve, 1300));
-    const resp =
-      `1. <b>Green & Bean Café</b>\n☕ Great for coffee, quick lunch & catch up on emails.\n5-min walk. Ideal: Fast WiFi, power outlets.\n\n2. <b>Innovation District Park</b>\n🧠 Scenic spot to explore, recharge creativity.\n7-min walk. Nice for a fresh air break.\n\n3. <b>Founders Hub Lounge</b>\n💻 Co-working zone for deep work or networking.\n4-min walk. Inspiring vibe, quiet zones.\n` +
-      `<i>All spots close, perfect for your time and goals.</i>`;
-    setState((s) => ({ ...s, gptResponse: resp }));
-    setLoadingGPT(false);
+    setErrorMessage(null);
+    try {
+      const { location, time_window, goals } = state;
+      if (!location || !time_window || !goals) {
+        throw new Error("Missing data for GPT prompt.");
+      }
+      const resp = await generateRoute({ location, time_window, goals, apiKey: openAIKey });
+      setState((s) => ({ ...s, gptResponse: resp }));
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to generate response.");
+    } finally {
+      setLoadingGPT(false);
+    }
+  };
+
+  // Handle OpenAI key submit
+  const handleOpenAIKeySubmit = () => {
+    if (!openAIKey || openAIKey.trim().length < 20) {
+      setErrorMessage("Please enter a valid OpenAI API key.");
+      return;
+    }
+    // VERY basic validity check (should start with "sk-")
+    if (!openAIKey.startsWith("sk-")) {
+      setErrorMessage("This doesn't look like a valid OpenAI key.");
+      return;
+    }
+    localStorage.setItem("openai_api_key", openAIKey);
+    setOpenAIModal(false);
+    setTimeout(() => {
+      generateGPT();
+    }, 120);
   };
 
   const purchaseRoute = async () => {
@@ -79,9 +118,53 @@ export default function ChatFlow() {
 
   // Step Components:
   const step = steps[stepIdx] || (state.purchased ? "done" : "preview");
+
   return (
     <div className="w-full min-h-screen flex justify-center bg-[#F3FCF8] pt-8 pb-24">
       <div className="w-full max-w-md">
+        {/* OpenAI key modal */}
+        {openAIModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-lg px-6 py-7 max-w-xs w-full flex flex-col gap-2 items-center">
+              <div className="font-semibold text-lg mb-2 text-center">Connect to OpenAI</div>
+              <div className="text-sm text-gray-500 mb-4 text-center">
+                Please paste your OpenAI API key to enable real AI-powered recommendations.<br />
+                Your key is only stored in your browser.
+              </div>
+              <input
+                type="password"
+                className="border px-3 py-2 rounded text-base w-full mb-1"
+                placeholder="sk-..."
+                value={openAIKey || ""}
+                onChange={e => setOpenAIKey(e.target.value)}
+                spellCheck={false}
+              />
+              {errorMessage && (
+                <div className="text-red-500 text-sm mb-2">{errorMessage}</div>
+              )}
+              <div className="w-full flex gap-2">
+                <button
+                  onClick={() => setOpenAIModal(false)}
+                  className="outline-btn !w-auto px-5"
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleOpenAIKeySubmit}
+                  className="primary-btn !w-auto px-5"
+                  type="button"
+                >
+                  Save & Continue
+                </button>
+              </div>
+              <div className="text-xs text-gray-400 mt-2 text-center">
+                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">Get your API key</a>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="fade-in">
           {step === "welcome" && (
             <WelcomeStep
@@ -107,7 +190,7 @@ export default function ChatFlow() {
               time_window={state.time_window}
               goals={state.goals}
               onGenerate={generateGPT}
-              loading={loadingGPT}
+              loading={loadingGPT || openAILoading}
               gptResponse={state.gptResponse}
               onDone={() => advance()}
             />
@@ -124,6 +207,9 @@ export default function ChatFlow() {
             <PurchaseStep />
           )}
         </div>
+        {errorMessage && !openAIModal && (
+          <div className="mt-2 text-center text-red-600 text-sm">{errorMessage}</div>
+        )}
         <div ref={scrollRef}></div>
       </div>
     </div>
