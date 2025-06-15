@@ -9,7 +9,8 @@ export type LLMPlace = {
   reason?: string;
 };
 
-const OPENAI_API_KEY = "YOUR_OPENAI_API_KEY_HERE"; // <-- <<< Insert your secret OpenAI key here
+// Inserted user-provided OpenAI API key below.
+const OPENAI_API_KEY = "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 "; // <-- <<< Insert your secret OpenAI key here
 
 export function useOpenAI() {
   // Simpler hook: only calls API, leaves prompt to consumer
@@ -97,3 +98,4 @@ Return 1-2 realistic local businesses or locations that fit the user's criteria.
   }
   return { getLLMPlaces };
 }
+
