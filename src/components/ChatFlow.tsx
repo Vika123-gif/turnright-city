@@ -208,6 +208,7 @@ export default function ChatFlow() {
               loading={loadingGPT || openAILoading}
               gptResponse={state.gptResponse}
               onDone={() => advance()}
+              debugInfo={debugInfo}
             />
           )}
           {step === "preview" && state.gptResponse && (

@@ -4,15 +4,19 @@ import type { GooglePlacesDebug } from "@/hooks/useGooglePlaces";
 
 type Props = {
   debug: GooglePlacesDebug | null;
+  style?: React.CSSProperties;
 };
 
-const DebugInfo: React.FC<Props> = ({ debug }) => {
+const DebugInfo: React.FC<Props> = ({ debug, style }) => {
   if (!debug) return null;
 
   const [lat, lng] = debug.location.split(",", 2);
 
   return (
-    <div className="border border-yellow-300 bg-yellow-50 rounded-lg p-4 mt-3 mb-2 text-xs">
+    <div
+      className="border border-yellow-300 bg-yellow-50 rounded-lg p-4 mt-3 mb-2 text-xs"
+      style={style}
+    >
       <strong>Debug Info:</strong>
       <ul className="ml-2 mt-1 space-y-0.5">
         <li>
@@ -39,3 +43,4 @@ const DebugInfo: React.FC<Props> = ({ debug }) => {
 };
 
 export default DebugInfo;
+

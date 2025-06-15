@@ -2,6 +2,8 @@
 import React, { useEffect } from "react";
 import Button from "../Button";
 import { Repeat } from "lucide-react";
+import DebugInfo from "../DebugInfo";
+import type { GooglePlacesDebug } from "@/hooks/useGooglePlaces";
 
 type Props = {
   location?: string | null;
@@ -11,6 +13,7 @@ type Props = {
   loading: boolean;
   gptResponse?: string | null;
   onDone: () => void;
+  debugInfo?: GooglePlacesDebug | null;
 };
 
 const GPTStep: React.FC<Props> = ({
@@ -21,15 +24,31 @@ const GPTStep: React.FC<Props> = ({
   loading,
   gptResponse,
   onDone,
+  debugInfo,
 }) => {
   useEffect(() => {
     if (!gptResponse) onGenerate();
     // eslint-disable-next-line
   }, []);
 
+  // Always log debug info to console for verification
+  console.log("GPTStep: debugInfo:", debugInfo);
+
   return (
     <div className="chat-card text-left min-h-[220px] flex flex-col justify-between gap-5">
+      {/* Debug panel is always visible and styled prominently */}
       <div>
+        <DebugInfo
+          debug={debugInfo}
+          // Give DebugInfo a "force prominent" look during testing
+          style={{
+            border: "2px solid #FFA500",
+            background: "#FFFBEA",
+            marginBottom: "20px",
+            marginTop: 0,
+            fontSize: "0.94em",
+          }}
+        />
         <div className="mb-3 text-lg">
           <span className="font-semibold">Searching for best spots for you... </span>
         </div>
