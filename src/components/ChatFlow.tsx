@@ -143,26 +143,35 @@ export default function ChatFlow() {
     if (!places || !location) return;
     setPaying(true);
     try {
-      // Use deployed Supabase Edge Function to create Stripe checkout session
       const res = await fetch("https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/create-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        // Optionally include info about the route here if you want
         body: JSON.stringify({
-          // You can send data if you want, but it's not required for the current backend
+          // You can send data if you want, but it's not required
         }),
       });
-      const data = await res.json();
+      let data: any;
+      try {
+        data = await res.json();
+      } catch (err) {
+        alert("Could not parse payment response. Check console for details.");
+        console.error("Payment Response Parse Error:", err, res);
+        return;
+      }
+      console.log("create-payment response:", data);
       if (data?.url) {
         window.location.href = data.url; // Redirect to Stripe checkout
         return;
+      } else if (data?.error) {
+        alert("Payment error: " + data.error);
       } else {
-        alert(data?.error || "No payment session URL received.");
+        alert("Unknown error. Raw response: " + JSON.stringify(data));
       }
     } catch (err: any) {
       alert("Could not start payment: " + (err?.message || err));
+      console.error("Payment exception:", err);
     } finally {
       setPaying(false);
     }
