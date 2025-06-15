@@ -9,25 +9,21 @@ export type LLMPlace = {
   reason?: string;
 };
 
+const OPENAI_API_KEY = "YOUR_OPENAI_API_KEY_HERE"; // <-- <<< Insert your secret OpenAI key here
+
 export function useOpenAI() {
   // Simpler hook: only calls API, leaves prompt to consumer
   async function getLLMPlaces({
-    apiKey,
     location,
     goals,
     timeWindow,
     userPrompt,
   }: {
-    apiKey: string;
     location: string;
     goals: string[];
     timeWindow: string;
     userPrompt: string;
   }): Promise<LLMPlace[]> {
-    // Sanitize the key to remove invisible chars and trim whitespace
-    // Only keep characters allowed by OpenAI keys (alphanumeric, underscore, dash, etc)
-    const safeApiKey = apiKey.trim().replace(/[^\x20-\x7E]/g, "");
-
     // Improved system prompt to strictly require a consistent JSON output
     const systemPrompt = `
 You are a business travel assistant. 
@@ -50,7 +46,7 @@ Return 1-2 realistic local businesses or locations that fit the user's criteria.
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${safeApiKey}`,
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-4o",
@@ -101,4 +97,3 @@ Return 1-2 realistic local businesses or locations that fit the user's criteria.
   }
   return { getLLMPlaces };
 }
-

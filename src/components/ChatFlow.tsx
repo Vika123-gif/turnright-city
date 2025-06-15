@@ -54,40 +54,26 @@ function OutlineButton({ children, ...props }: React.ButtonHTMLAttributes<HTMLBu
 
 export default function ChatFlow() {
   const [step, setStep] = useState<Step | "purchase">("welcome");
-  const [apiKey, setApiKey] = useState(localStorage.getItem("openai_api_key_dev") || "");
+  // Remove apiKey and showKeyModal logic
+  // const [apiKey, setApiKey] = useState(localStorage.getItem("openai_api_key_dev") || "");
   const [location, setLocation] = useState("");
   const [timeWindow, setTimeWindow] = useState<string | null>(null);
   const [goals, setGoals] = useState<string[]>([]);
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [showKeyModal, setShowKeyModal] = useState(() => {
-    return !localStorage.getItem("openai_api_key_dev");
-  });
+  // Remove showKeyModal
+  // const [showKeyModal, setShowKeyModal] = useState(() => {
+  //   return !localStorage.getItem("openai_api_key_dev");
+  // });
 
-  // Store origin + route for "purchase" step
   const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string, places: LLMPlace[] } | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
 
-  // On mount or when apiKey changes, hide modal if key is present
-  useEffect(() => {
-    const storedKey = localStorage.getItem("openai_api_key_dev");
-    if (storedKey && storedKey.length > 0) {
-      setApiKey(storedKey);
-      setShowKeyModal(false);
-    }
-  }, []);
+  // Remove useEffect for checking and saving apiKey/showKeyModal
 
-  // Save API key on enter
-  function handleApiKeyInput(e: React.ChangeEvent<HTMLInputElement>) {
-    setApiKey(e.target.value);
-  }
-  function handleApiKeySubmit() {
-    localStorage.setItem("openai_api_key_dev", apiKey);
-    setShowKeyModal(false);
-    setStep("welcome");
-  }
+  // Remove handleApiKeyInput, handleApiKeySubmit
 
   // Welcome/location step
   function handleDetectLocation() {
@@ -130,7 +116,7 @@ export default function ChatFlow() {
     try {
       const userPrompt = `You are a business travel assistant. User is at ${location}, has ${timeWindow}, wants to ${goals.join(", ")}. Suggest 1-2 realistic places nearby with walking times and reasons why they're perfect.`;
       const response: LLMPlace[] = await getLLMPlaces({
-        apiKey,
+        // apiKey, // REMOVE
         location,
         goals,
         timeWindow: timeWindow || "",
@@ -207,32 +193,10 @@ export default function ChatFlow() {
     return url;
   }
 
-  // Modal for API key
-  if (showKeyModal) {
-    return (
-      <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40">
-        <div className="bg-white rounded-xl max-w-xs w-full p-7 shadow-lg flex flex-col items-center text-center">
-          <div className="text-xl font-semibold mb-4">🔑 Enter your OpenAI API key</div>
-          <input
-            type="password"
-            placeholder="sk-..."
-            value={apiKey}
-            className="border rounded-lg p-3 text-base w-full mb-4"
-            onChange={handleApiKeyInput}
-            autoFocus
-          />
-          <PrimaryButton onClick={handleApiKeySubmit} disabled={!apiKey}>
-            Save & Continue
-          </PrimaryButton>
-          <div className="text-xs text-gray-500 mt-3">
-            Your key is stored in your browser and never sent anywhere except OpenAI.
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Remove the modal for API key: just drop that entire section
+  // if (showKeyModal) { ... } => REMOVE
 
-  // Chat UI for each step
+  // Render the main chat UI unconditionally
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-[#F3FCF8] px-2 py-10">
       <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-md px-6 py-8 relative">
