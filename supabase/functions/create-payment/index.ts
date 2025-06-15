@@ -39,6 +39,15 @@ serve(async (req) => {
       }
     }
 
+    // Determine if user is authenticated via Authorization header
+    let userEmail = "guest@example.com";
+    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      // Optionally, you could look up a user if you want (not required for guest flow)
+      // This assumes you do NOT require a logged-in user.
+      // (you can add logic for a real user if you enable auth in the future)
+    }
+
     // Determine the origin for Stripe redirect URLs
     const origin = req.headers.get("origin") ?? "http://localhost:3000";
 
@@ -58,6 +67,7 @@ serve(async (req) => {
       mode: "payment",
       success_url: `${origin}/?payment=success`,
       cancel_url: `${origin}/?payment=cancel`,
+      customer_email: userEmail, // Always provide some email (guest or user)
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
