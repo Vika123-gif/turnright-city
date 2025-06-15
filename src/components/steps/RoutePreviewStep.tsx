@@ -2,23 +2,47 @@
 import React from "react";
 import Button from "../Button";
 import { Repeat } from "lucide-react";
+import type { LLMPlace } from "@/hooks/useOpenAI";
+
 type Props = {
-  gptResponse: string,
+  places: LLMPlace[];
   onRegenerate: () => void;
   onBuy: () => void;
   purchasing: boolean;
 };
 
 const RoutePreviewStep: React.FC<Props> = ({
-  gptResponse,
+  places,
   onRegenerate,
   onBuy,
-  purchasing
+  purchasing,
 }) => {
   return (
     <div className="chat-card text-left">
-      <div className="font-semibold text-lg mb-3 flex items-center gap-2">📍 Here's what I found for you:</div>
-      <div className="bg-[#F6FDF9] px-4 py-3 rounded-lg text-base mb-6" dangerouslySetInnerHTML={{ __html: gptResponse.replace(/\n/g, "<br />") }} />
+      <div className="font-semibold text-lg mb-3 flex items-center gap-2">
+        📍 Here's what I found for you:
+      </div>
+      <div className="bg-[#F6FDF9] px-4 py-3 rounded-lg text-base mb-6">
+        {places && places.length > 0 ? (
+          <div className="space-y-4">
+            {places.map((p, i) => (
+              <div key={i} className="mb-3">
+                <div className="font-semibold text-base">{`${i + 1}. ${p.name}`}</div>
+                <div className="text-gray-600 text-sm">{p.address}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  🚶 {p.walkingTime} min walk
+                  {p.type && ` | Type: ${p.type}`}
+                </div>
+                {p.reason && (
+                  <div className="text-sm mt-1 text-[#008457]">{p.reason}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div>No results found.</div>
+        )}
+      </div>
       <div className="flex flex-col gap-4">
         <Button variant="outline" onClick={onRegenerate} disabled={purchasing}>
           <Repeat className="w-5 h-5 mr-2 -ml-1" /> Generate Again
@@ -30,4 +54,6 @@ const RoutePreviewStep: React.FC<Props> = ({
     </div>
   );
 };
+
 export default RoutePreviewStep;
+
