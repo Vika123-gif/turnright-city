@@ -178,6 +178,29 @@ export default function ChatFlow() {
     return url;
   }
 
+  // Add Apple Maps route generator
+  function makeAppleMapsRoute(origin: string, places: LLMPlace[] = []) {
+    // Apple Maps uses a much simpler URL format and does not support explicit waypoints via URLs.
+    // We'll just provide: saddr (origin) and daddr (final destination)
+    // If there are intermediate places, append them in daddr with "+"
+    // See: https://developer.apple.com/library/archive/featuredarticles/iPhoneURLScheme_Reference/MapLinks/MapLinks.html
+    if (!places.length) return `https://maps.apple.com`;
+
+    const originStr = origin;
+    // Build a full daddr string: if multiple places, join by " to:" (Apple Maps will treat as waypoints)
+    // E.g. maps.apple.com/?saddr=San+Jose&daddr=Palo+Alto+to:Cupertino
+    const destinations = places.map(p => (p.address || p.name).replace(/\n/g, " ").trim());
+    let url = `https://maps.apple.com/?saddr=${encodeURIComponent(originStr)}&daddr=${encodeURIComponent(destinations[0])}`;
+
+    if (destinations.length > 1) {
+      for (let i = 1; i < destinations.length; i++) {
+        url += `%20to:${encodeURIComponent(destinations[i])}`;
+      }
+    }
+    url += "&dirflg=w"; // walking
+    return url;
+  }
+
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-[#F3FCF8] px-2 py-10">
       <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-md px-6 py-8 relative">
@@ -338,16 +361,26 @@ export default function ChatFlow() {
               </div>
             )}
             <div className="mb-6 text-[#008457] font-medium">
-              {"Here's your route link:"}{" "}
+              {"Here's your route link:"}
               {(purchaseRoute && purchaseRoute.places.length > 0) ? (
-                <a
-                  href={makeGoogleMapsRoute(purchaseRoute.origin, purchaseRoute.places)}
-                  className="underline text-[#00BC72]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View Route
-                </a>
+                <div className="flex flex-col gap-1 mt-2">
+                  <a
+                    href={makeGoogleMapsRoute(purchaseRoute.origin, purchaseRoute.places)}
+                    className="underline text-[#00BC72]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View in Google Maps
+                  </a>
+                  <a
+                    href={makeAppleMapsRoute(purchaseRoute.origin, purchaseRoute.places)}
+                    className="underline text-[#008457]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View in Apple Maps
+                  </a>
+                </div>
               ) : (
                 <span className="text-gray-400">No places</span>
               )}
