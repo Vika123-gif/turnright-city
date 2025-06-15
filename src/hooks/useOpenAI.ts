@@ -39,7 +39,8 @@ export function useOpenAI() {
         messages: [
           {
             role: "system",
-            content: "You generate creative, realistic local business route suggestions for business travelers in JSON format.",
+            content:
+              "You generate creative, realistic local business route suggestions for business travelers in JSON format.",
           },
           {
             role: "user",
@@ -55,11 +56,28 @@ export function useOpenAI() {
     const text = data.choices[0].message.content;
     let places: LLMPlace[] = [];
     try {
+      // Try to extract just the array, if possible
       const match = text.match(/\[.*?\]/s);
-      if (match) places = JSON.parse(match[0]);
-      else places = JSON.parse(text);
-    } catch {
-      throw new Error("AI could not generate a valid route.\n\n" + text?.slice(0,120));
+      if (match) {
+        places = JSON.parse(match[0]);
+      } else {
+        // Try parsing as object or array
+        const parsed = JSON.parse(
+          text
+            // Remove markdown code block formatting if present
+            .replace(/^```json|^```|```$/g, "")
+            .trim()
+        );
+        if (Array.isArray(parsed)) {
+          places = parsed;
+        } else if (parsed && typeof parsed === "object" && Array.isArray(parsed.places)) {
+          places = parsed.places;
+        } else {
+          throw new Error("AI did not return a list of places.");
+        }
+      }
+    } catch (err) {
+      throw new Error("AI could not generate a valid route.\n\n" + text?.slice(0, 120));
     }
     if (!Array.isArray(places)) throw new Error("AI did not return a list of places.");
     return places;
