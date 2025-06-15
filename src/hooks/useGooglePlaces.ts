@@ -2,48 +2,48 @@
 import { useState } from "react";
 
 type Place = {
-  place_id: string;
   name: string;
   address: string;
-  lat: number;
-  lng: number;
+  walkingTime: number; // walking time in minutes
+  type?: string;
 };
 
-type WalkingInfo = {
-  place: Place;
-  walkMinutes: number;
-  walkDistance: string;
-};
-
-// NOTE: Frontend now calls our backend edge function (API) instead of Google APIs directly
 export function useGooglePlaces() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Find places that match the user's goals
-  async function findPlaces(opts: {
+  /**
+   * Calls the Supabase Edge Function with user's location, goals and timeWindow.
+   * @param opts 
+   * @returns Place[] (real places with walking times)
+   */
+  async function getNearbyPlaces(opts: {
     location: string;
-    query: string;
-    radiusMeters?: number;
-    maxResults?: number;
+    goals: string[];
+    timeWindow: string;
   }): Promise<Place[]> {
     setLoading(true);
     setError(null);
+
     try {
-      const response = await fetch("/functions/google-places", {
+      const response = await fetch("https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/google-places", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "findPlaces",
           location: opts.location,
-          query: opts.query,
-          radiusMeters: opts.radiusMeters ?? 1200,
-          maxResults: opts.maxResults ?? 5,
+          goals: opts.goals,
+          timeWindow: opts.timeWindow,
         }),
       });
+
       if (!response.ok) throw new Error("Failed to fetch places from backend.");
       const data = await response.json();
-      return data.results as Place[];
+
+      if (!data.success || !Array.isArray(data.places)) {
+        throw new Error("Invalid response from backend.");
+      }
+
+      return data.places as Place[];
     } catch (err: any) {
       setError(err.message || "Unknown backend error.");
       return [];
@@ -52,38 +52,5 @@ export function useGooglePlaces() {
     }
   }
 
-  // Calculate real walking time between two coordinates
-  async function getWalkingTimeMinutes(
-    from: string,
-    toLat: number,
-    toLng: number
-  ): Promise<{ minutes: number; distanceText: string }> {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/functions/google-places", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "getWalkingTime",
-          from,
-          toLat,
-          toLng,
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to fetch walking time from backend.");
-      const data = await response.json();
-      return {
-        minutes: data.minutes,
-        distanceText: data.distanceText,
-      };
-    } catch (err: any) {
-      setError(err.message || "Unknown backend error");
-      return { minutes: 99, distanceText: "unknown" };
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return { findPlaces, getWalkingTimeMinutes, loading, error };
+  return { getNearbyPlaces, loading, error };
 }
