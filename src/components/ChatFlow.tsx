@@ -1,11 +1,11 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import WelcomeStep from "./steps/WelcomeStep";
 import TimeStep from "./steps/TimeStep";
 import GoalsStep from "./steps/GoalsStep";
 import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
-import { useOpenAI } from "@/hooks/useOpenAI";
+import ApiKeyModal from "./ApiKeyModal";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 // We'll use a helper to keep API key just in session during dev
 const KEY_STORAGE = "openai_api_key_dev";
@@ -25,7 +25,6 @@ const steps: StepKey[] = [
   "welcome",
   "time",
   "goals",
-  "apiKey",
   "places",
   "preview",
 ];
@@ -44,6 +43,8 @@ export default function ChatFlow() {
   const [state, setState] = useState<FlowState>(initialState);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [showKeyModal, setShowKeyModal] = useState(false);
   const { loading, error, getLLMPlaces } = useOpenAI();
 
   // For scroll-to-latest interaction
@@ -97,51 +98,43 @@ export default function ChatFlow() {
   };
 
   // API Key entry step/component
-  const ApiKeyStep = ({
-    value,
-    onNext
-  }: {
-    value: string | null | undefined;
-    onNext: (key: string) => void;
-  }) => {
-    const [key, setKey] = useState(value || localStorage.getItem(KEY_STORAGE) || "");
-    const [visible, setVisible] = useState(false);
-    return (
-      <div className="chat-card text-left">
-        <div className="mb-4 font-semibold text-lg">🔑 Enter your OpenAI API key <span className="text-base font-normal text-muted-foreground">(temporary, for dev/test ONLY)</span></div>
-        <input
-          type={visible ? "text" : "password"}
-          className="border rounded-lg px-3 py-2 w-full text-base"
-          value={key}
-          onChange={e => setKey(e.target.value)}
-          autoFocus
-        />
-        <label className="mt-2 block text-sm text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={visible}
-            onChange={e => setVisible(e.target.checked)}
-          /> Show API key
-        </label>
-        <button
-          className="mt-6 bg-primary px-5 py-2 rounded text-white font-medium"
-          disabled={!key}
-          onClick={() => {
-            localStorage.setItem(KEY_STORAGE, key);
-            onNext(key);
-          }}
-        >
-          Continue
-        </button>
-        <div className="mt-2 text-xs text-muted-foreground">
-          Your key is never stored remotely. Only used to test route suggestions with OpenAI.
-        </div>
-      </div>
-    );
+  const handleApiKeySet = (key: string) => {
+    setApiKey(key);
+    setShowKeyModal(false);
+    setState((s) => ({ ...s, apiKey: key }));
   };
+
+  const handleResetKey = () => {
+    localStorage.removeItem("openai_api_key_dev");
+    setApiKey(null);
+    setShowKeyModal(true);
+    setState((s) => ({ ...s, apiKey: null }));
+  };
+
+  // On mount: check for stored key, open modal if missing
+  useEffect(() => {
+    const stored = localStorage.getItem("openai_api_key_dev");
+    if (stored) {
+      setApiKey(stored);
+    } else {
+      setShowKeyModal(true);
+    }
+  }, []);
+
+  // Prevent progress until API key set (unless at the modal)
+  if (!apiKey) {
+    return (
+      <ApiKeyModal open={showKeyModal} onSet={handleApiKeySet} />
+    );
+  }
 
   // Step Components:
   const step = steps[stepIdx] || (state.purchased ? "done" : "preview");
+
+  useEffect(() => {
+    // Refresh state.apiKey from updated value in ChatFlow
+    setState((s) => ({ ...s, apiKey }));
+  }, [apiKey]);
 
   React.useEffect(() => {
     if (step === "places" && (!state.places || state.places.length === 0)) {
@@ -170,12 +163,6 @@ export default function ChatFlow() {
             <GoalsStep
               onNext={(goals) => advance({ goals })}
               value={state.goals || []}
-            />
-          )}
-          {step === "apiKey" && (
-            <ApiKeyStep
-              value={state.apiKey}
-              onNext={(apiKey: string) => advance({ apiKey })}
             />
           )}
           {step === "places" && (
@@ -208,6 +195,15 @@ export default function ChatFlow() {
         {errorMessage && (
           <div className="mt-2 text-center text-red-600 text-sm">{errorMessage}</div>
         )}
+        <div className="pt-10 text-center">
+          <button
+            className="text-xs text-blue-600 underline underline-offset-2"
+            onClick={handleResetKey}
+            type="button"
+          >
+            Reset API Key
+          </button>
+        </div>
         <div ref={scrollRef}></div>
       </div>
     </div>
