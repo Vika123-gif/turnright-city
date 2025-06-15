@@ -52,30 +52,20 @@ function OutlineButton({ children, ...props }: React.ButtonHTMLAttributes<HTMLBu
   );
 }
 
+import RouteRating from "./RouteRating";
+
 export default function ChatFlow() {
   const [step, setStep] = useState<Step | "purchase">("welcome");
-  // Remove apiKey and showKeyModal logic
-  // const [apiKey, setApiKey] = useState(localStorage.getItem("openai_api_key_dev") || "");
   const [location, setLocation] = useState("");
   const [timeWindow, setTimeWindow] = useState<string | null>(null);
   const [goals, setGoals] = useState<string[]>([]);
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
-  // Remove showKeyModal
-  // const [showKeyModal, setShowKeyModal] = useState(() => {
-  //   return !localStorage.getItem("openai_api_key_dev");
-  // });
-
-  const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string, places: LLMPlace[] } | null>(null);
+  const [routeRating, setRouteRating] = useState<number | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
 
-  // Remove useEffect for checking and saving apiKey/showKeyModal
-
-  // Remove handleApiKeyInput, handleApiKeySubmit
-
-  // Welcome/location step
   function handleDetectLocation() {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -91,13 +81,11 @@ export default function ChatFlow() {
     setStep("time");
   }
 
-  // Time select
   function handleSelectTime(t: string) {
     setTimeWindow(t);
     setStep("goals");
   }
 
-  // Goals (multi-select)
   function handleToggleGoal(goal: string) {
     setGoals((prev) =>
       prev.includes(goal) ? prev.filter((g) => g !== goal) : [...prev, goal]
@@ -108,7 +96,6 @@ export default function ChatFlow() {
     fetchPlaces();
   }
 
-  // OpenAI integration with your exact prompt
   async function fetchPlaces() {
     setError(null);
     setGenerating(true);
@@ -116,7 +103,6 @@ export default function ChatFlow() {
     try {
       const userPrompt = `You are a business travel assistant. User is at ${location}, has ${timeWindow}, wants to ${goals.join(", ")}. Suggest 1-2 realistic places nearby with walking times and reasons why they're perfect.`;
       const response: LLMPlace[] = await getLLMPlaces({
-        // apiKey, // REMOVE
         location,
         goals,
         timeWindow: timeWindow || "",
@@ -132,13 +118,11 @@ export default function ChatFlow() {
     }
   }
 
-  // Regenerate
   function regenerate() {
     setStep("generating");
     fetchPlaces();
   }
 
-  // Reset
   function reset() {
     setLocation("");
     setTimeWindow(null);
@@ -148,7 +132,6 @@ export default function ChatFlow() {
     setStep("welcome");
   }
 
-  // Buy Route handler (replace this later with Stripe integration)
   function handleBuyRoute() {
     if (places && location) {
       setPurchaseRoute({
@@ -159,23 +142,15 @@ export default function ChatFlow() {
     setStep("purchase");
   }
 
-  // Utilities: parse location to lat,lng string if possible (preserve manual addresses otherwise)
   function parseOrigin(loc: string): string {
-    // Handles both "lat,lng" and manual address input
-    // Google accepts both, as long as it's encoded
     return encodeURIComponent(loc.trim());
   }
 
-  // Generate the Google Maps URL with walking directions
   function makeGoogleMapsRoute(origin: string, places: LLMPlace[] = []) {
-    // If places is empty, just link to origin
     if (!places.length) return `https://maps.google.com`;
 
-    // Start: user location (geo or manual)
     const originEnc = parseOrigin(origin);
 
-    // Destinations: all but last are waypoints, last is destination
-    // Use address if possible, fallback to name if not
     const waypointAddresses = places
       .slice(0, -1)
       .map(p => encodeURIComponent(p.address ? p.address : p.name));
@@ -184,8 +159,6 @@ export default function ChatFlow() {
         (places[places.length - 1]?.address || places[places.length - 1]?.name || "")
       );
 
-    // Google Maps "dir" syntax:
-    // https://www.google.com/maps/dir/?api=1&origin=<start>&destination=<destination>&travelmode=walking&waypoints=wp1|wp2
     let url = `https://www.google.com/maps/dir/?api=1&origin=${originEnc}&destination=${destination}&travelmode=walking`;
     if (waypointAddresses.length > 0) {
       url += `&waypoints=${waypointAddresses.join("|")}`;
@@ -193,10 +166,6 @@ export default function ChatFlow() {
     return url;
   }
 
-  // Remove the modal for API key: just drop that entire section
-  // if (showKeyModal) { ... } => REMOVE
-
-  // Render the main chat UI unconditionally
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-[#F3FCF8] px-2 py-10">
       <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-md px-6 py-8 relative">
@@ -370,6 +339,16 @@ export default function ChatFlow() {
                 <span className="text-gray-400">No places</span>
               )}
             </div>
+            {routeRating === null ? (
+              <RouteRating
+                disabled={false}
+                onSubmit={(rating) => setRouteRating(rating)}
+              />
+            ) : (
+              <div className="my-5 text-green-700 font-semibold">
+                Thank you for rating this route {routeRating} star{routeRating > 1 ? "s" : ""}! 🌟
+              </div>
+            )}
             <PrimaryButton onClick={reset}>Start New Search</PrimaryButton>
           </div>
         )}
