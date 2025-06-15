@@ -61,9 +61,21 @@ export default function ChatFlow() {
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
-  const [showKeyModal, setShowKeyModal] = useState(!apiKey);
+  // Only show modal if key is missing; let useEffect manage changes after mount.
+  const [showKeyModal, setShowKeyModal] = useState(() => {
+    return !localStorage.getItem("openai_api_key_dev");
+  });
 
   const { getLLMPlaces } = useOpenAI();
+
+  // On mount or when apiKey changes, hide modal if key is present
+  useEffect(() => {
+    const storedKey = localStorage.getItem("openai_api_key_dev");
+    if (storedKey && storedKey.length > 0) {
+      setApiKey(storedKey);
+      setShowKeyModal(false);
+    }
+  }, []);
 
   // Save API key on enter
   function handleApiKeyInput(e: React.ChangeEvent<HTMLInputElement>) {
