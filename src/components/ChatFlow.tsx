@@ -5,7 +5,9 @@ import GoalsStep from "./steps/GoalsStep";
 import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
+import DebugInfo from "./DebugInfo";
 import { useOpenAI } from "@/hooks/useOpenAI";
+import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 
 type StepKey = "welcome" | "time" | "goals" | "gpt" | "preview" | "purchase" | "done";
 type FlowState = {
@@ -65,6 +67,9 @@ export default function ChatFlow() {
     setStepIdx(3); // gpt step
     setState((s) => ({ ...s, gptResponse: null }));
   };
+
+  // Place debug info hook
+  const { debugInfo } = useGooglePlaces();
 
   // Updated GPT generation step
   const { generateRoute, loading: openAILoading, error: openAIError } = useOpenAI();
@@ -172,6 +177,10 @@ export default function ChatFlow() {
           </div>
         )}
         <div className="fade-in">
+          {/* Show debug info if in a step after location entered */}
+          {(stepIdx >= 1 && state.location) && (
+            <DebugInfo debug={debugInfo} />
+          )}
           {step === "welcome" && (
             <WelcomeStep
               onLocation={(loc) => advance({ location: loc })}

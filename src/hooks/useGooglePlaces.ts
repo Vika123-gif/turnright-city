@@ -8,9 +8,20 @@ type Place = {
   type?: string;
 };
 
+export type GooglePlacesDebug = {
+  location: string;
+  searchRadius: number;
+  goals: string[];
+  initialFound: number;
+  afterWalkingFilter: number;
+  walkingLimit: number;
+  filteredTypes: string[];
+};
+
 export function useGooglePlaces() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<GooglePlacesDebug | null>(null);
 
   /**
    * Calls the Supabase Edge Function with user's location, goals and timeWindow.
@@ -24,6 +35,10 @@ export function useGooglePlaces() {
   }): Promise<Place[]> {
     setLoading(true);
     setError(null);
+
+    // These are what you wanted to know for debugging
+    const searchRadius = 800;
+    const walkingLimit = 10; // minutes
 
     try {
       const response = await fetch("https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/google-places", {
@@ -43,14 +58,30 @@ export function useGooglePlaces() {
         throw new Error("Invalid response from backend.");
       }
 
-      return data.places as Place[];
+      // Assume all returned are within 800m, but double-check the walkingTime
+      const initialFound = data.places.length;
+      const afterWalking = data.places.filter(
+        (p: any) => typeof p.walkingTime === "number" && p.walkingTime <= walkingLimit
+      );
+      setDebugInfo({
+        location: opts.location,
+        searchRadius,
+        goals: opts.goals,
+        initialFound,
+        afterWalkingFilter: afterWalking.length,
+        walkingLimit,
+        filteredTypes: Array.from(new Set(data.places.map((p: any) => p.type || "unknown")))
+      });
+
+      return afterWalking as Place[];
     } catch (err: any) {
       setError(err.message || "Unknown backend error.");
+      setDebugInfo(null);
       return [];
     } finally {
       setLoading(false);
     }
   }
 
-  return { getNearbyPlaces, loading, error };
+  return { getNearbyPlaces, loading, error, debugInfo };
 }
