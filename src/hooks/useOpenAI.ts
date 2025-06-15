@@ -21,8 +21,7 @@ export const useOpenAI = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Google API key is stored in localStorage
-  const googleApiKey = localStorage.getItem("google_api_key") || "";
+  // No more API key in the frontend
 
   // Real recommendation + true walking times
   async function generateRoute(options: {
@@ -34,10 +33,8 @@ export const useOpenAI = () => {
     setLoading(true);
     setError(null);
     try {
-      // Use Google Places API to get real places
-      if (!googleApiKey) throw new Error("No Google API key set, please provide it in settings.");
-
-      const { findPlaces, getWalkingTimeMinutes } = useGooglePlaces(googleApiKey);
+      // Use Google Places API via backend
+      const { findPlaces, getWalkingTimeMinutes } = useGooglePlaces();
 
       // Find all candidate places for all goals (flattened result, no dups by place_id)
       let allCandidates: any[] = [];

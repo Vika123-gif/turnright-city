@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from "react";
 import WelcomeStep from "./steps/WelcomeStep";
 import TimeStep from "./steps/TimeStep";
@@ -7,10 +6,6 @@ import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
 import { useOpenAI } from "@/hooks/useOpenAI";
-import { Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
 
 type StepKey = "welcome" | "time" | "goals" | "gpt" | "preview" | "purchase" | "done";
 type FlowState = {
@@ -46,33 +41,6 @@ export default function ChatFlow() {
   const [openAIModal, setOpenAIModal] = React.useState(false);
   const [openAIKey, setOpenAIKey] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
-
-  // -------- Settings modal state ---------
-  const [showSettings, setShowSettings] = useState(false);
-  const [googleApiKey, setGoogleApiKey] = useState<string>("");
-  // Load Google API key from localStorage when modal is opened
-  React.useEffect(() => {
-    if (showSettings) {
-      setGoogleApiKey(localStorage.getItem("google_api_key") || "");
-    }
-  }, [showSettings]);
-
-  const handleSettingsSave = () => {
-    if (googleApiKey.trim().length < 20) {
-      toast({
-        title: "Invalid API key",
-        description: "Please enter a valid Google Places API key.",
-        variant: "destructive",
-      });
-      return;
-    }
-    localStorage.setItem("google_api_key", googleApiKey.trim());
-    setShowSettings(false);
-    toast({
-      title: "Google API key saved",
-      description: "Your Google Places API key has been updated.",
-    });
-  };
 
   // For scroll-to-latest interaction
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -161,58 +129,6 @@ export default function ChatFlow() {
   return (
     <div className="w-full min-h-screen flex justify-center bg-[#F3FCF8] pt-8 pb-24">
       <div className="w-full max-w-md relative">
-
-        {/* Settings Button */}
-        <button
-          className="absolute top-1.5 right-3 z-30 hover:bg-gray-200 rounded-full p-1 transition"
-          aria-label="Open Settings"
-          onClick={() => setShowSettings(true)}
-        >
-          <Settings size={22} />
-        </button>
-
-        {/* Settings Modal */}
-        {showSettings && (
-          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-lg px-6 py-7 max-w-xs w-full flex flex-col gap-3 items-center">
-              <div className="font-semibold text-lg mb-2 text-center">
-                Settings
-              </div>
-              <div className="w-full">
-                <label htmlFor="google-api-key" className="block text-xs text-gray-600 mb-1">
-                  Google Places API Key
-                </label>
-                <Input
-                  id="google-api-key"
-                  type="password"
-                  value={googleApiKey}
-                  placeholder="AIza..."
-                  onChange={e => setGoogleApiKey(e.target.value)}
-                  className="mb-2"
-                  spellCheck={false}
-                />
-              </div>
-              <div className="flex w-full gap-2 mt-2">
-                <Button
-                  variant="outline"
-                  className="w-1/2"
-                  onClick={() => setShowSettings(false)}
-                >Cancel</Button>
-                <Button
-                  className="w-1/2"
-                  onClick={handleSettingsSave}
-                >Save</Button>
-              </div>
-              <div className="w-full mt-1">
-                <span className="text-[11px] text-gray-400">
-                  Get a key at{" "}
-                  <a className="underline" target="_blank" rel="noopener noreferrer" href="https://console.cloud.google.com/apis/credentials">Google Cloud Console</a>
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* OpenAI key modal */}
         {openAIModal && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
@@ -255,7 +171,6 @@ export default function ChatFlow() {
             </div>
           </div>
         )}
-
         <div className="fade-in">
           {step === "welcome" && (
             <WelcomeStep

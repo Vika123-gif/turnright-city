@@ -15,7 +15,8 @@ type WalkingInfo = {
   walkDistance: string;
 };
 
-export function useGooglePlaces(apiKey: string) {
+// NOTE: Frontend now calls our backend edge function (API) instead of Google APIs directly
+export function useGooglePlaces() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,23 +30,22 @@ export function useGooglePlaces(apiKey: string) {
     setLoading(true);
     setError(null);
     try {
-      const [lat, lng] = opts.location.split(",").map(Number);
-      const resp = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
-          opts.query
-        )}&location=${lat},${lng}&radius=${opts.radiusMeters ?? 1200}&key=${apiKey}`
-      );
-      const data = await resp.json();
-      if (data.status !== "OK") throw new Error(data.error_message || "Google Places API error.");
-      return (data.results.slice(0, opts.maxResults || 5) || []).map((item: any) => ({
-        place_id: item.place_id,
-        name: item.name,
-        address: item.formatted_address,
-        lat: item.geometry.location.lat,
-        lng: item.geometry.location.lng,
-      }));
+      const response = await fetch("/functions/google-places", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "findPlaces",
+          location: opts.location,
+          query: opts.query,
+          radiusMeters: opts.radiusMeters ?? 1200,
+          maxResults: opts.maxResults ?? 5,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to fetch places from backend.");
+      const data = await response.json();
+      return data.results as Place[];
     } catch (err: any) {
-      setError(err.message || "Unknown Google Places error.");
+      setError(err.message || "Unknown backend error.");
       return [];
     } finally {
       setLoading(false);
@@ -61,20 +61,24 @@ export function useGooglePlaces(apiKey: string) {
     setLoading(true);
     setError(null);
     try {
-      const [fromLat, fromLng] = from.split(",").map(Number);
-      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&mode=walking&key=${apiKey}`;
-      const resp = await fetch(url);
-      const data = await resp.json();
-      if (data.status !== "OK") throw new Error(data.error_message || "Google Directions API error.");
-      const route = data.routes[0];
-      if (!route) throw new Error("No walking route found");
-      const leg = route.legs[0];
+      const response = await fetch("/functions/google-places", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "getWalkingTime",
+          from,
+          toLat,
+          toLng,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to fetch walking time from backend.");
+      const data = await response.json();
       return {
-        minutes: Math.round((leg.duration.value || 0) / 60),
-        distanceText: leg.distance.text,
+        minutes: data.minutes,
+        distanceText: data.distanceText,
       };
     } catch (err: any) {
-      setError(err.message || "Unknown Google Directions error");
+      setError(err.message || "Unknown backend error");
       return { minutes: 99, distanceText: "unknown" };
     } finally {
       setLoading(false);
