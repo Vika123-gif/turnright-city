@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 export type LLMPlace = {
@@ -24,12 +23,16 @@ export function useOpenAI() {
     timeWindow: string;
     userPrompt: string;
   }): Promise<LLMPlace[]> {
+    // Sanitize the key to remove invisible chars and trim whitespace
+    // Only keep characters allowed by OpenAI keys (alphanumeric, underscore, dash, etc)
+    const safeApiKey = apiKey.trim().replace(/[^\x20-\x7E]/g, "");
+
     const prompt = userPrompt;
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${safeApiKey}`,
       },
       body: JSON.stringify({
         model: "gpt-4o",
