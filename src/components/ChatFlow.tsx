@@ -63,6 +63,7 @@ export default function ChatFlow() {
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [routeRating, setRouteRating] = useState<number | null>(null);
+  const [paying, setPaying] = useState(false);
 
   // Add purchaseRoute state to store purchase data after buying route
   const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string; places: LLMPlace[] } | null>(null);
@@ -138,13 +139,32 @@ export default function ChatFlow() {
   }
 
   function handleBuyRoute() {
-    if (places && location) {
-      setPurchaseRoute({
-        origin: location,
-        places: places,
+    if (!places || !location) return;
+    setPaying(true);
+    try {
+      // Call Supabase Edge Function to create Stripe checkout session
+      const res = await fetch("/functions/v1/create-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // Optionally include info about the route here if you want
+        body: JSON.stringify({
+          // Could include product details for custom receipt if desired
+        }),
       });
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url; // Redirect to Stripe checkout
+        return;
+      } else {
+        alert(data?.error || "No payment session URL received.");
+      }
+    } catch (err: any) {
+      alert("Could not start payment: " + (err?.message || err));
+    } finally {
+      setPaying(false);
     }
-    setStep("purchase");
   }
 
   function parseOrigin(loc: string): string {
@@ -293,11 +313,11 @@ export default function ChatFlow() {
               </div>
             )}
             <div className="flex flex-col gap-3">
-              <OutlineButton onClick={regenerate} disabled={generating}>
+              <OutlineButton onClick={regenerate} disabled={generating || paying}>
                 🔁 Generate Again
               </OutlineButton>
-              <PrimaryButton onClick={handleBuyRoute}>
-                💳 Buy Route
+              <PrimaryButton onClick={handleBuyRoute} disabled={paying}>
+                {paying ? "Processing..." : "💳 Buy Route"}
               </PrimaryButton>
             </div>
           </>
