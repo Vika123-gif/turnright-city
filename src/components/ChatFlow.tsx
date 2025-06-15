@@ -143,15 +143,15 @@ export default function ChatFlow() {
     if (!places || !location) return;
     setPaying(true);
     try {
-      // Call Supabase Edge Function to create Stripe checkout session
-      const res = await fetch("/functions/v1/create-payment", {
+      // Use deployed Supabase Edge Function to create Stripe checkout session
+      const res = await fetch("https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/create-payment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         // Optionally include info about the route here if you want
         body: JSON.stringify({
-          // Could include product details for custom receipt if desired
+          // You can send data if you want, but it's not required for the current backend
         }),
       });
       const data = await res.json();
