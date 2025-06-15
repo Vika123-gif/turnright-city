@@ -7,6 +7,8 @@ import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
 import ApiKeyModal from "./ApiKeyModal";
 import type { LLMPlace } from "@/hooks/useOpenAI";
+import { useOpenAI } from "@/hooks/useOpenAI";
+
 // We'll use a helper to keep API key just in session during dev
 const KEY_STORAGE = "openai_api_key_dev";
 

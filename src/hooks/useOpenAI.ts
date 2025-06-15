@@ -15,22 +15,24 @@ function createPrompt({
   goals: string[],
   timeWindow: string,
 }) {
+  // Improved, activity-based time logic
   return `
-You are an intelligent travel planner. Given the following info, generate a list (3-5) of interesting places for a business traveler to visit in the next ${timeWindow}.
+You are an intelligent travel planner. Given the following info, generate a creative list (3-5) of interesting places for a business traveler to visit in the next ${timeWindow}.
 Base all results within a 12-min walk radius, use location context: "${location}".
 
-For each place:
-- Include a short name (creative + local-sounding), an address (invented but plausible for the area), a walking time in minutes (random 3-12), and a type from: ${goals.join(", ")}.
-- Do NOT return explanations, just JSON as example below:
+Each place must include:
+- short local-sounding name,
+- plausible address in the area,
+- realistic walkingTime (random 3-12 min, distribute by activity if possible),
+- type chosen from: ${goals.join(", ")}.
 
+Example output (JSON only, no explanation!):
 [
   {"name": "Café du Midi", "address": "18 Rue de Lyon, Paris", "walkingTime": 8, "type": "coffee"},
   {"name": "Parc des Artisans", "address": "22 Boulevard Magenta, Paris", "walkingTime": 5, "type": "explore"}
 ]
 
-Include at least 1 place per selected activity/goal if possible. 
-Do NOT suggest tourist clichés unless relevant. Stick closely to the area.
-Be truly local and realistic. Short, creative, and plausible output only. Return JUST the JSON list!`;
+At least 1 place per selected goal if possible. No tourist clichés unless relevant. Output only valid JSON array as above.`;
 }
 
 export function useOpenAI() {
@@ -61,12 +63,10 @@ export function useOpenAI() {
           ],
           temperature: 0.8,
           max_tokens: 520,
-          stop: null,
         })
       });
 
       if (!res.ok) throw new Error("OpenAI API error: " + (await res.text()).slice(0, 220));
-
       const data = await res.json();
       // Try to extract the first JSON block from the response text
       const text = data.choices[0].message.content;

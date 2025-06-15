@@ -50,7 +50,7 @@ export default function ApiKeyModal({ open, onSet }: ApiKeyModalProps) {
           /> Show API key
         </label>
         <Button
-          variant="primary"
+          variant="default"
           className="mt-6 w-full"
           disabled={!key}
           onClick={handleSave}
@@ -64,4 +64,3 @@ export default function ApiKeyModal({ open, onSet }: ApiKeyModalProps) {
     </Dialog>
   );
 }
-
