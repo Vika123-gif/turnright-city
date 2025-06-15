@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from "react";
 import WelcomeStep from "./steps/WelcomeStep";
 import TimeStep from "./steps/TimeStep";
@@ -41,6 +42,7 @@ const initialState: FlowState = {
 };
 
 export default function ChatFlow() {
+  // ❗ MAKE SURE ALL HOOKS CALLED UNCONDITIONALLY
   const [stepIdx, setStepIdx] = useState(0);
   const [state, setState] = useState<FlowState>(initialState);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
@@ -51,6 +53,8 @@ export default function ChatFlow() {
 
   // For scroll-to-latest interaction
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Always scroll on step change
   React.useEffect(() => {
     setTimeout(() => {
       scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -107,7 +111,7 @@ export default function ChatFlow() {
   };
 
   const handleResetKey = () => {
-    localStorage.removeItem("openai_api_key_dev");
+    localStorage.removeItem(KEY_STORAGE);
     setApiKey(null);
     setShowKeyModal(true);
     setState((s) => ({ ...s, apiKey: null }));
@@ -115,7 +119,7 @@ export default function ChatFlow() {
 
   // On mount: check for stored key, open modal if missing
   useEffect(() => {
-    const stored = localStorage.getItem("openai_api_key_dev");
+    const stored = localStorage.getItem(KEY_STORAGE);
     if (stored) {
       setApiKey(stored);
     } else {
@@ -124,13 +128,8 @@ export default function ChatFlow() {
   }, []);
 
   // Prevent progress until API key set (unless at the modal)
-  if (!apiKey) {
-    return (
-      <ApiKeyModal open={showKeyModal} onSet={handleApiKeySet} />
-    );
-  }
-
-  // Step Components:
+  // ❗DO NOT RETURN EARLY — let hooks always run. Only control UI by showing modal conditionally.
+  
   const step = steps[stepIdx] || (state.purchased ? "done" : "preview");
 
   useEffect(() => {
@@ -148,52 +147,58 @@ export default function ChatFlow() {
   return (
     <div className="w-full min-h-screen flex justify-center bg-[#F3FCF8] pt-8 pb-24">
       <div className="w-full max-w-md relative">
-        <div className="fade-in">
-          {step === "welcome" && (
-            <WelcomeStep
-              onLocation={(loc) => advance({ location: loc })}
-              value={state.location}
-            />
-          )}
-          {step === "time" && (
-            <TimeStep
-              onNext={(time) => advance({ time_window: time })}
-              value={state.time_window}
-            />
-          )}
-          {step === "goals" && (
-            <GoalsStep
-              onNext={(goals) => advance({ goals })}
-              value={state.goals || []}
-            />
-          )}
-          {step === "places" && (
-            <GPTStep
-              places={state.places || []}
-              loading={loadingPlaces || loading}
-              onDone={() => advance()}
-              error={errorMessage || error}
-            />
-          )}
-          {step === "preview" && state.places && state.places.length > 0 && (
-            <RoutePreviewStep
-              gptResponse={
-                state.places
-                  .map(
-                    (p, idx) =>
-                      `${idx + 1}. ${p.name}\n${p.address}\nWalk: ${p.walkingTime} min`
-                  )
-                  .join("\n\n")
-              }
-              onRegenerate={backToPlaces}
-              onBuy={purchaseRoute}
-              purchasing={!!state.purchasing}
-            />
-          )}
-          {step === "done" && (
-            <PurchaseStep />
-          )}
-        </div>
+        {/* Modal always mounted, shown only if needed */}
+        <ApiKeyModal open={showKeyModal || !apiKey} onSet={handleApiKeySet} />
+        {/* Don't render the flow if API key absent */}
+        {apiKey && (
+          <div className="fade-in">
+            {step === "welcome" && (
+              <WelcomeStep
+                onLocation={(loc) => advance({ location: loc })}
+                value={state.location}
+              />
+            )}
+            {step === "time" && (
+              <TimeStep
+                onNext={(time) => advance({ time_window: time })}
+                value={state.time_window}
+              />
+            )}
+            {step === "goals" && (
+              <GoalsStep
+                onNext={(goals) => advance({ goals })}
+                value={state.goals || []}
+              />
+            )}
+            {step === "places" && (
+              <GPTStep
+                places={state.places || []}
+                loading={loadingPlaces || loading}
+                onDone={() => advance()}
+                error={errorMessage || error}
+              />
+            )}
+            {step === "preview" && state.places && state.places.length > 0 && (
+              <RoutePreviewStep
+                gptResponse={
+                  state.places
+                    .map(
+                      (p, idx) =>
+                        `${idx + 1}. ${p.name}\n${p.address}\nWalk: ${p.walkingTime} min`
+                    )
+                    .join("\n\n")
+                }
+                onRegenerate={backToPlaces}
+                onBuy={purchaseRoute}
+                purchasing={!!state.purchasing}
+              />
+            )}
+            {step === "done" && (
+              <PurchaseStep />
+            )}
+          </div>
+        )}
+
         {errorMessage && (
           <div className="mt-2 text-center text-red-600 text-sm">{errorMessage}</div>
         )}
@@ -211,3 +216,4 @@ export default function ChatFlow() {
     </div>
   );
 }
+
