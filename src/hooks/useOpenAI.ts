@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 
 export type LLMPlace = {
@@ -27,6 +28,23 @@ export function useOpenAI() {
     // Only keep characters allowed by OpenAI keys (alphanumeric, underscore, dash, etc)
     const safeApiKey = apiKey.trim().replace(/[^\x20-\x7E]/g, "");
 
+    // Improved system prompt to strictly require a consistent JSON output
+    const systemPrompt = `
+You are a business travel assistant. 
+Always respond with a valid, compact JSON array (no markdown, no comments, no numbering).
+Each object in the array must follow this exact structure:
+{
+  "name": string,            // Name of the place (required)
+  "address": string,         // Full address (required)
+  "walkingTime": number,     // Walking time from previous stop or user's start location, in minutes (required)
+  "type": string,            // Type/category, e.g. "coffee", "restaurant" (optional)
+  "reason": string           // Short reason why it fits the user (optional)
+}
+Never return markdown formatting, don't include explanations, just output the JSON array only.
+
+Return 1-2 realistic local businesses or locations that fit the user's criteria.
+`.trim();
+
     const prompt = userPrompt;
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -39,8 +57,7 @@ export function useOpenAI() {
         messages: [
           {
             role: "system",
-            content:
-              "You generate creative, realistic local business route suggestions for business travelers in JSON format.",
+            content: systemPrompt,
           },
           {
             role: "user",
@@ -84,3 +101,4 @@ export function useOpenAI() {
   }
   return { getLLMPlaces };
 }
+
