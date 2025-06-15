@@ -64,6 +64,9 @@ export default function ChatFlow() {
   const [generating, setGenerating] = useState(false);
   const [routeRating, setRouteRating] = useState<number | null>(null);
 
+  // Add purchaseRoute state to store purchase data after buying route
+  const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string; places: LLMPlace[] } | null>(null);
+
   const { getLLMPlaces } = useOpenAI();
 
   function handleDetectLocation() {
@@ -129,6 +132,8 @@ export default function ChatFlow() {
     setGoals([]);
     setPlaces(null);
     setError(null);
+    setPurchaseRoute(null);
+    setRouteRating(null);
     setStep("welcome");
   }
 
@@ -304,6 +309,7 @@ export default function ChatFlow() {
             <div className="text-lg font-semibold mb-1">
               Thanks for your purchase!
             </div>
+            {/* Duplicated list of route stops */}
             {purchaseRoute && purchaseRoute.places && purchaseRoute.places.length > 0 && (
               <div className="mb-6 text-left">
                 <div className="font-semibold mb-2 text-[#008457]">Your route stops:</div>
@@ -339,6 +345,7 @@ export default function ChatFlow() {
                 <span className="text-gray-400">No places</span>
               )}
             </div>
+            {/* Route Rating component after purchase */}
             {routeRating === null ? (
               <RouteRating
                 disabled={false}
