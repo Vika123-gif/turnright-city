@@ -138,7 +138,8 @@ export default function ChatFlow() {
     setStep("welcome");
   }
 
-  function handleBuyRoute() {
+  // Fix: Make handleBuyRoute async
+  async function handleBuyRoute() {
     if (!places || !location) return;
     setPaying(true);
     try {
