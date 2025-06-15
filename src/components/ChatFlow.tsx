@@ -61,10 +61,12 @@ export default function ChatFlow() {
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
-  // Only show modal if key is missing; let useEffect manage changes after mount.
   const [showKeyModal, setShowKeyModal] = useState(() => {
     return !localStorage.getItem("openai_api_key_dev");
   });
+
+  // Store origin + route for "purchase" step
+  const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string, places: LLMPlace[] } | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
 
@@ -162,10 +164,47 @@ export default function ChatFlow() {
 
   // Buy Route handler (replace this later with Stripe integration)
   function handleBuyRoute() {
-    // Simulate payment by opening a placeholder Stripe Checkout (replace with real later)
-    // window.open('https://buy.stripe.com/test_dR65mQ07Ta2kaLm9AA', '_blank');
-    // For now, just go to purchase step after a brief simulated delay.
+    if (places && location) {
+      setPurchaseRoute({
+        origin: location,
+        places: places,
+      });
+    }
     setStep("purchase");
+  }
+
+  // Utilities: parse location to lat,lng string if possible (preserve manual addresses otherwise)
+  function parseOrigin(loc: string): string {
+    // Handles both "lat,lng" and manual address input
+    // Google accepts both, as long as it's encoded
+    return encodeURIComponent(loc.trim());
+  }
+
+  // Generate the Google Maps URL with walking directions
+  function makeGoogleMapsRoute(origin: string, places: LLMPlace[] = []) {
+    // If places is empty, just link to origin
+    if (!places.length) return `https://maps.google.com`;
+
+    // Start: user location (geo or manual)
+    const originEnc = parseOrigin(origin);
+
+    // Destinations: all but last are waypoints, last is destination
+    // Use address if possible, fallback to name if not
+    const waypointAddresses = places
+      .slice(0, -1)
+      .map(p => encodeURIComponent(p.address ? p.address : p.name));
+    const destination =
+      encodeURIComponent(
+        (places[places.length - 1]?.address || places[places.length - 1]?.name || "")
+      );
+
+    // Google Maps "dir" syntax:
+    // https://www.google.com/maps/dir/?api=1&origin=<start>&destination=<destination>&travelmode=walking&waypoints=wp1|wp2
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${originEnc}&destination=${destination}&travelmode=walking`;
+    if (waypointAddresses.length > 0) {
+      url += `&waypoints=${waypointAddresses.join("|")}`;
+    }
+    return url;
   }
 
   // Modal for API key
@@ -333,15 +372,22 @@ export default function ChatFlow() {
               Thanks for your purchase!
             </div>
             <div className="mb-6 text-[#008457] font-medium">
-              Here's your route link:{" "}
-              <a
-                href="#"
-                className="underline text-[#00BC72]"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View Route
-              </a>
+              {"Here's your route link:"}{" "}
+              {(purchaseRoute && purchaseRoute.places.length > 0) ? (
+                <a
+                  href={makeGoogleMapsRoute(purchaseRoute.origin, purchaseRoute.places)}
+                  className="underline text-[#00BC72]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    // (Optional: log or track click here)
+                  }}
+                >
+                  View Route
+                </a>
+              ) : (
+                <span className="text-gray-400">No places</span>
+              )}
             </div>
             <PrimaryButton onClick={reset}>Start New Search</PrimaryButton>
           </div>
