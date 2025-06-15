@@ -9,6 +9,9 @@ export const useOpenAI = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // FIX: Call custom hooks only at the top level (not inside functions)
+  const { getNearbyPlaces } = useGooglePlaces();
+
   // Send ONLY real places for formatting
   async function generateRoute(options: {
     location: string;  // "lat,lng"
@@ -20,7 +23,6 @@ export const useOpenAI = () => {
     setError(null);
     try {
       // Fetch real places using our backend
-      const { getNearbyPlaces } = useGooglePlaces();
       const realPlaces = await getNearbyPlaces({
         location: options.location,
         goals: options.goals,
