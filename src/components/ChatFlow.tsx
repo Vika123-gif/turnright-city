@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 
@@ -9,7 +8,8 @@ type Step =
   | "time"
   | "goals"
   | "generating"
-  | "results";
+  | "results"
+  | "purchase";
 
 const TIME_OPTIONS = [
   "30 minutes",
@@ -53,7 +53,7 @@ function OutlineButton({ children, ...props }: React.ButtonHTMLAttributes<HTMLBu
 }
 
 export default function ChatFlow() {
-  const [step, setStep] = useState<Step>("welcome");
+  const [step, setStep] = useState<Step | "purchase">("welcome");
   const [apiKey, setApiKey] = useState(localStorage.getItem("openai_api_key_dev") || "");
   const [location, setLocation] = useState("");
   const [timeWindow, setTimeWindow] = useState<string | null>(null);
@@ -158,6 +158,14 @@ export default function ChatFlow() {
     setPlaces(null);
     setError(null);
     setStep("welcome");
+  }
+
+  // Buy Route handler (replace this later with Stripe integration)
+  function handleBuyRoute() {
+    // Simulate payment by opening a placeholder Stripe Checkout (replace with real later)
+    // window.open('https://buy.stripe.com/test_dR65mQ07Ta2kaLm9AA', '_blank');
+    // For now, just go to purchase step after a brief simulated delay.
+    setStep("purchase");
   }
 
   // Modal for API key
@@ -296,7 +304,6 @@ export default function ChatFlow() {
                           🚶 {p.walkingTime} min walk
                           {p.type && ` | Type: ${p.type}`}
                         </div>
-                        {/* Show desc/reason if returned */}
                         {p.reason && (
                           <div className="text-sm mt-1 text-[#008457]">{p.reason}</div>
                         )}
@@ -312,11 +319,32 @@ export default function ChatFlow() {
               <OutlineButton onClick={regenerate} disabled={generating}>
                 🔁 Generate Again
               </OutlineButton>
-              <PrimaryButton onClick={reset}>
+              <PrimaryButton onClick={handleBuyRoute}>
                 💳 Buy Route
               </PrimaryButton>
             </div>
           </>
+        )}
+
+        {step === "purchase" && (
+          <div className="chat-card text-center">
+            <div className="text-3xl mb-5">✅</div>
+            <div className="text-lg font-semibold mb-1">
+              Thanks for your purchase!
+            </div>
+            <div className="mb-6 text-[#008457] font-medium">
+              Here's your route link:{" "}
+              <a
+                href="#"
+                className="underline text-[#00BC72]"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View Route
+              </a>
+            </div>
+            <PrimaryButton onClick={reset}>Start New Search</PrimaryButton>
+          </div>
         )}
       </div>
     </div>
