@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
+import { createClient } from "@supabase/supabase-js";
 
 const BRAND_COLOR = "#00BC72";
 
@@ -69,6 +70,10 @@ export default function ChatFlow() {
   const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string; places: LLMPlace[] } | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://gwwqfoplhhtyjkrhazbt.supabase.co";
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ""; // You should configure this
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   function handleDetectLocation() {
     if ("geolocation" in navigator) {
@@ -143,14 +148,21 @@ export default function ChatFlow() {
     if (!places || !location) return;
     setPaying(true);
     try {
+      // 1. Get the Supabase Auth session (user) for token
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      // 2. Prepare headers
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+      }
+      // 3. Make POST request to Supabase Edge Function
       const res = await fetch("https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/create-payment", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          // You can send data if you want, but it's not required
-        }),
+        headers,
+        body: JSON.stringify({}),
       });
       let data: any;
       try {
