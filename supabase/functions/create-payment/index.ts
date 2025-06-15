@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 
+// Setup CORS headers for all responses
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -17,31 +18,31 @@ serve(async (req) => {
     });
   }
 
-  // Stripe secret key from env
+  // Stripe secret key from Supabase secrets (must be set in Supabase dashboard)
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!stripeKey) {
     return new Response(
-      JSON.stringify({ error: "Missing STRIPE_SECRET_KEY" }),
+      JSON.stringify({ error: "Missing STRIPE_SECRET_KEY in function environment." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
   const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
   try {
-    // Try to parse the request body (not used in this example, but required for POST)
+    // Optionally parse request body (not used but required for POST)
     let body: any = {};
     if (req.method === "POST") {
       try {
         body = await req.json();
       } catch (_) {
-        // silently proceed - allows graceful fallback if body is missing
+        // ignore parse errors, allow empty body
       }
     }
 
-    // Determine the origin for success/cancel URLs
+    // Determine the origin for Stripe redirect URLs
     const origin = req.headers.get("origin") ?? "http://localhost:3000";
 
-    // Create Stripe session (edit unit_amount as needed, e.g. 499 for $4.99)
+    // Create the Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -49,7 +50,7 @@ serve(async (req) => {
           price_data: {
             currency: "usd",
             product_data: { name: "Route Purchase" },
-            unit_amount: 0, // change to correct price in cents, e.g. 499 for $4.99
+            unit_amount: 499, // Update this! Amount in cents (e.g., 499 = $4.99)
           },
           quantity: 1,
         },
@@ -59,10 +60,10 @@ serve(async (req) => {
       cancel_url: `${origin}/?payment=cancel`,
     });
 
-    return new Response(
-      JSON.stringify({ url: session.url }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ url: session.url }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     return new Response(
       JSON.stringify({ error: (error as Error).message || "Unknown error" }),
