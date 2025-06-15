@@ -5,17 +5,19 @@ import Stripe from "https://esm.sh/stripe@14.21.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 serve(async (req) => {
-  // CORS preflight support
+  // Handle CORS preflight request
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
-  // Stripe init
+  // Stripe secret key from env
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!stripeKey) {
     return new Response(
@@ -26,7 +28,20 @@ serve(async (req) => {
   const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
   try {
-    const { origin } = req.headers;
+    // Try to parse the request body (not used in this example, but required for POST)
+    let body: any = {};
+    if (req.method === "POST") {
+      try {
+        body = await req.json();
+      } catch (_) {
+        // silently proceed - allows graceful fallback if body is missing
+      }
+    }
+
+    // Determine the origin for success/cancel URLs
+    const origin = req.headers.get("origin") ?? "http://localhost:3000";
+
+    // Create Stripe session (edit unit_amount as needed, e.g. 499 for $4.99)
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -34,14 +49,14 @@ serve(async (req) => {
           price_data: {
             currency: "usd",
             product_data: { name: "Route Purchase" },
-            unit_amount: 0, // Change to desired price in cents
+            unit_amount: 0, // change to correct price in cents, e.g. 499 for $4.99
           },
           quantity: 1,
         },
       ],
       mode: "payment",
-      success_url: `${origin ?? "http://localhost:3000"}/?payment=success`,
-      cancel_url: `${origin ?? "http://localhost:3000"}/?payment=cancel`,
+      success_url: `${origin}/?payment=success`,
+      cancel_url: `${origin}/?payment=cancel`,
     });
 
     return new Response(
