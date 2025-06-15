@@ -335,6 +335,26 @@ export default function ChatFlow() {
             <div className="text-lg font-semibold mb-1">
               Thanks for your purchase!
             </div>
+            {purchaseRoute && purchaseRoute.places && purchaseRoute.places.length > 0 && (
+              <div className="mb-6 text-left">
+                <div className="font-semibold mb-2 text-[#008457]">Your route stops:</div>
+                <ul className="space-y-2">
+                  {purchaseRoute.places.map((p, i) => (
+                    <li key={i} className="p-2 rounded bg-[#F6FDF9] text-sm mb-1">
+                      <div className="font-semibold">{`${i + 1}. ${p.name}`}</div>
+                      <div className="text-gray-600">{p.address}</div>
+                      <div className="text-xs text-gray-500">
+                        🚶 {p.walkingTime} min walk
+                        {p.type && ` | Type: ${p.type}`}
+                      </div>
+                      {p.reason && (
+                        <div className="mt-1 text-[#008457]">{p.reason}</div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="mb-6 text-[#008457] font-medium">
               {"Here's your route link:"}{" "}
               {(purchaseRoute && purchaseRoute.places.length > 0) ? (
@@ -343,9 +363,6 @@ export default function ChatFlow() {
                   className="underline text-[#00BC72]"
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => {
-                    // (Optional: log or track click here)
-                  }}
                 >
                   View Route
                 </a>
