@@ -119,6 +119,14 @@ export default function ChatFlow() {
   // Step Components:
   const step = steps[stepIdx] || (state.purchased ? "done" : "preview");
 
+  // RESET API KEY HANDLER
+  const handleResetApiKey = () => {
+    localStorage.removeItem("openai_api_key");
+    setOpenAIKey(null);
+    setOpenAIModal(true);
+    setErrorMessage(null);
+  };
+
   return (
     <div className="w-full min-h-screen flex justify-center bg-[#F3FCF8] pt-8 pb-24">
       <div className="w-full max-w-md">
@@ -210,6 +218,17 @@ export default function ChatFlow() {
         {errorMessage && !openAIModal && (
           <div className="mt-2 text-center text-red-600 text-sm">{errorMessage}</div>
         )}
+        {/* Reset API Key Button */}
+        <div className="mt-8 flex justify-center">
+          <button
+            type="button"
+            className="underline text-xs text-gray-400 hover:text-[#00BC72] transition"
+            onClick={handleResetApiKey}
+            aria-label="Reset OpenAI API Key"
+          >
+            Reset API Key
+          </button>
+        </div>
         <div ref={scrollRef}></div>
       </div>
     </div>
