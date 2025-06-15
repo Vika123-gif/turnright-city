@@ -2,6 +2,11 @@ import React, { useRef, useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { createClient } from "@supabase/supabase-js";
 
+// HARDCODED SUPABASE CREDENTIALS FOR TESTING ONLY
+const supabaseUrl = "https://gwwqfoplhhtyjkrhazbt.supabase.co";
+const supabaseAnonKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3d3Fmb3BsaGh0eWprcmhhemJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDU5OTQsImV4cCI6MjA2NTU4MTk5NH0.fgFpmEdc3swzKw0xlGYt68a9vM9J2F3fKdT413UNoPk";
+
 const BRAND_COLOR = "#00BC72";
 
 type Step =
@@ -71,16 +76,8 @@ export default function ChatFlow() {
 
   const { getLLMPlaces } = useOpenAI();
 
-  // Set up Supabase configuration with robust required key check
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://gwwqfoplhhtyjkrhazbt.supabase.co";
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  // Only attempt to create client if both URL and key are present
-  let supabase: ReturnType<typeof createClient> | null = null;
-  const missingSupabaseKey = !supabaseAnonKey || supabaseAnonKey.trim() === "" || !supabaseUrl;
-
-  if (!missingSupabaseKey) {
-    supabase = createClient(supabaseUrl, supabaseAnonKey);
-  }
+  // Use hardcoded Supabase client for testing
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   function handleDetectLocation() {
     if ("geolocation" in navigator) {
@@ -153,12 +150,6 @@ export default function ChatFlow() {
   // Fix: Make handleBuyRoute async
   async function handleBuyRoute() {
     if (!places || !location) return;
-    if (missingSupabaseKey || !supabase) {
-      alert(
-        "Your Supabase anon key or URL is missing. Configure VITE_SUPABASE_ANON_KEY and VITE_SUPABASE_URL in your project settings."
-      );
-      return;
-    }
     setPaying(true);
     try {
       // 1. Get the Supabase Auth session (user) for token
@@ -224,25 +215,6 @@ export default function ChatFlow() {
       url += `&waypoints=${waypointAddresses.join("|")}`;
     }
     return url;
-  }
-
-  // At the top of the render,
-  // Show a clear error if Supabase key is missing
-  if (missingSupabaseKey) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F3FCF8]">
-        <div className="bg-white shadow p-6 rounded-xl max-w-sm text-center border border-red-300">
-          <div className="text-4xl mb-3">🚫</div>
-          <div className="text-xl font-semibold text-red-600 mb-2">
-            Supabase configuration missing!
-          </div>
-          <div className="text-base text-gray-800 mb-1">
-            This app requires <span className="font-semibold">VITE_SUPABASE_ANON_KEY</span> and <span className="font-semibold">VITE_SUPABASE_URL</span> to be set correctly in project settings. <br />
-            <span className="text-red-500 font-medium">Please configure these and restart the app.</span>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (
