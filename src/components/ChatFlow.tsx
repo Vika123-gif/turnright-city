@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from "react";
 import WelcomeStep from "./steps/WelcomeStep";
 import TimeStep from "./steps/TimeStep";
@@ -6,15 +7,15 @@ import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
 import DebugInfo from "./DebugInfo";
-import { useOpenAI } from "@/hooks/useOpenAI";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
+import type { Place } from "./PlacesList";
 
-type StepKey = "welcome" | "time" | "goals" | "gpt" | "preview" | "purchase" | "done";
+type StepKey = "welcome" | "time" | "goals" | "places" | "preview" | "purchase" | "done";
 type FlowState = {
   location?: string | null;
   time_window?: string | null;
   goals?: string[];
-  gptResponse?: string | null;
+  places?: Place[];
   purchased?: boolean;
   [k: string]: any;
 };
@@ -23,7 +24,7 @@ const steps: StepKey[] = [
   "welcome",
   "time",
   "goals",
-  "gpt",
+  "places",
   "preview",
 ];
 
@@ -31,31 +32,24 @@ const initialState: FlowState = {
   location: null,
   time_window: null,
   goals: [],
-  gptResponse: null,
+  places: [],
   purchased: false,
 };
 
 export default function ChatFlow() {
   const [stepIdx, setStepIdx] = useState(0);
   const [state, setState] = useState<FlowState>(initialState);
-  const [loadingGPT, setLoadingGPT] = useState(false);
+  const [loadingPlaces, setLoadingPlaces] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
-  const [openAIModal, setOpenAIModal] = React.useState(false);
-  const [openAIKey, setOpenAIKey] = React.useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // For scroll-to-latest interaction
   const scrollRef = useRef<HTMLDivElement>(null);
   React.useEffect(() => {
-    const key = localStorage.getItem("openai_api_key");
-    if (key) setOpenAIKey(key);
-  }, []);
-
-  React.useEffect(() => {
     setTimeout(() => {
       scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     }, 180);
-  }, [stepIdx, loadingGPT, purchasing]);
+  }, [stepIdx, loadingPlaces, purchasing]);
 
   // Steps handler
   const advance = (fields: Partial<FlowState> = {}) => {
@@ -63,53 +57,35 @@ export default function ChatFlow() {
     setStepIdx((idx) => Math.min(idx + 1, steps.length));
   };
 
-  const backToGPT = () => {
-    setStepIdx(3); // gpt step
-    setState((s) => ({ ...s, gptResponse: null }));
+  const backToPlaces = () => {
+    setStepIdx(3); // places step
+    setState((s) => ({ ...s, places: [] }));
   };
 
   // Place debug info hook
-  const { debugInfo } = useGooglePlaces();
+  const { getNearbyPlaces, debugInfo } = useGooglePlaces();
 
-  // Updated GPT generation step
-  const { generateRoute, loading: openAILoading, error: openAIError } = useOpenAI();
-  const generateGPT = async () => {
-    if (!openAIKey) {
-      setOpenAIModal(true);
-      return;
-    }
-    setLoadingGPT(true);
+  // Results/generation step: fetch real places (no OpenAI)
+  const fetchPlaces = async () => {
+    setLoadingPlaces(true);
     setErrorMessage(null);
     try {
       const { location, time_window, goals } = state;
       if (!location || !time_window || !goals) {
-        throw new Error("Missing data for GPT prompt.");
+        throw new Error("Missing data for Places search.");
       }
-      const resp = await generateRoute({ location, time_window, goals, apiKey: openAIKey });
-      setState((s) => ({ ...s, gptResponse: resp }));
+      const places = await getNearbyPlaces({
+        location,
+        goals,
+        timeWindow: time_window,
+      });
+      setState((s) => ({ ...s, places }));
     } catch (err: any) {
-      setErrorMessage(err.message || "Failed to generate response.");
+      setErrorMessage(err.message || "Failed to find places.");
+      setState((s) => ({ ...s, places: [] }));
     } finally {
-      setLoadingGPT(false);
+      setLoadingPlaces(false);
     }
-  };
-
-  // Handle OpenAI key submit
-  const handleOpenAIKeySubmit = () => {
-    if (!openAIKey || openAIKey.trim().length < 20) {
-      setErrorMessage("Please enter a valid OpenAI API key.");
-      return;
-    }
-    // VERY basic validity check (should start with "sk-")
-    if (!openAIKey.startsWith("sk-")) {
-      setErrorMessage("This doesn't look like a valid OpenAI key.");
-      return;
-    }
-    localStorage.setItem("openai_api_key", openAIKey);
-    setOpenAIModal(false);
-    setTimeout(() => {
-      generateGPT();
-    }, 120);
   };
 
   const purchaseRoute = async () => {
@@ -123,61 +99,18 @@ export default function ChatFlow() {
   // Step Components:
   const step = steps[stepIdx] || (state.purchased ? "done" : "preview");
 
-  // RESET API KEY HANDLER
-  const handleResetApiKey = () => {
-    localStorage.removeItem("openai_api_key");
-    setOpenAIKey(null);
-    setOpenAIModal(true);
-    setErrorMessage(null);
-  };
+  // Start search on entering the "places" step
+  React.useEffect(() => {
+    if (step === "places" && (!state.places || state.places.length === 0)) {
+      fetchPlaces();
+    }
+    // eslint-disable-next-line
+  }, [step]);
 
   return (
     <div className="w-full min-h-screen flex justify-center bg-[#F3FCF8] pt-8 pb-24">
       <div className="w-full max-w-md relative">
-        {/* OpenAI key modal */}
-        {openAIModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-lg px-6 py-7 max-w-xs w-full flex flex-col gap-2 items-center">
-              <div className="font-semibold text-lg mb-2 text-center">Connect to OpenAI</div>
-              <div className="text-sm text-gray-500 mb-4 text-center">
-                Please paste your OpenAI API key to enable real AI-powered recommendations.<br />
-                Your key is only stored in your browser.
-              </div>
-              <input
-                type="password"
-                className="border px-3 py-2 rounded text-base w-full mb-1"
-                placeholder="sk-..."
-                value={openAIKey || ""}
-                onChange={e => setOpenAIKey(e.target.value)}
-                spellCheck={false}
-              />
-              {errorMessage && (
-                <div className="text-red-500 text-sm mb-2">{errorMessage}</div>
-              )}
-              <div className="w-full flex gap-2">
-                <button
-                  onClick={() => setOpenAIModal(false)}
-                  className="outline-btn !w-auto px-5"
-                  type="button"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleOpenAIKeySubmit}
-                  className="primary-btn !w-auto px-5"
-                  type="button"
-                >
-                  Save & Continue
-                </button>
-              </div>
-              <div className="text-xs text-gray-400 mt-2 text-center">
-                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">Get your API key</a>
-              </div>
-            </div>
-          </div>
-        )}
         <div className="fade-in">
-          {/* Show debug info if in a step after location entered */}
           {(stepIdx >= 1 && state.location) && (
             <DebugInfo debug={debugInfo} />
           )}
@@ -199,22 +132,25 @@ export default function ChatFlow() {
               value={state.goals || []}
             />
           )}
-          {step === "gpt" && (
+          {step === "places" && (
             <GPTStep
-              location={state.location}
-              time_window={state.time_window}
-              goals={state.goals}
-              onGenerate={generateGPT}
-              loading={loadingGPT || openAILoading}
-              gptResponse={state.gptResponse}
+              places={state.places || []}
+              loading={loadingPlaces}
               onDone={() => advance()}
               debugInfo={debugInfo}
             />
           )}
-          {step === "preview" && state.gptResponse && (
+          {step === "preview" && state.places && state.places.length > 0 && (
             <RoutePreviewStep
-              gptResponse={state.gptResponse}
-              onRegenerate={backToGPT}
+              gptResponse={
+                state.places
+                  .map(
+                    (p, idx) =>
+                      `${idx + 1}. ${p.name}\n${p.address}\nWalk: ${p.walkingTime} min`
+                  )
+                  .join("\n\n")
+              }
+              onRegenerate={backToPlaces}
               onBuy={purchaseRoute}
               purchasing={purchasing}
             />
@@ -223,20 +159,9 @@ export default function ChatFlow() {
             <PurchaseStep />
           )}
         </div>
-        {errorMessage && !openAIModal && (
+        {errorMessage && (
           <div className="mt-2 text-center text-red-600 text-sm">{errorMessage}</div>
         )}
-        {/* Reset API Key Button */}
-        <div className="mt-8 flex justify-center">
-          <button
-            type="button"
-            className="underline text-xs text-gray-400 hover:text-[#00BC72] transition"
-            onClick={handleResetApiKey}
-            aria-label="Reset OpenAI API Key"
-          >
-            Reset API Key
-          </button>
-        </div>
         <div ref={scrollRef}></div>
       </div>
     </div>
