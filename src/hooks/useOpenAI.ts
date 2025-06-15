@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { sanitizeInput } from "@/lib/utils";
 
 export type LLMPlace = {
   name: string;
@@ -48,27 +48,46 @@ export function useOpenAI() {
     setLoading(true);
     setError(null);
     try {
-      const prompt = createPrompt(opts);
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${opts.apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o",
-          messages: [
-            { role: "system", content: "You generate plausible, highly local, activity-based route suggestions for business travelers." },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.8,
-          max_tokens: 520,
-        })
+      // Sanitize inputs
+      const cleanLocation = sanitizeInput(opts.location);
+      const cleanGoals = opts.goals.map(sanitizeInput);
+      const cleanTimeWindow = sanitizeInput(opts.timeWindow);
+
+      const prompt = createPrompt({
+        location: cleanLocation,
+        goals: cleanGoals,
+        timeWindow: cleanTimeWindow,
       });
+
+      // Browser fetch with JSON and utf-8 should be robust,
+      // but wrap to catch encoding exceptions.
+      let res: Response;
+      try {
+        res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "Authorization": `Bearer ${opts.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            messages: [
+              { role: "system", content: "You generate plausible, highly local, activity-based route suggestions for business travelers." },
+              { role: "user", content: prompt }
+            ],
+            temperature: 0.8,
+            max_tokens: 520,
+          })
+        });
+      } catch (e: any) {
+        // Looks for encoding errors
+        setError("Encoding error. Please use plain text for location/goals.");
+        setLoading(false);
+        return [];
+      }
 
       if (!res.ok) throw new Error("OpenAI API error: " + (await res.text()).slice(0, 220));
       const data = await res.json();
-      // Try to extract the first JSON block from the response text
       const text = data.choices[0].message.content;
       let places: LLMPlace[] = [];
       try {
@@ -82,7 +101,11 @@ export function useOpenAI() {
         throw new Error("LLM did not return plausible places.");
       return places as LLMPlace[];
     } catch (err: any) {
-      setError(err.message || "OpenAI error");
+      if (err.message && err.message.includes("code point")) {
+        setError("Encoding error: please avoid using rare/proprietary characters. Try again with simple location and goal names.");
+      } else {
+        setError(err.message || "OpenAI error");
+      }
       return [];
     } finally {
       setLoading(false);
