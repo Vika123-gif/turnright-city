@@ -147,50 +147,11 @@ export default function ChatFlow() {
     setStep("welcome");
   }
 
-  // Fix: Make handleBuyRoute async
-  async function handleBuyRoute() {
+  // Restored Buy Route handler: skips payment, just shows confirmation
+  function handleBuyRoute() {
     if (!places || !location) return;
-    setPaying(true);
-    try {
-      // 1. Get the Supabase Auth session (user) for token
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      // 2. Prepare headers
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-      }
-      // 3. Make POST request to Supabase Edge Function
-      const res = await fetch("https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/create-payment", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({}),
-      });
-      let data: any;
-      try {
-        data = await res.json();
-      } catch (err) {
-        alert("Could not parse payment response. Check console for details.");
-        console.error("Payment Response Parse Error:", err, res);
-        return;
-      }
-      console.log("create-payment response:", data);
-      if (data?.url) {
-        window.location.href = data.url; // Redirect to Stripe checkout
-        return;
-      } else if (data?.error) {
-        alert("Payment error: " + data.error);
-      } else {
-        alert("Unknown error. Raw response: " + JSON.stringify(data));
-      }
-    } catch (err: any) {
-      alert("Could not start payment: " + (err?.message || err));
-      console.error("Payment exception:", err);
-    } finally {
-      setPaying(false);
-    }
+    setPurchaseRoute({ origin: location, places });
+    setStep("purchase");
   }
 
   function parseOrigin(loc: string): string {
@@ -339,11 +300,11 @@ export default function ChatFlow() {
               </div>
             )}
             <div className="flex flex-col gap-3">
-              <OutlineButton onClick={regenerate} disabled={generating || paying}>
+              <OutlineButton onClick={regenerate} disabled={generating}>
                 🔁 Generate Again
               </OutlineButton>
-              <PrimaryButton onClick={handleBuyRoute} disabled={paying}>
-                {paying ? "Processing..." : "💳 Buy Route"}
+              <PrimaryButton onClick={handleBuyRoute}>
+                💳 Buy Route
               </PrimaryButton>
             </div>
           </>
