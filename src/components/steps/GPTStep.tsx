@@ -1,49 +1,41 @@
 
 import React from "react";
 import Button from "../Button";
-import DebugInfo from "../DebugInfo";
-import type { GooglePlacesDebug } from "@/hooks/useGooglePlaces";
-import PlacesList, { Place } from "../PlacesList";
+import PlacesList from "../PlacesList";
+import type { LLMPlace } from "@/hooks/useOpenAI";
 
 type Props = {
-  places: Place[];
+  places: LLMPlace[];
   loading: boolean;
   onDone: () => void;
-  debugInfo?: GooglePlacesDebug | null;
+  error?: string | null;
 };
 
 const GPTStep: React.FC<Props> = ({
   places,
   loading,
   onDone,
-  debugInfo,
+  error,
 }) => {
-  // Log debug info for developer verification
-  console.log("ResultsStep: debugInfo:", debugInfo);
-
   return (
     <div className="chat-card text-left min-h-[220px] flex flex-col justify-between gap-5">
       <div>
-        {/* Prominent debug info at top */}
-        <DebugInfo
-          debug={debugInfo}
-          style={{
-            border: "2px solid #FFA500",
-            background: "#FFFBEA",
-            marginBottom: "20px",
-            marginTop: 0,
-            fontSize: "0.94em",
-          }}
-        />
         <div className="mb-3 text-lg">
           <span className="font-semibold">
-            Searching for the best spots for you...
+            {loading
+              ? "AI is creating local suggestions for you..."
+              : "Your custom business route:"}
           </span>
         </div>
         {loading && (
           <div className="mt-6">
             <div className="w-full h-16 rounded-lg bg-[#f3f3f3] animate-pulse mb-2"></div>
             <div className="w-4/5 h-5 rounded bg-[#f3f3f3] animate-pulse"></div>
+          </div>
+        )}
+        {error && (
+          <div className="text-red-500 mb-3">
+            {error}
           </div>
         )}
         {!loading && <PlacesList places={places} />}
