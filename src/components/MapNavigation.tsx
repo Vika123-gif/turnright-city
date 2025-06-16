@@ -37,6 +37,7 @@ function LocationUpdater({ userPosition }: { userPosition: [number, number] | nu
   
   useEffect(() => {
     if (userPosition) {
+      console.log('Updating map view to user position:', userPosition);
       map.setView(userPosition, 16);
     }
   }, [userPosition, map]);
@@ -45,6 +46,8 @@ function LocationUpdater({ userPosition }: { userPosition: [number, number] | nu
 }
 
 const MapNavigation: React.FC<Props> = ({ origin, places, onClose }) => {
+  console.log('MapNavigation rendered with:', { origin, places });
+  
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
   const [isTracking, setIsTracking] = useState(false);
@@ -53,12 +56,15 @@ const MapNavigation: React.FC<Props> = ({ origin, places, onClose }) => {
 
   // Parse origin coordinates
   const originCoords = React.useMemo(() => {
+    console.log('Parsing origin:', origin);
     if (origin.includes(',')) {
       const [lat, lng] = origin.split(',').map(coord => parseFloat(coord.trim()));
       if (!isNaN(lat) && !isNaN(lng)) {
+        console.log('Parsed origin coords:', [lat, lng]);
         return [lat, lng] as [number, number];
       }
     }
+    console.log('Failed to parse origin coords');
     return null;
   }, [origin]);
 
@@ -66,21 +72,26 @@ const MapNavigation: React.FC<Props> = ({ origin, places, onClose }) => {
   const placeCoordinates = React.useMemo(() => {
     if (!originCoords) return [];
     
-    return places.map((place, index) => {
+    const coords = places.map((place, index) => {
       // Simple offset for demo - in real app you'd geocode the addresses
       const latOffset = (index + 1) * 0.002;
       const lngOffset = (index + 1) * 0.002;
       return [originCoords[0] + latOffset, originCoords[1] + lngOffset] as [number, number];
     });
+    console.log('Generated place coordinates:', coords);
+    return coords;
   }, [places, originCoords]);
 
   useEffect(() => {
     if (originCoords && placeCoordinates.length > 0) {
-      setRouteCoordinates([originCoords, ...placeCoordinates]);
+      const route = [originCoords, ...placeCoordinates];
+      console.log('Setting route coordinates:', route);
+      setRouteCoordinates(route);
     }
   }, [originCoords, placeCoordinates]);
 
   const startTracking = () => {
+    console.log('Starting location tracking');
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by this browser');
       return;
@@ -92,9 +103,11 @@ const MapNavigation: React.FC<Props> = ({ origin, places, onClose }) => {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
+        console.log('Got user position:', latitude, longitude);
         setUserPosition([latitude, longitude]);
       },
       (error) => {
+        console.error('Geolocation error:', error);
         setError(`Location error: ${error.message}`);
         setIsTracking(false);
       },
@@ -107,6 +120,7 @@ const MapNavigation: React.FC<Props> = ({ origin, places, onClose }) => {
   };
 
   const stopTracking = () => {
+    console.log('Stopping location tracking');
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
@@ -123,9 +137,10 @@ const MapNavigation: React.FC<Props> = ({ origin, places, onClose }) => {
   }, []);
 
   if (!originCoords) {
+    console.log('No valid origin coordinates, showing error');
     return (
       <div className="p-4 text-center">
-        <p className="text-red-500 mb-4">Invalid origin coordinates</p>
+        <p className="text-red-500 mb-4">Invalid origin coordinates: {origin}</p>
         <button
           onClick={onClose}
           className="bg-[#00BC72] text-white px-4 py-2 rounded-lg"
@@ -135,6 +150,8 @@ const MapNavigation: React.FC<Props> = ({ origin, places, onClose }) => {
       </div>
     );
   }
+
+  console.log('Rendering map with origin:', originCoords);
 
   return (
     <div className="relative w-full h-96 bg-gray-100 rounded-lg overflow-hidden">
