@@ -1,0 +1,70 @@
+
+import { useEffect } from 'react';
+
+declare global {
+  interface Window {
+    gtag: (...args: any[]) => void;
+    dataLayer: any[];
+  }
+}
+
+const GA_MEASUREMENT_ID = 'G-M39MJ3SEWZ';
+
+export const useAnalytics = () => {
+  useEffect(() => {
+    // Load Google Analytics script
+    const script1 = document.createElement('script');
+    script1.async = true;
+    script1.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
+    document.head.appendChild(script1);
+
+    const script2 = document.createElement('script');
+    script2.innerHTML = `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '${GA_MEASUREMENT_ID}');
+    `;
+    document.head.appendChild(script2);
+
+    return () => {
+      document.head.removeChild(script1);
+      document.head.removeChild(script2);
+    };
+  }, []);
+
+  const trackEvent = (eventName: string, eventParams?: Record<string, any>) => {
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', eventName, eventParams);
+    }
+  };
+
+  const trackRouteGeneration = (location: string, timeWindow: string, goals: string[]) => {
+    trackEvent('generate_route', {
+      location,
+      time_window: timeWindow,
+      goals: goals.join(','),
+    });
+  };
+
+  const trackRoutePurchase = (location: string, placesCount: number) => {
+    trackEvent('purchase_route', {
+      location,
+      places_count: placesCount,
+      value: 1, // You can adjust this based on your pricing
+    });
+  };
+
+  const trackRouteRating = (rating: number) => {
+    trackEvent('rate_route', {
+      rating,
+    });
+  };
+
+  return {
+    trackEvent,
+    trackRouteGeneration,
+    trackRoutePurchase,
+    trackRouteRating,
+  };
+};

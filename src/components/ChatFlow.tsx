@@ -1,6 +1,6 @@
-
 import React, { useRef, useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { createClient } from "@supabase/supabase-js";
 
 // HARDCODED SUPABASE CREDENTIALS FOR TESTING ONLY
@@ -76,6 +76,7 @@ export default function ChatFlow() {
   const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string; places: LLMPlace[] } | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
+  const { trackRouteGeneration, trackRoutePurchase, trackRouteRating } = useAnalytics();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -114,6 +115,10 @@ export default function ChatFlow() {
     setError(null);
     setGenerating(true);
     setPlaces(null);
+    
+    // Track route generation attempt
+    trackRouteGeneration(location, timeWindow || "", goals);
+    
     try {
       const userPrompt = `You are a business travel assistant. User is at ${location}, has ${timeWindow}, wants to ${goals.join(", ")}. Suggest 1-2 realistic places nearby with walking times and reasons why they're perfect.`;
       const response: LLMPlace[] = await getLLMPlaces({
@@ -148,9 +153,13 @@ export default function ChatFlow() {
     setStep("welcome");
   }
 
-  // Restored Buy Route handler: skips payment, just shows confirmation
+  // Updated Buy Route handler with analytics tracking
   function handleBuyRoute() {
     if (!places || !location) return;
+    
+    // Track route purchase
+    trackRoutePurchase(location, places.length);
+    
     setPurchaseRoute({ origin: location, places });
     setStep("purchase");
   }
@@ -389,11 +398,14 @@ export default function ChatFlow() {
               )}
             </div>
 
-            {/* Route Rating component after purchase */}
+            {/* Route Rating component with analytics tracking */}
             {routeRating === null ? (
               <RouteRating
                 disabled={false}
-                onSubmit={(rating) => setRouteRating(rating)}
+                onSubmit={(rating) => {
+                  setRouteRating(rating);
+                  trackRouteRating(rating);
+                }}
               />
             ) : (
               <div className="my-5 text-green-700 font-semibold">
