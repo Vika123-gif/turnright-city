@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -51,26 +50,7 @@ export default function ChatFlow() {
     trackRouteGeneration(location, timeWindow || "", goals);
     
     try {
-      // Enhanced user prompt with better goal mapping
-      const goalDescriptions = goals.map(goal => {
-        switch(goal) {
-          case "work": return "find a coworking space or work-friendly environment";
-          case "coffee": return "get quality coffee";
-          case "eat": return "have a meal";
-          case "explore": return "discover something new and interesting";
-          default: return goal;
-        }
-      }).join(" and ");
-
-      const userPrompt = `I'm currently at ${location} and have ${timeWindow} available. I want to ${goalDescriptions}. 
-
-${goals.length > 1 ? 
-  `Since I have multiple goals (${goals.join(", ")}), please find venues that can serve multiple purposes or are located near each other.` : 
-  `My primary goal is to ${goalDescriptions}.`
-}
-
-Please suggest 1-2 realistic places that match my specific needs with accurate walking times and clear reasons why each place fits my goals.`;
-
+      const userPrompt = `You are a business travel assistant. User is at ${location}, has ${timeWindow}, wants to ${goals.join(", ")}. Suggest 1-2 realistic places nearby with walking times and reasons why they're perfect.`;
       const response: LLMPlace[] = await getLLMPlaces({
         location,
         goals,
