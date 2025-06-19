@@ -27,7 +27,7 @@ export function useOpenAI() {
     timeWindow: string;
     userPrompt: string;
   }): Promise<LLMPlace[]> {
-    // Improved system prompt to strictly require a consistent JSON output
+    // Updated system prompt with specific goal mapping
     const systemPrompt = `
 You are a business travel assistant. 
 Always respond with a valid, compact JSON array (no markdown, no comments, no numbering).
@@ -39,6 +39,13 @@ Each object in the array must follow this exact structure:
   "type": string,            // Type/category, e.g. "coffee", "restaurant" (optional)
   "reason": string           // Short reason why it fits the user (optional)
 }
+
+GOAL MAPPING - Return places based on these specific categories:
+- "explore" = interesting architecture, museums, galleries, historical sites, cultural landmarks, tourist attractions
+- "work" = cafes with wifi and work-friendly atmosphere, coworking spaces, business centers
+- "eat" = restaurants, bistros, eateries, food courts
+- "coffee" = coffee shops, specialty cafes, roasters
+
 Never return markdown formatting, don't include explanations, just output the JSON array only.
 
 Return 1-2 realistic local businesses or locations that fit the user's criteria.
