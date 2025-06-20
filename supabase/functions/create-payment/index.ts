@@ -1,18 +1,18 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
+
 // Setup CORS headers for all responses
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
-serve(async (req)=>{
+
+serve(async (req) => {
   // Handle CORS preflight request
   if (req.method === "OPTIONS") {
-    return new Response(JSON.stringify({
-      ok: true
-    }), {
+    return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: {
         ...corsHeaders,
@@ -21,6 +21,7 @@ serve(async (req)=>{
       }
     });
   }
+
   // Stripe secret key from Supabase secrets (must be set in Supabase dashboard)
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!stripeKey) {
@@ -35,9 +36,11 @@ serve(async (req)=>{
       }
     });
   }
+
   const stripe = new Stripe(stripeKey, {
     apiVersion: "2023-10-16"
   });
+
   try {
     // Optionally parse request body (not used but required for POST)
     let body = {};
@@ -45,24 +48,25 @@ serve(async (req)=>{
       try {
         body = await req.json();
       } catch (_) {
-      // ignore parse errors, allow empty body
+        // ignore parse errors, allow empty body
       }
     }
+
     // Determine if user is authenticated via Authorization header
     let userEmail = "guest@example.com";
     const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
     if (authHeader && authHeader.startsWith("Bearer ")) {
-    // Optionally, you could look up a user if you want (not required for guest flow)
-    // This assumes you do NOT require a logged-in user.
-    // (you can add logic for a real user if you enable auth in the future)
+      // Optionally, you could look up a user if you want (not required for guest flow)
+      // This assumes you do NOT require a logged-in user.
+      // (you can add logic for a real user if you enable auth in the future)
     }
+
     // Determine the origin for Stripe redirect URLs
     const origin = req.headers.get("origin") ?? "http://localhost:3000";
+
     // Create the Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: [
-        "card"
-      ],
+      payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
@@ -70,7 +74,7 @@ serve(async (req)=>{
             product_data: {
               name: "Route Purchase"
             },
-            unit_amount: 499
+            unit_amount: 499 // $4.99 in cents
           },
           quantity: 1
         }
@@ -80,9 +84,8 @@ serve(async (req)=>{
       cancel_url: `${origin}/?payment=cancel`,
       customer_email: userEmail
     });
-    return new Response(JSON.stringify({
-      url: session.url
-    }), {
+
+    return new Response(JSON.stringify({ url: session.url }), {
       status: 200,
       headers: {
         ...corsHeaders,
