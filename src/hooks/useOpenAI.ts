@@ -27,7 +27,7 @@ export function useOpenAI() {
     timeWindow: string;
     userPrompt: string;
   }): Promise<LLMPlace[]> {
-    // Updated system prompt with specific goal mapping
+    // Updated system prompt with clearer goal mapping
     const systemPrompt = `
 You are a business travel assistant. 
 Always respond with a valid, compact JSON array (no markdown, no comments, no numbering).
@@ -36,15 +36,29 @@ Each object in the array must follow this exact structure:
   "name": string,            // Name of the place (required)
   "address": string,         // Full address (required)
   "walkingTime": number,     // Walking time from previous stop or user's start location, in minutes (required)
-  "type": string,            // Type/category, e.g. "coffee", "restaurant" (optional)
+  "type": string,            // Type/category, e.g. "museum", "gallery", "cafe" (optional)
   "reason": string           // Short reason why it fits the user (optional)
 }
 
-GOAL MAPPING - Return places based on these specific categories:
-- "explore" = interesting architecture, museums, galleries, historical sites, cultural landmarks, tourist attractions
-- "work" = cafes with wifi and work-friendly atmosphere, coworking spaces, business centers
-- "eat" = restaurants, bistros, eateries, food courts
-- "coffee" = coffee shops, specialty cafes, roasters
+STRICT GOAL MAPPING - You MUST follow these categories exactly:
+
+IF user selected "explore":
+- ONLY suggest: museums, art galleries, historical sites, architectural landmarks, cultural centers, monuments, parks with historical significance, libraries, observation decks, unique buildings
+- NEVER suggest: restaurants, cafes, bars, shops, or any food/drink establishments
+
+IF user selected "work":
+- ONLY suggest: cafes with wifi and work-friendly atmosphere, coworking spaces, business centers, quiet libraries with workspaces
+- Focus on places good for laptop work
+
+IF user selected "eat":
+- ONLY suggest: restaurants, bistros, eateries, food courts, food trucks, dining establishments
+- Focus on places to have meals
+
+IF user selected "coffee":
+- ONLY suggest: coffee shops, specialty cafes, roasters, tea houses
+- Focus specifically on beverage establishments
+
+IMPORTANT: If user selected "explore", you must NOT recommend any food or drink establishments. Focus only on cultural, historical, and architectural attractions.
 
 Never return markdown formatting, don't include explanations, just output the JSON array only.
 
