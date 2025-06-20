@@ -105,7 +105,7 @@ const RoutePreviewStep: React.FC<Props> = ({
             onClick={handlePayment} 
             disabled={purchasing || processing}
           >
-            {processing ? "Processing..." : purchasing ? "Processing..." : "💳 Get Route (Free)"}
+            {processing ? "Processing..." : purchasing ? "Processing..." : "Buy Route"}
           </Button>
         )}
       </div>

@@ -74,7 +74,7 @@ serve(async (req) => {
             product_data: {
               name: "Route Purchase"
             },
-            unit_amount: 0 // $0.00 in cents
+            unit_amount: 100 // $1.00 in cents
           },
           quantity: 1
         }
