@@ -50,7 +50,13 @@ export default function ChatFlow() {
     trackRouteGeneration(location, timeWindow || "", goals);
     
     try {
-      const userPrompt = `You are a business travel assistant. User is at ${location}, has ${timeWindow}, wants to ${goals.join(", ")}. Suggest 1-2 realistic places nearby with walking times and reasons why they're perfect.`;
+      // Fix the user prompt construction to properly include goals
+      const goalsText = goals.length > 0 ? goals.join(", ") : "explore";
+      const userPrompt = `You are a business travel assistant. User is at ${location}, has ${timeWindow}, wants to ${goalsText}. Suggest 1-2 realistic places nearby with walking times and reasons why they're perfect.`;
+      
+      console.log("Sending prompt to OpenAI:", userPrompt);
+      console.log("Goals selected:", goals);
+      
       const response: LLMPlace[] = await getLLMPlaces({
         location,
         goals,
@@ -177,6 +183,7 @@ export default function ChatFlow() {
             onRegenerate={regenerate}
             onBuy={handleBuyRoute}
             purchasing={paying}
+            error={error}
           />
         )}
 
