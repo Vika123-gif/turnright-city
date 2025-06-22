@@ -30,13 +30,15 @@ export function useOpenAI() {
     
     console.log("=== DEBUG: useOpenAI getLLMPlaces called ===");
     console.log("Goals received in hook:", goals);
+    console.log("Goals type:", typeof goals);
+    console.log("Goals is array:", Array.isArray(goals));
+    console.log("Goals length:", goals?.length);
     console.log("User prompt:", userPrompt);
     
-    // Validate goals
-    if (!goals || goals.length === 0) {
-      throw new Error("No goals provided to OpenAI API");
-    }
-
+    // Remove the validation here since it's already done in ChatFlow
+    // The error message "Please select at least one goal before generating places" 
+    // should only come from ChatFlow validation, not here
+    
     // Enhanced system prompt with stricter goal enforcement
     const systemPrompt = `
 You are a business travel assistant that MUST follow goal restrictions EXACTLY. 
