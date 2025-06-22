@@ -70,11 +70,11 @@ serve(async (req) => {
       line_items: [
         {
           price_data: {
-            currency: "usd",
+            currency: "eur",
             product_data: {
               name: "Route Purchase"
             },
-            unit_amount: 100 // $1.00 in cents
+            unit_amount: 200 // €2.00 in cents
           },
           quantity: 1
         }
