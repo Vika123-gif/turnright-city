@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -63,6 +64,12 @@ export default function ChatFlow() {
   }, [places, location]);
 
   async function fetchPlaces() {
+    console.log("=== DEBUG: fetchPlaces called ===");
+    console.log("Current goals when fetchPlaces called:", goals);
+    console.log("Goals length:", goals?.length);
+    console.log("Location:", location);
+    console.log("TimeWindow:", timeWindow);
+    
     setError(null);
     setGenerating(true);
     setPlaces(null);
@@ -71,13 +78,13 @@ export default function ChatFlow() {
     trackRouteGeneration(location, timeWindow || "", goals);
     
     try {
-      console.log("=== DEBUG: Starting fetchPlaces ===");
-      console.log("Current goals state:", goals);
-      console.log("Goals length:", goals.length);
-      console.log("Goals array:", JSON.stringify(goals));
+      // More detailed validation with better error messages
+      if (!location || location.trim() === "") {
+        throw new Error("Location is required. Please go back and enter your location.");
+      }
       
-      // Ensure we have goals selected
-      if (!goals || goals.length === 0) {
+      if (!goals || !Array.isArray(goals) || goals.length === 0) {
+        console.error("Goals validation failed:", { goals, isArray: Array.isArray(goals), length: goals?.length });
         throw new Error("Please select at least one goal before generating places.");
       }
 
@@ -146,6 +153,8 @@ export default function ChatFlow() {
   }
 
   function regenerate() {
+    console.log("=== DEBUG: Regenerate called ===");
+    console.log("Current goals before regenerate:", goals);
     setStep("generating");
     fetchPlaces();
   }
@@ -233,11 +242,22 @@ export default function ChatFlow() {
           <GoalsStep
             onNext={(selectedGoals) => {
               console.log("=== DEBUG: GoalsStep onNext called ===");
-              console.log("Selected goals received:", selectedGoals);
+              console.log("Selected goals received:", selectedGoals, "Type:", typeof selectedGoals, "Array?", Array.isArray(selectedGoals));
+              
+              // Ensure we have a valid array
+              if (!Array.isArray(selectedGoals)) {
+                console.error("Goals is not an array:", selectedGoals);
+                return;
+              }
+              
               setGoals(selectedGoals);
+              console.log("Goals state set to:", selectedGoals);
+              
               setStep("generating");
-              // Add a small delay to ensure state is updated
+              
+              // Use setTimeout to ensure state is updated before calling fetchPlaces
               setTimeout(() => {
+                console.log("About to call fetchPlaces with goals:", selectedGoals);
                 fetchPlaces();
               }, 100);
             }}
