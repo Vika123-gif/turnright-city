@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -50,12 +51,22 @@ export default function ChatFlow() {
     trackRouteGeneration(location, timeWindow || "", goals);
     
     try {
-      // Fix the user prompt construction to properly include goals
-      const goalsText = goals.length > 0 ? goals.join(", ") : "explore";
-      const userPrompt = `You are a business travel assistant. User is at ${location}, has ${timeWindow}, wants to ${goalsText}. Suggest 1-2 realistic places nearby with walking times and reasons why they're perfect.`;
+      // Create a more explicit user prompt that clearly states the selected goals
+      const goalDescriptions = {
+        explore: "explore cultural attractions, museums, galleries, historical sites, or architectural landmarks",
+        eat: "find restaurants, bistros, eateries, or dining establishments",
+        coffee: "find coffee shops, cafes, specialty roasters, or tea houses", 
+        work: "find cafes with wifi, coworking spaces, or quiet work-friendly locations"
+      };
+      
+      const selectedGoalTexts = goals.map(goal => goalDescriptions[goal as keyof typeof goalDescriptions]).filter(Boolean);
+      const goalsText = selectedGoalTexts.length > 0 ? selectedGoalTexts.join(" and ") : "explore";
+      
+      const userPrompt = `I am currently at ${location} and have ${timeWindow} available. I specifically want to ${goalsText}. Please suggest 1-2 places that match EXACTLY what I'm looking for - nothing else. My selected goals are: ${goals.join(", ")}.`;
       
       console.log("Sending prompt to OpenAI:", userPrompt);
       console.log("Goals selected:", goals);
+      console.log("Goal descriptions:", selectedGoalTexts);
       
       const response: LLMPlace[] = await getLLMPlaces({
         location,
@@ -256,7 +267,7 @@ export default function ChatFlow() {
             )}
             <button
               onClick={reset}
-              className="w-full rounded-xl shadow-md font-semibold px-4 py-4 text-lg my-2 transition focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95 bg-[#00BC72] hover:bg-[#00965c] text-white"
+              className="w-full rounded-xl shadow-md font-semibold px-4 py-4 text-lg my-2 transition focus:outline-none focus:ring-2 focus-ring-offset-2 active:scale-95 bg-[#00BC72] hover:bg-[#00965c] text-white"
             >
               Start New Search
             </button>
