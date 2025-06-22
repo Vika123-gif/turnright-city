@@ -63,10 +63,10 @@ export default function ChatFlow() {
     }
   }, [places, location]);
 
-  async function fetchPlaces() {
-    console.log("=== DEBUG: fetchPlaces called ===");
-    console.log("Current goals when fetchPlaces called:", goals);
-    console.log("Goals length:", goals?.length);
+  async function fetchPlacesWithGoals(goalsToUse: string[]) {
+    console.log("=== DEBUG: fetchPlacesWithGoals called ===");
+    console.log("Goals parameter:", goalsToUse);
+    console.log("Goals length:", goalsToUse?.length);
     console.log("Location:", location);
     console.log("TimeWindow:", timeWindow);
     
@@ -75,7 +75,7 @@ export default function ChatFlow() {
     setPlaces(null);
     
     // Track route generation attempt
-    trackRouteGeneration(location, timeWindow || "", goals);
+    trackRouteGeneration(location, timeWindow || "", goalsToUse);
     
     try {
       // More detailed validation with better error messages
@@ -83,8 +83,8 @@ export default function ChatFlow() {
         throw new Error("Location is required. Please go back and enter your location.");
       }
       
-      if (!goals || !Array.isArray(goals) || goals.length === 0) {
-        console.error("Goals validation failed:", { goals, isArray: Array.isArray(goals), length: goals?.length });
+      if (!goalsToUse || !Array.isArray(goalsToUse) || goalsToUse.length === 0) {
+        console.error("Goals validation failed:", { goals: goalsToUse, isArray: Array.isArray(goalsToUse), length: goalsToUse?.length });
         throw new Error("Please select at least one goal before generating places.");
       }
 
@@ -96,11 +96,11 @@ export default function ChatFlow() {
         work: "find cafes with wifi, coworking spaces, or quiet work-friendly locations for working"
       };
       
-      const selectedGoalTexts = goals.map(goal => goalDescriptions[goal as keyof typeof goalDescriptions]).filter(Boolean);
+      const selectedGoalTexts = goalsToUse.map(goal => goalDescriptions[goal as keyof typeof goalDescriptions]).filter(Boolean);
       
       console.log("=== DEBUG: Goal processing ===");
       console.log("Selected goal texts:", selectedGoalTexts);
-      console.log("Goals being sent:", goals);
+      console.log("Goals being sent:", goalsToUse);
       
       if (selectedGoalTexts.length === 0) {
         throw new Error("No valid goals selected. Please select at least one goal.");
@@ -112,28 +112,28 @@ export default function ChatFlow() {
       let userPrompt = `I am currently at ${location} and have ${timeWindow} available. `;
       
       // Add very specific instructions based on selected goals
-      if (goals.includes("eat")) {
+      if (goalsToUse.includes("eat")) {
         userPrompt += "I ONLY want to find restaurants, bistros, eateries, or places where I can have a meal. DO NOT suggest museums, galleries, or tourist attractions. ";
       }
-      if (goals.includes("coffee")) {
+      if (goalsToUse.includes("coffee")) {
         userPrompt += "I ONLY want to find coffee shops, cafes, or beverage establishments. DO NOT suggest museums, galleries, or tourist attractions. ";
       }
-      if (goals.includes("explore")) {
+      if (goalsToUse.includes("explore")) {
         userPrompt += "I ONLY want to explore cultural attractions like museums, galleries, historical sites, or architectural landmarks. DO NOT suggest restaurants or cafes. ";
       }
-      if (goals.includes("work")) {
+      if (goalsToUse.includes("work")) {
         userPrompt += "I ONLY want to find work-friendly places like cafes with wifi or coworking spaces. ";
       }
       
-      userPrompt += `Please suggest 1-2 places that match EXACTLY what I'm looking for. My selected goals are: ${goals.join(", ")}.`;
+      userPrompt += `Please suggest 1-2 places that match EXACTLY what I'm looking for. My selected goals are: ${goalsToUse.join(", ")}.`;
       
       console.log("=== DEBUG: Final prompt ===");
       console.log("User prompt:", userPrompt);
-      console.log("Goals being passed to API:", goals);
+      console.log("Goals being passed to API:", goalsToUse);
       
       const response: LLMPlace[] = await getLLMPlaces({
         location,
-        goals,
+        goals: goalsToUse,
         timeWindow: timeWindow || "",
         userPrompt,
       });
@@ -144,7 +144,7 @@ export default function ChatFlow() {
       setPlaces(response);
       setStep("results");
     } catch (e: any) {
-      console.error("=== DEBUG: Error in fetchPlaces ===", e);
+      console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
       setStep("results");
     } finally {
@@ -156,7 +156,7 @@ export default function ChatFlow() {
     console.log("=== DEBUG: Regenerate called ===");
     console.log("Current goals before regenerate:", goals);
     setStep("generating");
-    fetchPlaces();
+    fetchPlacesWithGoals(goals);
   }
 
   function reset() {
@@ -255,11 +255,9 @@ export default function ChatFlow() {
               
               setStep("generating");
               
-              // Use setTimeout to ensure state is updated before calling fetchPlaces
-              setTimeout(() => {
-                console.log("About to call fetchPlaces with goals:", selectedGoals);
-                fetchPlaces();
-              }, 100);
+              // Call fetchPlacesWithGoals directly with the selectedGoals parameter
+              // instead of relying on the state which may not be updated yet
+              fetchPlacesWithGoals(selectedGoals);
             }}
             value={goals}
           />
