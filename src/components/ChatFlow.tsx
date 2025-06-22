@@ -51,22 +51,58 @@ export default function ChatFlow() {
     trackRouteGeneration(location, timeWindow || "", goals);
     
     try {
-      // Create a more explicit user prompt that clearly states the selected goals
+      console.log("=== DEBUG: Starting fetchPlaces ===");
+      console.log("Current goals state:", goals);
+      console.log("Goals length:", goals.length);
+      console.log("Goals array:", JSON.stringify(goals));
+      
+      // Ensure we have goals selected
+      if (!goals || goals.length === 0) {
+        throw new Error("Please select at least one goal before generating places.");
+      }
+
+      // Create a very explicit user prompt that clearly states the selected goals
       const goalDescriptions = {
         explore: "explore cultural attractions, museums, galleries, historical sites, or architectural landmarks",
-        eat: "find restaurants, bistros, eateries, or dining establishments",
-        coffee: "find coffee shops, cafes, specialty roasters, or tea houses", 
-        work: "find cafes with wifi, coworking spaces, or quiet work-friendly locations"
+        eat: "find restaurants, bistros, eateries, or dining establishments for meals",
+        coffee: "find coffee shops, cafes, specialty roasters, or tea houses for beverages", 
+        work: "find cafes with wifi, coworking spaces, or quiet work-friendly locations for working"
       };
       
       const selectedGoalTexts = goals.map(goal => goalDescriptions[goal as keyof typeof goalDescriptions]).filter(Boolean);
-      const goalsText = selectedGoalTexts.length > 0 ? selectedGoalTexts.join(" and ") : "explore";
       
-      const userPrompt = `I am currently at ${location} and have ${timeWindow} available. I specifically want to ${goalsText}. Please suggest 1-2 places that match EXACTLY what I'm looking for - nothing else. My selected goals are: ${goals.join(", ")}.`;
+      console.log("=== DEBUG: Goal processing ===");
+      console.log("Selected goal texts:", selectedGoalTexts);
+      console.log("Goals being sent:", goals);
       
-      console.log("Sending prompt to OpenAI:", userPrompt);
-      console.log("Goals selected:", goals);
-      console.log("Goal descriptions:", selectedGoalTexts);
+      if (selectedGoalTexts.length === 0) {
+        throw new Error("No valid goals selected. Please select at least one goal.");
+      }
+      
+      const goalsText = selectedGoalTexts.join(" and ");
+      
+      // Create very explicit user prompt
+      let userPrompt = `I am currently at ${location} and have ${timeWindow} available. `;
+      
+      // Add very specific instructions based on selected goals
+      if (goals.includes("eat")) {
+        userPrompt += "I ONLY want to find restaurants, bistros, eateries, or places where I can have a meal. DO NOT suggest museums, galleries, or tourist attractions. ";
+      }
+      if (goals.includes("coffee")) {
+        userPrompt += "I ONLY want to find coffee shops, cafes, or beverage establishments. DO NOT suggest museums, galleries, or tourist attractions. ";
+      }
+      if (goals.includes("explore")) {
+        userPrompt += "I ONLY want to explore cultural attractions like museums, galleries, historical sites, or architectural landmarks. DO NOT suggest restaurants or cafes. ";
+      }
+      if (goals.includes("work")) {
+        userPrompt += "I ONLY want to find work-friendly places like cafes with wifi or coworking spaces. ";
+      }
+      
+      userPrompt += `Please suggest 1-2 places that match EXACTLY what I'm looking for. My selected goals are: ${goals.join(", ")}.`;
+      
+      console.log("=== DEBUG: Final prompt ===");
+      console.log("User prompt:", userPrompt);
+      console.log("Goals being passed to API:", goals);
       
       const response: LLMPlace[] = await getLLMPlaces({
         location,
@@ -74,9 +110,14 @@ export default function ChatFlow() {
         timeWindow: timeWindow || "",
         userPrompt,
       });
+      
+      console.log("=== DEBUG: API Response ===");
+      console.log("Places returned:", response);
+      
       setPlaces(response);
       setStep("results");
     } catch (e: any) {
+      console.error("=== DEBUG: Error in fetchPlaces ===", e);
       setError(e.message || "Could not generate route.");
       setStep("results");
     } finally {
@@ -171,9 +212,14 @@ export default function ChatFlow() {
         {step === "goals" && (
           <GoalsStep
             onNext={(selectedGoals) => {
+              console.log("=== DEBUG: GoalsStep onNext called ===");
+              console.log("Selected goals received:", selectedGoals);
               setGoals(selectedGoals);
               setStep("generating");
-              fetchPlaces();
+              // Add a small delay to ensure state is updated
+              setTimeout(() => {
+                fetchPlaces();
+              }, 100);
             }}
             value={goals}
           />
