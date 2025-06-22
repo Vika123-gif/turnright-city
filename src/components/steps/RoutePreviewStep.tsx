@@ -23,9 +23,11 @@ const RoutePreviewStep: React.FC<Props> = ({
   const [processing, setProcessing] = useState(false);
 
   async function handlePayment() {
+    console.log("=== DEBUG: handlePayment called ===");
     setProcessing(true);
     try {
       console.log("Starting payment process...");
+      console.log("Places to purchase:", places);
       
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: JSON.stringify({
@@ -43,7 +45,9 @@ const RoutePreviewStep: React.FC<Props> = ({
 
       if (data?.url) {
         console.log("Redirecting to Stripe checkout:", data.url);
-        // Redirect to Stripe checkout in the same window
+        // Call onBuy first to set up the route data
+        onBuy();
+        // Then redirect to Stripe checkout in the same window
         window.location.href = data.url;
       } else {
         throw new Error("No checkout URL received");

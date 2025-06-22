@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -44,24 +43,55 @@ export default function ChatFlow() {
 
   // Check for payment success on component mount
   useEffect(() => {
+    console.log("=== DEBUG: Payment success check ===");
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
     const sessionId = urlParams.get('session_id');
     
-    if (paymentStatus === 'success' && sessionId && places && location) {
-      // Payment was successful, set up purchase route
-      setPurchaseRoute({ origin: location, places });
-      setStep("purchase");
+    console.log("Payment status from URL:", paymentStatus);
+    console.log("Session ID from URL:", sessionId);
+    console.log("Current places:", places);
+    console.log("Current location:", location);
+    
+    if (paymentStatus === 'success' && sessionId) {
+      console.log("Payment success detected, setting up purchase route");
+      
+      // Store the session data in localStorage temporarily
+      const storedRouteData = localStorage.getItem('pendingRouteData');
+      if (storedRouteData) {
+        try {
+          const routeData = JSON.parse(storedRouteData);
+          console.log("Restored route data from localStorage:", routeData);
+          
+          setPurchaseRoute(routeData);
+          setPlaces(routeData.places);
+          setLocation(routeData.origin);
+          setStep("purchase");
+          
+          // Clean up
+          localStorage.removeItem('pendingRouteData');
+        } catch (e) {
+          console.error("Error parsing stored route data:", e);
+        }
+      } else if (places && location) {
+        // Fallback to current state
+        console.log("Using current state for purchase route");
+        setPurchaseRoute({ origin: location, places });
+        setStep("purchase");
+      }
       
       // Clean up URL parameters
       const newUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     } else if (paymentStatus === 'cancel') {
+      console.log("Payment was cancelled");
       // Payment was cancelled, clean up URL
       const newUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
+      // Clean up any stored data
+      localStorage.removeItem('pendingRouteData');
     }
-  }, [places, location]);
+  }, []); // Remove dependencies to avoid infinite loops
 
   async function fetchPlacesWithGoals(goalsToUse: string[]) {
     console.log("=== DEBUG: fetchPlacesWithGoals called ===");
@@ -167,16 +197,26 @@ export default function ChatFlow() {
     setError(null);
     setPurchaseRoute(null);
     setRouteRating(null);
+    localStorage.removeItem('pendingRouteData');
     setStep("welcome");
   }
 
   function handleBuyRoute() {
-    if (!places || !location) return;
+    console.log("=== DEBUG: handleBuyRoute called ===");
+    if (!places || !location) {
+      console.error("Missing places or location for purchase");
+      return;
+    }
+    
+    // Store route data in localStorage before redirecting to payment
+    const routeData = { origin: location, places };
+    localStorage.setItem('pendingRouteData', JSON.stringify(routeData));
+    console.log("Stored route data in localStorage:", routeData);
     
     // Track route purchase
     trackRoutePurchase(location, places.length);
     
-    setPurchaseRoute({ origin: location, places });
+    setPurchaseRoute(routeData);
     setStep("purchase");
   }
 
