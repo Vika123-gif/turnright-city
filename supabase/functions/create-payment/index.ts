@@ -17,7 +17,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",
-        "x-debug-create-payment": "v2"
+        "x-debug-create-payment": "v3"
       }
     });
   }
@@ -32,7 +32,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",
-        "x-debug-create-payment": "v2"
+        "x-debug-create-payment": "v3"
       }
     });
   }
@@ -80,7 +80,7 @@ serve(async (req) => {
         }
       ],
       mode: "payment",
-      success_url: `${origin}/?payment=success`,
+      success_url: `${origin}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?payment=cancel`,
       customer_email: userEmail
     });
@@ -90,7 +90,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",
-        "x-debug-create-payment": "v2"
+        "x-debug-create-payment": "v3"
       }
     });
   } catch (error) {
@@ -101,7 +101,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",
-        "x-debug-create-payment": "v2"
+        "x-debug-create-payment": "v3"
       }
     });
   }

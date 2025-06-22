@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { createClient } from "@supabase/supabase-js";
@@ -41,6 +40,27 @@ export default function ChatFlow() {
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  // Check for payment success on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    const sessionId = urlParams.get('session_id');
+    
+    if (paymentStatus === 'success' && sessionId && places && location) {
+      // Payment was successful, set up purchase route
+      setPurchaseRoute({ origin: location, places });
+      setStep("purchase");
+      
+      // Clean up URL parameters
+      const newUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    } else if (paymentStatus === 'cancel') {
+      // Payment was cancelled, clean up URL
+      const newUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, [places, location]);
 
   async function fetchPlaces() {
     setError(null);

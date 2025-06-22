@@ -43,10 +43,8 @@ const RoutePreviewStep: React.FC<Props> = ({
 
       if (data?.url) {
         console.log("Redirecting to Stripe checkout:", data.url);
-        // Open Stripe checkout in a new tab
-        window.open(data.url, '_blank');
-        // Call the original onBuy to update the UI state
-        onBuy();
+        // Redirect to Stripe checkout in the same window
+        window.location.href = data.url;
       } else {
         throw new Error("No checkout URL received");
       }
@@ -102,7 +100,7 @@ const RoutePreviewStep: React.FC<Props> = ({
             onClick={handlePayment} 
             disabled={purchasing || processing}
           >
-            {processing ? "Processing..." : purchasing ? "Processing..." : "Buy Route"}
+            {processing ? "Opening Payment..." : "Buy Route"}
           </Button>
         )}
       </div>
