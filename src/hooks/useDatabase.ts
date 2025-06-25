@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 
@@ -45,20 +46,23 @@ export const useDatabase = () => {
         return null;
       }
       
-      // First check if this session already exists
+      // First check if this session already exists in the database
       const { data: existingSession, error: selectError } = await supabase
         .from('visitor_sessions')
         .select('*')
         .eq('user_session_id', userSessionId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors
 
-      if (selectError && selectError.code !== 'PGRST116') {
+      if (selectError) {
         console.error('Error checking existing session:', selectError);
         return null;
       }
 
+      console.log('Existing session found:', existingSession);
+
       if (existingSession) {
-        // Update existing session
+        // Update existing session - this makes them a returning visitor
+        console.log('Updating existing session for returning visitor');
         const { data, error } = await supabase
           .from('visitor_sessions')
           .update({
@@ -74,12 +78,13 @@ export const useDatabase = () => {
           return null;
         }
 
-        console.log('Updated visitor session:', data);
+        console.log('Updated visitor session (returning visitor):', data);
         // Mark this session as tracked in browser session
         sessionStorage.setItem(sessionTrackedKey, 'true');
         return data;
       } else {
-        // Create new session
+        // Create new session - this is a new visitor
+        console.log('Creating new session for new visitor');
         const insertData = {
           user_session_id: userSessionId,
           user_agent: window.navigator.userAgent,
@@ -100,7 +105,7 @@ export const useDatabase = () => {
           return null;
         }
 
-        console.log('Created new visitor session:', data);
+        console.log('Created new visitor session (new visitor):', data);
         // Mark this session as tracked in browser session
         sessionStorage.setItem(sessionTrackedKey, 'true');
         return data;
