@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useDatabase } from "@/hooks/useDatabase";
 import { createClient } from "@supabase/supabase-js";
 import WelcomeStep from "./steps/WelcomeStep";
 import TimeStep from "./steps/TimeStep";
@@ -34,12 +35,22 @@ export default function ChatFlow() {
   const [routeRating, setRouteRating] = useState<number | null>(null);
   const [paying, setPaying] = useState(false);
   const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string; places: LLMPlace[] } | null>(null);
+  const [userSessionId, setUserSessionId] = useState<string>("");
+  const [currentRouteGenerationId, setCurrentRouteGenerationId] = useState<string | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
+  const { generateSessionId, saveRouteGeneration, saveRoutePurchase, saveFeedback } = useDatabase();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  // Generate session ID on component mount
+  useEffect(() => {
+    if (!userSessionId) {
+      setUserSessionId(generateSessionId());
+    }
+  }, [userSessionId, generateSessionId]);
 
   // Check for payment success on component mount
   useEffect(() => {
@@ -68,6 +79,11 @@ export default function ChatFlow() {
           setLocation(routeData.origin);
           setStep("purchase");
           
+          // Save purchase to database
+          if (currentRouteGenerationId) {
+            saveRoutePurchase(currentRouteGenerationId, routeData.origin, routeData.places.length, userSessionId);
+          }
+          
           // Clean up
           localStorage.removeItem('pendingRouteData');
         } catch (e) {
@@ -78,6 +94,11 @@ export default function ChatFlow() {
         console.log("Using current state for purchase route");
         setPurchaseRoute({ origin: location, places });
         setStep("purchase");
+        
+        // Save purchase to database
+        if (currentRouteGenerationId) {
+          saveRoutePurchase(currentRouteGenerationId, location, places.length, userSessionId);
+        }
       }
       
       // Clean up URL parameters
@@ -172,6 +193,13 @@ export default function ChatFlow() {
       console.log("Places returned:", response);
       
       setPlaces(response);
+      
+      // Save route generation to database
+      const savedGeneration = await saveRouteGeneration(location, timeWindow, goalsToUse, response, userSessionId);
+      if (savedGeneration) {
+        setCurrentRouteGenerationId(savedGeneration.id);
+      }
+      
       setStep("results");
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
@@ -197,6 +225,8 @@ export default function ChatFlow() {
     setError(null);
     setPurchaseRoute(null);
     setRouteRating(null);
+    setCurrentRouteGenerationId(null);
+    setUserSessionId(generateSessionId());
     localStorage.removeItem('pendingRouteData');
     setStep("welcome");
   }
@@ -204,6 +234,33 @@ export default function ChatFlow() {
   function handleTextFeedback(feedback: string) {
     if (purchaseRoute) {
       trackTextFeedback(feedback, purchaseRoute.origin, purchaseRoute.places.length);
+      
+      // Save feedback to database
+      saveFeedback(
+        currentRouteGenerationId,
+        routeRating,
+        feedback,
+        purchaseRoute.origin,
+        purchaseRoute.places.length,
+        userSessionId
+      );
+    }
+  }
+
+  function handleRouteRating(rating: number) {
+    setRouteRating(rating);
+    trackRouteRating(rating);
+    
+    // Save rating to database
+    if (purchaseRoute) {
+      saveFeedback(
+        currentRouteGenerationId,
+        rating,
+        null,
+        purchaseRoute.origin,
+        purchaseRoute.places.length,
+        userSessionId
+      );
     }
   }
 
@@ -338,10 +395,7 @@ export default function ChatFlow() {
             makeGoogleMapsRoute={makeGoogleMapsRoute}
             makeAppleMapsRoute={makeAppleMapsRoute}
             routeRating={routeRating}
-            onRatingSubmit={(rating) => {
-              setRouteRating(rating);
-              trackRouteRating(rating);
-            }}
+            onRatingSubmit={handleRouteRating}
             RouteRatingComponent={RouteRating}
           />
         )}

@@ -9,7 +9,115 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      route_generations: {
+        Row: {
+          generated_at: string
+          goals: string[] | null
+          id: string
+          location: string
+          places_count: number | null
+          places_generated: Json | null
+          time_window: string | null
+          user_session_id: string | null
+        }
+        Insert: {
+          generated_at?: string
+          goals?: string[] | null
+          id?: string
+          location: string
+          places_count?: number | null
+          places_generated?: Json | null
+          time_window?: string | null
+          user_session_id?: string | null
+        }
+        Update: {
+          generated_at?: string
+          goals?: string[] | null
+          id?: string
+          location?: string
+          places_count?: number | null
+          places_generated?: Json | null
+          time_window?: string | null
+          user_session_id?: string | null
+        }
+        Relationships: []
+      }
+      route_purchases: {
+        Row: {
+          id: string
+          location: string | null
+          places_count: number | null
+          purchased_at: string
+          route_generation_id: string | null
+          user_session_id: string | null
+        }
+        Insert: {
+          id?: string
+          location?: string | null
+          places_count?: number | null
+          purchased_at?: string
+          route_generation_id?: string | null
+          user_session_id?: string | null
+        }
+        Update: {
+          id?: string
+          location?: string | null
+          places_count?: number | null
+          purchased_at?: string
+          route_generation_id?: string | null
+          user_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_purchases_route_generation_id_fkey"
+            columns: ["route_generation_id"]
+            isOneToOne: false
+            referencedRelation: "route_generations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_feedback: {
+        Row: {
+          id: string
+          location: string | null
+          places_count: number | null
+          rating: number | null
+          route_generation_id: string | null
+          submitted_at: string
+          text_feedback: string | null
+          user_session_id: string | null
+        }
+        Insert: {
+          id?: string
+          location?: string | null
+          places_count?: number | null
+          rating?: number | null
+          route_generation_id?: string | null
+          submitted_at?: string
+          text_feedback?: string | null
+          user_session_id?: string | null
+        }
+        Update: {
+          id?: string
+          location?: string | null
+          places_count?: number | null
+          rating?: number | null
+          route_generation_id?: string | null
+          submitted_at?: string
+          text_feedback?: string | null
+          user_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_feedback_route_generation_id_fkey"
+            columns: ["route_generation_id"]
+            isOneToOne: false
+            referencedRelation: "route_generations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
