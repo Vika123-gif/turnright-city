@@ -3,7 +3,16 @@ import type { LLMPlace } from "@/hooks/useOpenAI";
 
 export const useDatabase = () => {
   const generateSessionId = () => {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    // Try to get existing session ID from localStorage first
+    const existingSessionId = localStorage.getItem('userSessionId');
+    if (existingSessionId) {
+      return existingSessionId;
+    }
+    
+    // Generate new session ID and store it
+    const newSessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('userSessionId', newSessionId);
+    return newSessionId;
   };
 
   const testConnection = async () => {
@@ -27,6 +36,14 @@ export const useDatabase = () => {
   const trackVisitorSession = async (userSessionId: string) => {
     try {
       console.log('=== TRACK VISITOR SESSION ===');
+      console.log('Session ID:', userSessionId);
+      
+      // Check if we've already tracked this session in this browser session
+      const sessionTrackedKey = `session_tracked_${userSessionId}`;
+      if (sessionStorage.getItem(sessionTrackedKey)) {
+        console.log('Session already tracked in this browser session, skipping');
+        return null;
+      }
       
       // First check if this session already exists
       const { data: existingSession, error: selectError } = await supabase
@@ -58,6 +75,8 @@ export const useDatabase = () => {
         }
 
         console.log('Updated visitor session:', data);
+        // Mark this session as tracked in browser session
+        sessionStorage.setItem(sessionTrackedKey, 'true');
         return data;
       } else {
         // Create new session
@@ -82,6 +101,8 @@ export const useDatabase = () => {
         }
 
         console.log('Created new visitor session:', data);
+        // Mark this session as tracked in browser session
+        sessionStorage.setItem(sessionTrackedKey, 'true');
         return data;
       }
     } catch (err) {
@@ -99,6 +120,7 @@ export const useDatabase = () => {
       console.log('=== TRACK LOCATION EXIT ===');
       console.log('Exit action:', exitAction);
       console.log('Current location:', currentLocation);
+      console.log('User session ID:', userSessionId);
       
       const insertData = {
         user_session_id: userSessionId,
@@ -106,6 +128,8 @@ export const useDatabase = () => {
         exit_action: exitAction,
         clicked_at: new Date().toISOString()
       };
+
+      console.log('Inserting location exit data:', insertData);
 
       const { data, error } = await supabase
         .from('location_exits')
@@ -271,7 +295,7 @@ export const useDatabase = () => {
       return data;
     } catch (err) {
       console.error('=== ROUTE PURCHASE SAVE EXCEPTION ===');
-      console.error('Exception details:', err);
+      console.log('Exception details:', err);
       return null;
     }
   };

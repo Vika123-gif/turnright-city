@@ -49,13 +49,13 @@ export default function ChatFlow() {
   useEffect(() => {
     const initializeSession = async () => {
       if (!userSessionId) {
-        const newSessionId = generateSessionId();
-        setUserSessionId(newSessionId);
+        const sessionId = generateSessionId(); // This will now get from localStorage or create new
+        setUserSessionId(sessionId);
         console.log('=== SESSION INITIALIZED ===');
-        console.log('Session ID:', newSessionId);
+        console.log('Session ID:', sessionId);
         
-        // Track visitor session
-        await trackVisitorSession(newSessionId);
+        // Track visitor session (this will check if already tracked in this browser session)
+        await trackVisitorSession(sessionId);
         
         // Test database connection on startup
         console.log('Testing database connection...');
@@ -268,7 +268,7 @@ export default function ChatFlow() {
     setPurchaseRoute(null);
     setRouteRating(null);
     setCurrentRouteGenerationId(null);
-    setUserSessionId(generateSessionId());
+    // Don't regenerate session ID on reset, keep the same browser session
     localStorage.removeItem('pendingRouteData');
     localStorage.removeItem('pendingRouteGenerationId');
     localStorage.removeItem('pendingUserSessionId');
@@ -377,10 +377,14 @@ export default function ChatFlow() {
     console.log("New location:", newLocation);
     console.log("Exit action:", exitAction);
     console.log("Current location:", location);
+    console.log("User session ID:", userSessionId);
     
-    // Track location exit if we had a previous location
-    if (location && location !== newLocation) {
-      trackLocationExit(userSessionId, location, exitAction);
+    // Track location exit every time the location button is clicked
+    if (userSessionId) {
+      console.log("Tracking location exit...");
+      trackLocationExit(userSessionId, location || null, exitAction);
+    } else {
+      console.warn("No user session ID available for location exit tracking");
     }
     
     setLocation(newLocation);
