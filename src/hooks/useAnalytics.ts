@@ -48,7 +48,7 @@ export const useAnalytics = () => {
   };
 
   const trackBuyRouteClick = (location: string, placesCount: number) => {
-    trackEvent('buy_route_click', {
+    trackEvent('click', {
       location,
       places_count: placesCount,
       event_category: 'engagement',
