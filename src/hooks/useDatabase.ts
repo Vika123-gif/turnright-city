@@ -24,6 +24,108 @@ export const useDatabase = () => {
     }
   };
 
+  const trackVisitorSession = async (userSessionId: string) => {
+    try {
+      console.log('=== TRACK VISITOR SESSION ===');
+      
+      // First check if this session already exists
+      const { data: existingSession, error: selectError } = await supabase
+        .from('visitor_sessions')
+        .select('*')
+        .eq('user_session_id', userSessionId)
+        .single();
+
+      if (selectError && selectError.code !== 'PGRST116') {
+        console.error('Error checking existing session:', selectError);
+        return null;
+      }
+
+      if (existingSession) {
+        // Update existing session
+        const { data, error } = await supabase
+          .from('visitor_sessions')
+          .update({
+            last_visit_at: new Date().toISOString(),
+            visit_count: existingSession.visit_count + 1
+          })
+          .eq('user_session_id', userSessionId)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error updating visitor session:', error);
+          return null;
+        }
+
+        console.log('Updated visitor session:', data);
+        return data;
+      } else {
+        // Create new session
+        const insertData = {
+          user_session_id: userSessionId,
+          user_agent: window.navigator.userAgent,
+          referrer: document.referrer || null,
+          first_visit_at: new Date().toISOString(),
+          last_visit_at: new Date().toISOString(),
+          visit_count: 1
+        };
+
+        const { data, error } = await supabase
+          .from('visitor_sessions')
+          .insert(insertData)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating visitor session:', error);
+          return null;
+        }
+
+        console.log('Created new visitor session:', data);
+        return data;
+      }
+    } catch (err) {
+      console.error('Exception in trackVisitorSession:', err);
+      return null;
+    }
+  };
+
+  const trackLocationExit = async (
+    userSessionId: string,
+    currentLocation: string | null,
+    exitAction: 'detect_location' | 'manual_input'
+  ) => {
+    try {
+      console.log('=== TRACK LOCATION EXIT ===');
+      console.log('Exit action:', exitAction);
+      console.log('Current location:', currentLocation);
+      
+      const insertData = {
+        user_session_id: userSessionId,
+        current_location: currentLocation,
+        exit_action: exitAction,
+        clicked_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('location_exits')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error tracking location exit:', error);
+        return null;
+      }
+
+      console.log('Location exit tracked successfully:', data);
+      return data;
+    } catch (err) {
+      console.error('Exception in trackLocationExit:', err);
+      return null;
+    }
+  };
+
   const saveRouteGeneration = async (
     location: string,
     timeWindow: string | null,
@@ -226,6 +328,8 @@ export const useDatabase = () => {
 
   return {
     generateSessionId,
+    trackVisitorSession,
+    trackLocationExit,
     saveRouteGeneration,
     saveBuyButtonClick,
     saveRoutePurchase,

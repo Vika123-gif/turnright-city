@@ -4,7 +4,7 @@ import Button from "../Button";
 import { MapPin } from "lucide-react";
 
 type Props = {
-  onLocation: (loc: string) => void;
+  onLocation: (loc: string, exitAction: 'detect_location' | 'manual_input') => void;
   value?: string | null;
 };
 
@@ -21,7 +21,7 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
             pos.coords.latitude.toFixed(5) + "," + pos.coords.longitude.toFixed(5);
           setLoc(coords);
           setDetecting(false);
-          onLocation(coords);
+          onLocation(coords, 'detect_location');
         },
         (err) => {
           alert("Failed to get location. You can enter it manually.");
@@ -66,7 +66,7 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
             variant="outline"
             className="ml-2"
             style={{ minWidth: 0, minHeight: "44px", width: "auto" }}
-            onClick={() => onLocation(loc)}
+            onClick={() => onLocation(loc, 'manual_input')}
             disabled={!loc || detecting}
           >
             OK

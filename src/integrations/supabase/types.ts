@@ -44,6 +44,30 @@ export type Database = {
           },
         ]
       }
+      location_exits: {
+        Row: {
+          clicked_at: string
+          current_location: string | null
+          exit_action: string | null
+          id: string
+          user_session_id: string
+        }
+        Insert: {
+          clicked_at?: string
+          current_location?: string | null
+          exit_action?: string | null
+          id?: string
+          user_session_id: string
+        }
+        Update: {
+          clicked_at?: string
+          current_location?: string | null
+          exit_action?: string | null
+          id?: string
+          user_session_id?: string
+        }
+        Relationships: []
+      }
       route_generations: {
         Row: {
           generated_at: string
@@ -152,6 +176,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      visitor_sessions: {
+        Row: {
+          first_visit_at: string
+          id: string
+          ip_address: string | null
+          last_visit_at: string
+          referrer: string | null
+          user_agent: string | null
+          user_session_id: string
+          visit_count: number
+        }
+        Insert: {
+          first_visit_at?: string
+          id?: string
+          ip_address?: string | null
+          last_visit_at?: string
+          referrer?: string | null
+          user_agent?: string | null
+          user_session_id: string
+          visit_count?: number
+        }
+        Update: {
+          first_visit_at?: string
+          id?: string
+          ip_address?: string | null
+          last_visit_at?: string
+          referrer?: string | null
+          user_agent?: string | null
+          user_session_id?: string
+          visit_count?: number
+        }
+        Relationships: []
       }
     }
     Views: {

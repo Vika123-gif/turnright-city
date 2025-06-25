@@ -40,12 +40,12 @@ export default function ChatFlow() {
 
   const { getLLMPlaces } = useOpenAI();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
-  const { generateSessionId, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
+  const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-  // Generate session ID on component mount
+  // Generate session ID and track visitor on component mount
   useEffect(() => {
     const initializeSession = async () => {
       if (!userSessionId) {
@@ -53,6 +53,9 @@ export default function ChatFlow() {
         setUserSessionId(newSessionId);
         console.log('=== SESSION INITIALIZED ===');
         console.log('Session ID:', newSessionId);
+        
+        // Track visitor session
+        await trackVisitorSession(newSessionId);
         
         // Test database connection on startup
         console.log('Testing database connection...');
@@ -62,7 +65,7 @@ export default function ChatFlow() {
     };
     
     initializeSession();
-  }, [userSessionId, generateSessionId, testConnection]);
+  }, [userSessionId, generateSessionId, trackVisitorSession, testConnection]);
 
   // Check for payment success on component mount
   useEffect(() => {
@@ -368,6 +371,22 @@ export default function ChatFlow() {
     setStep("purchase");
   }
 
+  // Handler for location exit tracking
+  function handleLocationChange(newLocation: string, exitAction: 'detect_location' | 'manual_input') {
+    console.log("=== DEBUG: handleLocationChange called ===");
+    console.log("New location:", newLocation);
+    console.log("Exit action:", exitAction);
+    console.log("Current location:", location);
+    
+    // Track location exit if we had a previous location
+    if (location && location !== newLocation) {
+      trackLocationExit(userSessionId, location, exitAction);
+    }
+    
+    setLocation(newLocation);
+    setStep("time");
+  }
+
   function makeGoogleMapsRoute(origin: string, places: LLMPlace[] = []) {
     if (!places.length) return `https://maps.google.com`;
 
@@ -408,10 +427,7 @@ export default function ChatFlow() {
       <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-md px-6 py-8 relative">
         {step === "welcome" && (
           <WelcomeStep
-            onLocation={(loc) => {
-              setLocation(loc);
-              setStep("time");
-            }}
+            onLocation={handleLocationChange}
             value={location}
           />
         )}
