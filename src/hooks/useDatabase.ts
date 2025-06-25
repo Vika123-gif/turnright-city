@@ -7,12 +7,14 @@ export const useDatabase = () => {
     // Try to get existing session ID from localStorage first
     const existingSessionId = localStorage.getItem('userSessionId');
     if (existingSessionId) {
+      console.log('Found existing session ID in localStorage:', existingSessionId);
       return existingSessionId;
     }
     
     // Generate new session ID and store it
     const newSessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     localStorage.setItem('userSessionId', newSessionId);
+    console.log('Generated new session ID:', newSessionId);
     return newSessionId;
   };
 
@@ -36,33 +38,39 @@ export const useDatabase = () => {
 
   const trackVisitorSession = async (userSessionId: string) => {
     try {
-      console.log('=== TRACK VISITOR SESSION ===');
-      console.log('Session ID:', userSessionId);
+      console.log('=== TRACK VISITOR SESSION DEBUG ===');
+      console.log('Session ID to track:', userSessionId);
       
       // Check if we've already tracked this session in this browser session
       const sessionTrackedKey = `session_tracked_${userSessionId}`;
-      if (sessionStorage.getItem(sessionTrackedKey)) {
+      const alreadyTracked = sessionStorage.getItem(sessionTrackedKey);
+      console.log('Already tracked in this browser session?', !!alreadyTracked);
+      
+      if (alreadyTracked) {
         console.log('Session already tracked in this browser session, skipping');
         return null;
       }
       
       // First check if this session already exists in the database
+      console.log('Checking database for existing session...');
       const { data: existingSession, error: selectError } = await supabase
         .from('visitor_sessions')
         .select('*')
         .eq('user_session_id', userSessionId)
-        .maybeSingle(); // Use maybeSingle instead of single to avoid errors
+        .maybeSingle();
 
       if (selectError) {
         console.error('Error checking existing session:', selectError);
         return null;
       }
 
-      console.log('Existing session found:', existingSession);
+      console.log('Database query result - existing session:', existingSession);
 
       if (existingSession) {
         // Update existing session - this makes them a returning visitor
-        console.log('Updating existing session for returning visitor');
+        console.log('RETURNING VISITOR - Updating existing session');
+        console.log('Current visit count:', existingSession.visit_count);
+        
         const { data, error } = await supabase
           .from('visitor_sessions')
           .update({
@@ -78,13 +86,15 @@ export const useDatabase = () => {
           return null;
         }
 
-        console.log('Updated visitor session (returning visitor):', data);
+        console.log('SUCCESS - Updated visitor session (returning visitor):', data);
+        console.log('New visit count:', data.visit_count);
+        
         // Mark this session as tracked in browser session
         sessionStorage.setItem(sessionTrackedKey, 'true');
         return data;
       } else {
         // Create new session - this is a new visitor
-        console.log('Creating new session for new visitor');
+        console.log('NEW VISITOR - Creating new session');
         const insertData = {
           user_session_id: userSessionId,
           user_agent: window.navigator.userAgent,
@@ -93,6 +103,8 @@ export const useDatabase = () => {
           last_visit_at: new Date().toISOString(),
           visit_count: 1
         };
+
+        console.log('Insert data for new visitor:', insertData);
 
         const { data, error } = await supabase
           .from('visitor_sessions')
@@ -105,7 +117,8 @@ export const useDatabase = () => {
           return null;
         }
 
-        console.log('Created new visitor session (new visitor):', data);
+        console.log('SUCCESS - Created new visitor session (new visitor):', data);
+        
         // Mark this session as tracked in browser session
         sessionStorage.setItem(sessionTrackedKey, 'true');
         return data;
