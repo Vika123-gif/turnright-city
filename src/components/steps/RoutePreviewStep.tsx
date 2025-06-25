@@ -28,6 +28,8 @@ const RoutePreviewStep: React.FC<Props> = ({
 
   async function handlePayment() {
     console.log("=== DEBUG: handlePayment called ===");
+    console.log("Current places:", places);
+    console.log("Current location:", location);
     
     // Track the buy button click
     if (onTrackBuyClick) {

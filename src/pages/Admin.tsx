@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Star } from 'lucide-react';
 
 interface RouteGeneration {
@@ -49,13 +50,19 @@ const Admin = () => {
 
   const fetchData = async () => {
     try {
+      console.log('=== ADMIN: Fetching data ===');
+      
       // Fetch route generations
       const { data: generations, error: genError } = await supabase
         .from('route_generations')
         .select('*')
         .order('generated_at', { ascending: false });
 
-      if (genError) throw genError;
+      if (genError) {
+        console.error('Error fetching generations:', genError);
+        throw genError;
+      }
+      console.log('Fetched generations:', generations);
 
       // Fetch feedback
       const { data: feedbackData, error: feedbackError } = await supabase
@@ -63,7 +70,11 @@ const Admin = () => {
         .select('*')
         .order('submitted_at', { ascending: false });
 
-      if (feedbackError) throw feedbackError;
+      if (feedbackError) {
+        console.error('Error fetching feedback:', feedbackError);
+        throw feedbackError;
+      }
+      console.log('Fetched feedback:', feedbackData);
 
       // Fetch purchases
       const { data: purchaseData, error: purchaseError } = await supabase
@@ -71,7 +82,11 @@ const Admin = () => {
         .select('*')
         .order('purchased_at', { ascending: false });
 
-      if (purchaseError) throw purchaseError;
+      if (purchaseError) {
+        console.error('Error fetching purchases:', purchaseError);
+        throw purchaseError;
+      }
+      console.log('Fetched purchases:', purchaseData);
 
       setRouteGenerations(generations || []);
       setFeedback(feedbackData || []);
@@ -80,6 +95,90 @@ const Admin = () => {
       console.error('Error fetching admin data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const testDatabaseInsert = async () => {
+    try {
+      console.log('=== TESTING DATABASE INSERT ===');
+      
+      // Test route generation insert
+      const testGeneration = {
+        location: 'Test Location',
+        time_window: '2 hours',
+        goals: ['eat', 'coffee'],
+        places_generated: [{ name: 'Test Place', address: 'Test Address' }],
+        places_count: 1,
+        user_session_id: 'test-session-' + Date.now()
+      };
+
+      const { data: genData, error: genError } = await supabase
+        .from('route_generations')
+        .insert(testGeneration)
+        .select()
+        .single();
+
+      if (genError) {
+        console.error('Test generation insert error:', genError);
+        alert('Generation insert failed: ' + genError.message);
+        return;
+      }
+
+      console.log('Test generation inserted:', genData);
+
+      // Test feedback insert
+      const testFeedback = {
+        route_generation_id: genData.id,
+        rating: 5,
+        text_feedback: 'Test feedback',
+        location: 'Test Location',
+        places_count: 1,
+        user_session_id: testGeneration.user_session_id
+      };
+
+      const { data: feedbackData, error: feedbackError } = await supabase
+        .from('user_feedback')
+        .insert(testFeedback)
+        .select()
+        .single();
+
+      if (feedbackError) {
+        console.error('Test feedback insert error:', feedbackError);
+        alert('Feedback insert failed: ' + feedbackError.message);
+        return;
+      }
+
+      console.log('Test feedback inserted:', feedbackData);
+
+      // Test purchase insert
+      const testPurchase = {
+        route_generation_id: genData.id,
+        location: 'Test Location',
+        places_count: 1,
+        user_session_id: testGeneration.user_session_id
+      };
+
+      const { data: purchaseData, error: purchaseError } = await supabase
+        .from('route_purchases')
+        .insert(testPurchase)
+        .select()
+        .single();
+
+      if (purchaseError) {
+        console.error('Test purchase insert error:', purchaseError);
+        alert('Purchase insert failed: ' + purchaseError.message);
+        return;
+      }
+
+      console.log('Test purchase inserted:', purchaseData);
+      
+      alert('All test inserts successful! Check the console for details.');
+      
+      // Refresh data
+      fetchData();
+    } catch (error) {
+      console.error('Test insert failed:', error);
+      alert('Test failed: ' + (error as Error).message);
     }
   };
 
@@ -105,7 +204,12 @@ const Admin = () => {
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <Button onClick={testDatabaseInsert} variant="outline">
+          Test Database Insert
+        </Button>
+      </div>
       
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
