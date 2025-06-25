@@ -119,6 +119,21 @@ const RoutePreviewStep: React.FC<Props> = ({
             {processing ? "Opening Payment..." : "Buy Route"}
           </Button>
         )}
+
+        {/* MVP Link */}
+        <div className="border-t pt-4 text-center">
+          <p className="text-sm text-gray-600 mb-2">
+            Save for the next generations!
+          </p>
+          <a
+            href="https://turnright.city/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#008457] underline font-medium text-sm hover:text-[#00BC72] transition-colors"
+          >
+            Visit TurnRight.city
+          </a>
+        </div>
       </div>
     </div>
   );
