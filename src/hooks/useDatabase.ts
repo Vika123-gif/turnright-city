@@ -7,6 +7,24 @@ export const useDatabase = () => {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   };
 
+  const testConnection = async () => {
+    try {
+      console.log('=== TESTING DATABASE CONNECTION ===');
+      const { data, error } = await supabase.from('route_generations').select('count').limit(1);
+      
+      if (error) {
+        console.error('Database connection test failed:', error);
+        return false;
+      }
+      
+      console.log('Database connection test successful:', data);
+      return true;
+    } catch (err) {
+      console.error('Database connection test exception:', err);
+      return false;
+    }
+  };
+
   const saveRouteGeneration = async (
     location: string,
     timeWindow: string | null,
@@ -15,36 +33,52 @@ export const useDatabase = () => {
     userSessionId: string
   ) => {
     try {
-      console.log('Attempting to save route generation:', {
+      console.log('=== SAVE ROUTE GENERATION ATTEMPT ===');
+      console.log('Connection test before insert...');
+      await testConnection();
+      
+      console.log('Attempting to save route generation with data:', {
         location,
-        timeWindow,
+        time_window: timeWindow,
         goals,
-        placesCount: places.length,
-        userSessionId
+        places_generated: places,
+        places_count: places.length,
+        user_session_id: userSessionId
       });
+
+      const insertData = {
+        location,
+        time_window: timeWindow,
+        goals,
+        places_generated: places,
+        places_count: places.length,
+        user_session_id: userSessionId,
+      };
+
+      console.log('Insert data prepared:', insertData);
 
       const { data, error } = await supabase
         .from('route_generations')
-        .insert({
-          location,
-          time_window: timeWindow,
-          goals,
-          places_generated: places,
-          places_count: places.length,
-          user_session_id: userSessionId,
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (error) {
-        console.error('Error saving route generation:', error);
+        console.error('=== ROUTE GENERATION INSERT ERROR ===');
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        console.error('Full error object:', error);
         return null;
       }
 
-      console.log('Route generation saved successfully:', data);
+      console.log('=== ROUTE GENERATION SAVED SUCCESSFULLY ===');
+      console.log('Saved data:', data);
       return data;
     } catch (err) {
-      console.error('Exception saving route generation:', err);
+      console.error('=== ROUTE GENERATION SAVE EXCEPTION ===');
+      console.error('Exception details:', err);
       return null;
     }
   };
@@ -56,33 +90,41 @@ export const useDatabase = () => {
     userSessionId: string
   ) => {
     try {
-      console.log('Attempting to save route purchase:', {
-        routeGenerationId,
+      console.log('=== SAVE ROUTE PURCHASE ATTEMPT ===');
+      console.log('Connection test before insert...');
+      await testConnection();
+      
+      const insertData = {
+        route_generation_id: routeGenerationId,
         location,
-        placesCount,
-        userSessionId
-      });
+        places_count: placesCount,
+        user_session_id: userSessionId,
+      };
+
+      console.log('Purchase insert data:', insertData);
 
       const { data, error } = await supabase
         .from('route_purchases')
-        .insert({
-          route_generation_id: routeGenerationId,
-          location,
-          places_count: placesCount,
-          user_session_id: userSessionId,
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (error) {
-        console.error('Error saving route purchase:', error);
+        console.error('=== ROUTE PURCHASE INSERT ERROR ===');
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        console.error('Full error object:', error);
         return null;
       }
 
-      console.log('Route purchase saved successfully:', data);
+      console.log('=== ROUTE PURCHASE SAVED SUCCESSFULLY ===');
+      console.log('Saved data:', data);
       return data;
     } catch (err) {
-      console.error('Exception saving route purchase:', err);
+      console.error('=== ROUTE PURCHASE SAVE EXCEPTION ===');
+      console.error('Exception details:', err);
       return null;
     }
   };
@@ -96,37 +138,43 @@ export const useDatabase = () => {
     userSessionId: string
   ) => {
     try {
-      console.log('Attempting to save feedback:', {
-        routeGenerationId,
+      console.log('=== SAVE FEEDBACK ATTEMPT ===');
+      console.log('Connection test before insert...');
+      await testConnection();
+      
+      const insertData = {
+        route_generation_id: routeGenerationId,
         rating,
-        textFeedback,
+        text_feedback: textFeedback,
         location,
-        placesCount,
-        userSessionId
-      });
+        places_count: placesCount,
+        user_session_id: userSessionId,
+      };
+
+      console.log('Feedback insert data:', insertData);
 
       const { data, error } = await supabase
         .from('user_feedback')
-        .insert({
-          route_generation_id: routeGenerationId,
-          rating,
-          text_feedback: textFeedback,
-          location,
-          places_count: placesCount,
-          user_session_id: userSessionId,
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (error) {
-        console.error('Error saving feedback:', error);
+        console.error('=== FEEDBACK INSERT ERROR ===');
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        console.error('Full error object:', error);
         return null;
       }
 
-      console.log('Feedback saved successfully:', data);
+      console.log('=== FEEDBACK SAVED SUCCESSFULLY ===');
+      console.log('Saved data:', data);
       return data;
     } catch (err) {
-      console.error('Exception saving feedback:', err);
+      console.error('=== FEEDBACK SAVE EXCEPTION ===');
+      console.error('Exception details:', err);
       return null;
     }
   };
@@ -136,5 +184,6 @@ export const useDatabase = () => {
     saveRouteGeneration,
     saveRoutePurchase,
     saveFeedback,
+    testConnection,
   };
 };

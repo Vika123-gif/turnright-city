@@ -40,17 +40,29 @@ export default function ChatFlow() {
 
   const { getLLMPlaces } = useOpenAI();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
-  const { generateSessionId, saveRouteGeneration, saveRoutePurchase, saveFeedback } = useDatabase();
+  const { generateSessionId, saveRouteGeneration, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   // Generate session ID on component mount
   useEffect(() => {
-    if (!userSessionId) {
-      setUserSessionId(generateSessionId());
-    }
-  }, [userSessionId, generateSessionId]);
+    const initializeSession = async () => {
+      if (!userSessionId) {
+        const newSessionId = generateSessionId();
+        setUserSessionId(newSessionId);
+        console.log('=== SESSION INITIALIZED ===');
+        console.log('Session ID:', newSessionId);
+        
+        // Test database connection on startup
+        console.log('Testing database connection...');
+        const connectionOk = await testConnection();
+        console.log('Database connection test result:', connectionOk);
+      }
+    };
+    
+    initializeSession();
+  }, [userSessionId, generateSessionId, testConnection]);
 
   // Check for payment success on component mount
   useEffect(() => {
@@ -80,8 +92,11 @@ export default function ChatFlow() {
           setStep("purchase");
           
           // Save purchase to database
+          console.log("Attempting to save purchase after payment success...");
           if (currentRouteGenerationId) {
             saveRoutePurchase(currentRouteGenerationId, routeData.origin, routeData.places.length, userSessionId);
+          } else {
+            console.warn("No route generation ID available for purchase tracking");
           }
           
           // Clean up
@@ -96,8 +111,11 @@ export default function ChatFlow() {
         setStep("purchase");
         
         // Save purchase to database
+        console.log("Attempting to save purchase with current state...");
         if (currentRouteGenerationId) {
           saveRoutePurchase(currentRouteGenerationId, location, places.length, userSessionId);
+        } else {
+          console.warn("No route generation ID available for purchase tracking");
         }
       }
       
@@ -120,6 +138,7 @@ export default function ChatFlow() {
     console.log("Goals length:", goalsToUse?.length);
     console.log("Location:", location);
     console.log("TimeWindow:", timeWindow);
+    console.log("User Session ID:", userSessionId);
     
     setError(null);
     setGenerating(true);
@@ -195,9 +214,14 @@ export default function ChatFlow() {
       setPlaces(response);
       
       // Save route generation to database
+      console.log("=== ATTEMPTING TO SAVE ROUTE GENERATION ===");
+      console.log("Session ID for save:", userSessionId);
       const savedGeneration = await saveRouteGeneration(location, timeWindow, goalsToUse, response, userSessionId);
       if (savedGeneration) {
+        console.log("Route generation saved with ID:", savedGeneration.id);
         setCurrentRouteGenerationId(savedGeneration.id);
+      } else {
+        console.error("Failed to save route generation to database");
       }
       
       setStep("results");
@@ -218,6 +242,7 @@ export default function ChatFlow() {
   }
 
   function reset() {
+    console.log("=== DEBUG: Reset called ===");
     setLocation("");
     setTimeWindow(null);
     setGoals([]);
@@ -232,10 +257,17 @@ export default function ChatFlow() {
   }
 
   function handleTextFeedback(feedback: string) {
+    console.log("=== DEBUG: handleTextFeedback called ===");
+    console.log("Feedback:", feedback);
+    console.log("Purchase route:", purchaseRoute);
+    console.log("Current route generation ID:", currentRouteGenerationId);
+    console.log("User session ID:", userSessionId);
+    
     if (purchaseRoute) {
       trackTextFeedback(feedback, purchaseRoute.origin, purchaseRoute.places.length);
       
       // Save feedback to database
+      console.log("Attempting to save text feedback to database...");
       saveFeedback(
         currentRouteGenerationId,
         routeRating,
@@ -244,15 +276,24 @@ export default function ChatFlow() {
         purchaseRoute.places.length,
         userSessionId
       );
+    } else {
+      console.warn("No purchase route available for feedback");
     }
   }
 
   function handleRouteRating(rating: number) {
+    console.log("=== DEBUG: handleRouteRating called ===");
+    console.log("Rating:", rating);
+    console.log("Purchase route:", purchaseRoute);
+    console.log("Current route generation ID:", currentRouteGenerationId);
+    console.log("User session ID:", userSessionId);
+    
     setRouteRating(rating);
     trackRouteRating(rating);
     
     // Save rating to database
     if (purchaseRoute) {
+      console.log("Attempting to save rating to database...");
       saveFeedback(
         currentRouteGenerationId,
         rating,
@@ -261,11 +302,18 @@ export default function ChatFlow() {
         purchaseRoute.places.length,
         userSessionId
       );
+    } else {
+      console.warn("No purchase route available for rating");
     }
   }
 
   function handleBuyRoute() {
     console.log("=== DEBUG: handleBuyRoute called ===");
+    console.log("Places:", places);
+    console.log("Location:", location);
+    console.log("Current route generation ID:", currentRouteGenerationId);
+    console.log("User session ID:", userSessionId);
+    
     if (!places || !location) {
       console.error("Missing places or location for purchase");
       return;
