@@ -135,10 +135,25 @@ const PurchaseStep: React.FC<Props> = ({
       <Button
         variant="primary"
         onClick={onStartNew}
-        className="w-full"
+        className="w-full mb-6"
       >
         Start New Search
       </Button>
+
+      {/* MVP Link */}
+      <div className="border-t pt-4 text-center">
+        <p className="text-sm text-gray-600 mb-2">
+          Save for the next generations!
+        </p>
+        <a
+          href="https://turnright.city/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#008457] underline font-medium text-sm hover:text-[#00BC72] transition-colors"
+        >
+          Visit TurnRight.city
+        </a>
+      </div>
     </div>
   );
 };
