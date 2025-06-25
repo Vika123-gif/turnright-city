@@ -70,11 +70,22 @@ export const useAnalytics = () => {
     });
   };
 
+  const trackTextFeedback = (feedback: string, location: string, placesCount: number) => {
+    trackEvent('text_feedback', {
+      feedback_length: feedback.length,
+      location,
+      places_count: placesCount,
+      event_category: 'engagement',
+      event_label: 'route_feedback',
+    });
+  };
+
   return {
     trackEvent,
     trackRouteGeneration,
     trackBuyRouteClick,
     trackRoutePurchase,
     trackRouteRating,
+    trackTextFeedback,
   };
 };

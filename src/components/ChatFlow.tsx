@@ -36,7 +36,7 @@ export default function ChatFlow() {
   const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string; places: LLMPlace[] } | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
-  const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating } = useAnalytics();
+  const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -201,6 +201,12 @@ export default function ChatFlow() {
     setStep("welcome");
   }
 
+  function handleTextFeedback(feedback: string) {
+    if (purchaseRoute) {
+      trackTextFeedback(feedback, purchaseRoute.origin, purchaseRoute.places.length);
+    }
+  }
+
   function handleBuyRoute() {
     console.log("=== DEBUG: handleBuyRoute called ===");
     if (!places || !location) {
@@ -325,79 +331,19 @@ export default function ChatFlow() {
         )}
 
         {step === "purchase" && (
-          <div className="chat-card text-center">
-            <div className="text-3xl mb-5">✅</div>
-            <div className="text-lg font-semibold mb-1">
-              Thanks for your purchase!
-            </div>
-            
-            {purchaseRoute && purchaseRoute.places && purchaseRoute.places.length > 0 && (
-              <div className="mb-6 text-left">
-                <div className="font-semibold mb-2 text-[#008457]">Your route stops:</div>
-                <ul className="space-y-2">
-                  {purchaseRoute.places.map((p, i) => (
-                    <li key={i} className="p-2 rounded bg-[#F6FDF9] text-sm mb-1">
-                      <div className="font-semibold">{`${i + 1}. ${p.name}`}</div>
-                      <div className="text-gray-600">{p.address}</div>
-                      <div className="text-xs text-gray-500">
-                        🚶 {p.walkingTime} min walk
-                        {p.type && ` | Type: ${p.type}`}
-                      </div>
-                      {p.reason && (
-                        <div className="mt-1 text-[#008457]">{p.reason}</div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            
-            <div className="mb-6 text-[#008457] font-medium">
-              {"Here's your route link:"}
-              {(purchaseRoute && purchaseRoute.places.length > 0) ? (
-                <div className="flex flex-col gap-1 mt-2">
-                  <a
-                    href={makeGoogleMapsRoute(purchaseRoute.origin, purchaseRoute.places)}
-                    className="underline text-[#00BC72]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View in Google Maps
-                  </a>
-                  <a
-                    href={makeAppleMapsRoute(purchaseRoute.origin, purchaseRoute.places)}
-                    className="underline text-[#008457]"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    View in Apple Maps
-                  </a>
-                </div>
-              ) : (
-                <span className="text-gray-400">No places</span>
-              )}
-            </div>
-
-            {routeRating === null ? (
-              <RouteRating
-                disabled={false}
-                onSubmit={(rating) => {
-                  setRouteRating(rating);
-                  trackRouteRating(rating);
-                }}
-              />
-            ) : (
-              <div className="my-5 text-green-700 font-semibold">
-                Thank you for rating this route {routeRating} star{routeRating > 1 ? "s" : ""}! 🌟
-              </div>
-            )}
-            <button
-              onClick={reset}
-              className="w-full rounded-xl shadow-md font-semibold px-4 py-4 text-lg my-2 transition focus:outline-none focus:ring-2 focus-ring-offset-2 active:scale-95 bg-[#00BC72] hover:bg-[#00965c] text-white"
-            >
-              Start New Search
-            </button>
-          </div>
+          <PurchaseStep
+            onFeedbackSubmit={handleTextFeedback}
+            onStartNew={reset}
+            purchaseRoute={purchaseRoute}
+            makeGoogleMapsRoute={makeGoogleMapsRoute}
+            makeAppleMapsRoute={makeAppleMapsRoute}
+            routeRating={routeRating}
+            onRatingSubmit={(rating) => {
+              setRouteRating(rating);
+              trackRouteRating(rating);
+            }}
+            RouteRatingComponent={RouteRating}
+          />
         )}
       </div>
     </div>
