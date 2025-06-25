@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,11 +47,32 @@ interface BuyButtonClick {
   user_session_id: string;
 }
 
+interface VisitorSession {
+  id: string;
+  user_session_id: string;
+  first_visit_at: string;
+  last_visit_at: string;
+  visit_count: number;
+  user_agent: string | null;
+  ip_address: string | null;
+  referrer: string | null;
+}
+
+interface LocationExit {
+  id: string;
+  user_session_id: string;
+  clicked_at: string;
+  current_location: string | null;
+  exit_action: string | null;
+}
+
 const Admin = () => {
   const [routeGenerations, setRouteGenerations] = useState<RouteGeneration[]>([]);
   const [feedback, setFeedback] = useState<UserFeedback[]>([]);
   const [purchases, setPurchases] = useState<RoutePurchase[]>([]);
   const [buyButtonClicks, setBuyButtonClicks] = useState<BuyButtonClick[]>([]);
+  const [visitorSessions, setVisitorSessions] = useState<VisitorSession[]>([]);
+  const [locationExits, setLocationExits] = useState<LocationExit[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -109,10 +131,36 @@ const Admin = () => {
       }
       console.log('Fetched buy button clicks:', buyClickData);
 
+      // Fetch visitor sessions
+      const { data: visitorData, error: visitorError } = await supabase
+        .from('visitor_sessions')
+        .select('*')
+        .order('first_visit_at', { ascending: false });
+
+      if (visitorError) {
+        console.error('Error fetching visitor sessions:', visitorError);
+        throw visitorError;
+      }
+      console.log('Fetched visitor sessions:', visitorData);
+
+      // Fetch location exits
+      const { data: locationExitData, error: locationExitError } = await supabase
+        .from('location_exits')
+        .select('*')
+        .order('clicked_at', { ascending: false });
+
+      if (locationExitError) {
+        console.error('Error fetching location exits:', locationExitError);
+        throw locationExitError;
+      }
+      console.log('Fetched location exits:', locationExitData);
+
       setRouteGenerations(generations || []);
       setFeedback(feedbackData || []);
       setPurchases(purchaseData || []);
       setBuyButtonClicks(buyClickData || []);
+      setVisitorSessions(visitorData || []);
+      setLocationExits(locationExitData || []);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -212,6 +260,13 @@ const Admin = () => {
     );
   }
 
+  const uniqueVisitors = visitorSessions.filter(session => session.visit_count === 1).length;
+  const returningVisitors = visitorSessions.filter(session => session.visit_count > 1).length;
+  const totalVisitors = visitorSessions.length;
+  const totalLocationExits = locationExits.length;
+  const detectLocationClicks = locationExits.filter(exit => exit.exit_action === 'detect_location').length;
+  const manualInputClicks = locationExits.filter(exit => exit.exit_action === 'manual_input').length;
+
   const stats = {
     totalGenerations: routeGenerations.length,
     totalPurchases: purchases.length,
@@ -222,7 +277,13 @@ const Admin = () => {
       : 'N/A',
     conversionRate: buyButtonClicks.length > 0 
       ? ((purchases.length / buyButtonClicks.length) * 100).toFixed(1) + '%'
-      : 'N/A'
+      : 'N/A',
+    uniqueVisitors,
+    returningVisitors,
+    totalVisitors,
+    totalLocationExits,
+    detectLocationClicks,
+    manualInputClicks
   };
 
   return (
@@ -235,7 +296,31 @@ const Admin = () => {
       </div>
       
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Visitors</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalVisitors}</div>
+            <div className="text-xs text-gray-500">
+              {stats.uniqueVisitors} new, {stats.returningVisitors} returning
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Location Button Clicks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalLocationExits}</div>
+            <div className="text-xs text-gray-500">
+              {stats.detectLocationClicks} detect, {stats.manualInputClicks} manual
+            </div>
+          </CardContent>
+        </Card>
+        
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Generations</CardTitle>
@@ -247,122 +332,90 @@ const Admin = () => {
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Buy Button Clicks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalBuyClicks}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Purchases</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPurchases}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.conversionRate}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Feedback</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalFeedback}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.averageRating}</div>
+            <div className="text-xs text-gray-500">
+              {stats.totalBuyClicks} clicks → {stats.totalPurchases} purchases
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="generations" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="generations">Route Generations</TabsTrigger>
-          <TabsTrigger value="clicks">Buy Button Clicks</TabsTrigger>
-          <TabsTrigger value="feedback">User Feedback</TabsTrigger>
+      <Tabs defaultValue="visitors" className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="visitors">Visitors</TabsTrigger>
+          <TabsTrigger value="location-exits">Location Exits</TabsTrigger>
+          <TabsTrigger value="generations">Generations</TabsTrigger>
+          <TabsTrigger value="clicks">Buy Clicks</TabsTrigger>
+          <TabsTrigger value="feedback">Feedback</TabsTrigger>
           <TabsTrigger value="purchases">Purchases</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="generations" className="space-y-4">
-          <h2 className="text-xl font-semibold">Route Generations</h2>
-          {routeGenerations.map((generation) => (
-            <Card key={generation.id}>
+        <TabsContent value="visitors" className="space-y-4">
+          <h2 className="text-xl font-semibold">Visitor Sessions</h2>
+          {visitorSessions.map((visitor) => (
+            <Card key={visitor.id}>
               <CardHeader>
-                <CardTitle className="text-lg">{generation.location}</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  Session: {visitor.user_session_id}
+                  <Badge variant={visitor.visit_count === 1 ? "default" : "secondary"}>
+                    {visitor.visit_count === 1 ? "New" : `${visitor.visit_count} visits`}
+                  </Badge>
+                </CardTitle>
                 <div className="text-sm text-gray-500">
-                  {new Date(generation.generated_at).toLocaleString()}
+                  First visit: {new Date(visitor.first_visit_at).toLocaleString()}
+                  {visitor.visit_count > 1 && (
+                    <> • Last visit: {new Date(visitor.last_visit_at).toLocaleString()}</>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div>
-                    <strong>Time Window:</strong> {generation.time_window || 'Not specified'}
+                    <strong>User Agent:</strong> {visitor.user_agent || 'Unknown'}
                   </div>
-                  <div>
-                    <strong>Goals:</strong>{' '}
-                    {generation.goals?.map((goal) => (
-                      <Badge key={goal} variant="secondary" className="mr-1">
-                        {goal}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div>
-                    <strong>Places Count:</strong> {generation.places_count}
-                  </div>
-                  <div>
-                    <strong>Session ID:</strong> {generation.user_session_id}
-                  </div>
-                  {generation.places_generated && (
-                    <details className="mt-2">
-                      <summary className="cursor-pointer font-medium">View Generated Places</summary>
-                      <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto">
-                        {JSON.stringify(generation.places_generated, null, 2)}
-                      </pre>
-                    </details>
+                  {visitor.referrer && (
+                    <div>
+                      <strong>Referrer:</strong> {visitor.referrer}
+                    </div>
                   )}
+                  <div>
+                    <strong>Visit Count:</strong> {visitor.visit_count}
+                  </div>
                 </div>
               </CardContent>
             </Card>
           ))}
         </TabsContent>
         
-        <TabsContent value="clicks" className="space-y-4">
-          <h2 className="text-xl font-semibold">Buy Button Clicks</h2>
-          {buyButtonClicks.map((click) => (
-            <Card key={click.id}>
+        <TabsContent value="location-exits" className="space-y-4">
+          <h2 className="text-xl font-semibold">Location Button Clicks</h2>
+          {locationExits.map((exit) => (
+            <Card key={exit.id}>
               <CardHeader>
-                <CardTitle className="text-lg">{click.location || 'Unknown Location'}</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  {exit.current_location || 'Unknown Location'}
+                  <Badge variant={exit.exit_action === 'detect_location' ? "default" : "outline"}>
+                    {exit.exit_action === 'detect_location' ? '📍 Share Location' : '✏️ Manual Input'}
+                  </Badge>
+                </CardTitle>
                 <div className="text-sm text-gray-500">
-                  {new Date(click.clicked_at).toLocaleString()}
+                  {new Date(exit.clicked_at).toLocaleString()}
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div>
-                    <strong>Places Count:</strong> {click.places_count}
+                    <strong>Session ID:</strong> {exit.user_session_id}
                   </div>
                   <div>
-                    <strong>Session ID:</strong> {click.user_session_id}
+                    <strong>Action:</strong> {exit.exit_action}
                   </div>
-                  {click.route_generation_id && (
+                  {exit.current_location && (
                     <div>
-                      <strong>Generation ID:</strong> {click.route_generation_id}
+                      <strong>Previous Location:</strong> {exit.current_location}
                     </div>
                   )}
                 </div>
