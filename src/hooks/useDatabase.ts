@@ -15,6 +15,14 @@ export const useDatabase = () => {
     userSessionId: string
   ) => {
     try {
+      console.log('Attempting to save route generation:', {
+        location,
+        timeWindow,
+        goals,
+        placesCount: places.length,
+        userSessionId
+      });
+
       const { data, error } = await supabase
         .from('route_generations')
         .insert({
@@ -33,10 +41,10 @@ export const useDatabase = () => {
         return null;
       }
 
-      console.log('Route generation saved:', data);
+      console.log('Route generation saved successfully:', data);
       return data;
     } catch (err) {
-      console.error('Error saving route generation:', err);
+      console.error('Exception saving route generation:', err);
       return null;
     }
   };
@@ -48,6 +56,13 @@ export const useDatabase = () => {
     userSessionId: string
   ) => {
     try {
+      console.log('Attempting to save route purchase:', {
+        routeGenerationId,
+        location,
+        placesCount,
+        userSessionId
+      });
+
       const { data, error } = await supabase
         .from('route_purchases')
         .insert({
@@ -64,10 +79,10 @@ export const useDatabase = () => {
         return null;
       }
 
-      console.log('Route purchase saved:', data);
+      console.log('Route purchase saved successfully:', data);
       return data;
     } catch (err) {
-      console.error('Error saving route purchase:', err);
+      console.error('Exception saving route purchase:', err);
       return null;
     }
   };
@@ -81,6 +96,15 @@ export const useDatabase = () => {
     userSessionId: string
   ) => {
     try {
+      console.log('Attempting to save feedback:', {
+        routeGenerationId,
+        rating,
+        textFeedback,
+        location,
+        placesCount,
+        userSessionId
+      });
+
       const { data, error } = await supabase
         .from('user_feedback')
         .insert({
@@ -99,10 +123,10 @@ export const useDatabase = () => {
         return null;
       }
 
-      console.log('Feedback saved:', data);
+      console.log('Feedback saved successfully:', data);
       return data;
     } catch (err) {
-      console.error('Error saving feedback:', err);
+      console.error('Exception saving feedback:', err);
       return null;
     }
   };
