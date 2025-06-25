@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,10 +37,20 @@ interface RoutePurchase {
   user_session_id: string;
 }
 
+interface BuyButtonClick {
+  id: string;
+  route_generation_id: string | null;
+  location: string | null;
+  places_count: number | null;
+  clicked_at: string;
+  user_session_id: string;
+}
+
 const Admin = () => {
   const [routeGenerations, setRouteGenerations] = useState<RouteGeneration[]>([]);
   const [feedback, setFeedback] = useState<UserFeedback[]>([]);
   const [purchases, setPurchases] = useState<RoutePurchase[]>([]);
+  const [buyButtonClicks, setBuyButtonClicks] = useState<BuyButtonClick[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -88,9 +97,22 @@ const Admin = () => {
       }
       console.log('Fetched purchases:', purchaseData);
 
+      // Fetch buy button clicks
+      const { data: buyClickData, error: buyClickError } = await supabase
+        .from('buy_button_clicks')
+        .select('*')
+        .order('clicked_at', { ascending: false });
+
+      if (buyClickError) {
+        console.error('Error fetching buy button clicks:', buyClickError);
+        throw buyClickError;
+      }
+      console.log('Fetched buy button clicks:', buyClickData);
+
       setRouteGenerations(generations || []);
       setFeedback(feedbackData || []);
       setPurchases(purchaseData || []);
+      setBuyButtonClicks(buyClickData || []);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -193,12 +215,13 @@ const Admin = () => {
   const stats = {
     totalGenerations: routeGenerations.length,
     totalPurchases: purchases.length,
+    totalBuyClicks: buyButtonClicks.length,
     totalFeedback: feedback.length,
     averageRating: feedback.filter(f => f.rating).length > 0 
       ? (feedback.filter(f => f.rating).reduce((sum, f) => sum + (f.rating || 0), 0) / feedback.filter(f => f.rating).length).toFixed(1)
       : 'N/A',
-    conversionRate: routeGenerations.length > 0 
-      ? ((purchases.length / routeGenerations.length) * 100).toFixed(1) + '%'
+    conversionRate: buyButtonClicks.length > 0 
+      ? ((purchases.length / buyButtonClicks.length) * 100).toFixed(1) + '%'
       : 'N/A'
   };
 
@@ -212,13 +235,22 @@ const Admin = () => {
       </div>
       
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Generations</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalGenerations}</div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Buy Button Clicks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalBuyClicks}</div>
           </CardContent>
         </Card>
         
@@ -260,8 +292,9 @@ const Admin = () => {
       </div>
 
       <Tabs defaultValue="generations" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="generations">Route Generations</TabsTrigger>
+          <TabsTrigger value="clicks">Buy Button Clicks</TabsTrigger>
           <TabsTrigger value="feedback">User Feedback</TabsTrigger>
           <TabsTrigger value="purchases">Purchases</TabsTrigger>
         </TabsList>
@@ -302,6 +335,35 @@ const Admin = () => {
                         {JSON.stringify(generation.places_generated, null, 2)}
                       </pre>
                     </details>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+        
+        <TabsContent value="clicks" className="space-y-4">
+          <h2 className="text-xl font-semibold">Buy Button Clicks</h2>
+          {buyButtonClicks.map((click) => (
+            <Card key={click.id}>
+              <CardHeader>
+                <CardTitle className="text-lg">{click.location || 'Unknown Location'}</CardTitle>
+                <div className="text-sm text-gray-500">
+                  {new Date(click.clicked_at).toLocaleString()}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div>
+                    <strong>Places Count:</strong> {click.places_count}
+                  </div>
+                  <div>
+                    <strong>Session ID:</strong> {click.user_session_id}
+                  </div>
+                  {click.route_generation_id && (
+                    <div>
+                      <strong>Generation ID:</strong> {click.route_generation_id}
+                    </div>
                   )}
                 </div>
               </CardContent>

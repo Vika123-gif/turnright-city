@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      buy_button_clicks: {
+        Row: {
+          clicked_at: string
+          id: string
+          location: string | null
+          places_count: number | null
+          route_generation_id: string | null
+          user_session_id: string | null
+        }
+        Insert: {
+          clicked_at?: string
+          id?: string
+          location?: string | null
+          places_count?: number | null
+          route_generation_id?: string | null
+          user_session_id?: string | null
+        }
+        Update: {
+          clicked_at?: string
+          id?: string
+          location?: string | null
+          places_count?: number | null
+          route_generation_id?: string | null
+          user_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buy_button_clicks_route_generation_id_fkey"
+            columns: ["route_generation_id"]
+            isOneToOne: false
+            referencedRelation: "route_generations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       route_generations: {
         Row: {
           generated_at: string

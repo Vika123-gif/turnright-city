@@ -40,7 +40,7 @@ export default function ChatFlow() {
 
   const { getLLMPlaces } = useOpenAI();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
-  const { generateSessionId, saveRouteGeneration, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
+  const { generateSessionId, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -256,6 +256,21 @@ export default function ChatFlow() {
     setStep("welcome");
   }
 
+  function handleBuyButtonClick(location: string, placesCount: number) {
+    console.log("=== DEBUG: handleBuyButtonClick called ===");
+    console.log("Location:", location);
+    console.log("Places count:", placesCount);
+    console.log("Current route generation ID:", currentRouteGenerationId);
+    console.log("User session ID:", userSessionId);
+    
+    // Track the buy button click in analytics
+    trackBuyRouteClick(location, placesCount);
+    
+    // Save buy button click to database
+    console.log("Attempting to save buy button click to database...");
+    saveBuyButtonClick(currentRouteGenerationId, location, placesCount, userSessionId);
+  }
+
   function handleTextFeedback(feedback: string) {
     console.log("=== DEBUG: handleTextFeedback called ===");
     console.log("Feedback:", feedback);
@@ -431,7 +446,7 @@ export default function ChatFlow() {
             purchasing={paying}
             error={error}
             location={location}
-            onTrackBuyClick={trackBuyRouteClick}
+            onTrackBuyClick={handleBuyButtonClick}
           />
         )}
 

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 
@@ -78,6 +77,52 @@ export const useDatabase = () => {
       return data;
     } catch (err) {
       console.error('=== ROUTE GENERATION SAVE EXCEPTION ===');
+      console.error('Exception details:', err);
+      return null;
+    }
+  };
+
+  const saveBuyButtonClick = async (
+    routeGenerationId: string | null,
+    location: string,
+    placesCount: number,
+    userSessionId: string
+  ) => {
+    try {
+      console.log('=== SAVE BUY BUTTON CLICK ATTEMPT ===');
+      console.log('Connection test before insert...');
+      await testConnection();
+      
+      const insertData = {
+        route_generation_id: routeGenerationId,
+        location,
+        places_count: placesCount,
+        user_session_id: userSessionId,
+      };
+
+      console.log('Buy button click insert data:', insertData);
+
+      const { data, error } = await supabase
+        .from('buy_button_clicks')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('=== BUY BUTTON CLICK INSERT ERROR ===');
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        console.error('Full error object:', error);
+        return null;
+      }
+
+      console.log('=== BUY BUTTON CLICK SAVED SUCCESSFULLY ===');
+      console.log('Saved data:', data);
+      return data;
+    } catch (err) {
+      console.error('=== BUY BUTTON CLICK SAVE EXCEPTION ===');
       console.error('Exception details:', err);
       return null;
     }
@@ -182,6 +227,7 @@ export const useDatabase = () => {
   return {
     generateSessionId,
     saveRouteGeneration,
+    saveBuyButtonClick,
     saveRoutePurchase,
     saveFeedback,
     testConnection,
