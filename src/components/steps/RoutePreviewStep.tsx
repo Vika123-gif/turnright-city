@@ -11,6 +11,8 @@ type Props = {
   onBuy: () => void;
   purchasing: boolean;
   error?: string | null;
+  location?: string;
+  onTrackBuyClick?: (location: string, placesCount: number) => void;
 };
 
 const RoutePreviewStep: React.FC<Props> = ({
@@ -19,11 +21,19 @@ const RoutePreviewStep: React.FC<Props> = ({
   onBuy,
   purchasing,
   error,
+  location = '',
+  onTrackBuyClick,
 }) => {
   const [processing, setProcessing] = useState(false);
 
   async function handlePayment() {
     console.log("=== DEBUG: handlePayment called ===");
+    
+    // Track the buy button click
+    if (onTrackBuyClick) {
+      onTrackBuyClick(location, places.length);
+    }
+    
     setProcessing(true);
     try {
       console.log("Starting payment process...");

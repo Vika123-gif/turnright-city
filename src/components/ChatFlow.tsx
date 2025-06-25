@@ -36,7 +36,7 @@ export default function ChatFlow() {
   const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string; places: LLMPlace[] } | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
-  const { trackRouteGeneration, trackRoutePurchase, trackRouteRating } = useAnalytics();
+  const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating } = useAnalytics();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -319,6 +319,8 @@ export default function ChatFlow() {
             onBuy={handleBuyRoute}
             purchasing={paying}
             error={error}
+            location={location}
+            onTrackBuyClick={trackBuyRouteClick}
           />
         )}
 

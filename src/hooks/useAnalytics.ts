@@ -47,11 +47,20 @@ export const useAnalytics = () => {
     });
   };
 
+  const trackBuyRouteClick = (location: string, placesCount: number) => {
+    trackEvent('buy_route_click', {
+      location,
+      places_count: placesCount,
+      event_category: 'engagement',
+      event_label: 'buy_route_button',
+    });
+  };
+
   const trackRoutePurchase = (location: string, placesCount: number) => {
     trackEvent('purchase_route', {
       location,
       places_count: placesCount,
-      value: 1, // You can adjust this based on your pricing
+      value: 2, // Updated to match the €2.00 price
     });
   };
 
@@ -64,6 +73,7 @@ export const useAnalytics = () => {
   return {
     trackEvent,
     trackRouteGeneration,
+    trackBuyRouteClick,
     trackRoutePurchase,
     trackRouteRating,
   };
