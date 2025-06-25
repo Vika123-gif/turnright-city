@@ -91,16 +91,28 @@ export default function ChatFlow() {
           setLocation(routeData.origin);
           setStep("purchase");
           
-          // Save purchase to database
+          // Get the stored route generation ID
+          const storedRouteGenerationId = localStorage.getItem('pendingRouteGenerationId');
+          const storedUserSessionId = localStorage.getItem('pendingUserSessionId');
+          
+          // Save purchase to database with stored IDs
           console.log("Attempting to save purchase after payment success...");
-          if (currentRouteGenerationId) {
-            saveRoutePurchase(currentRouteGenerationId, routeData.origin, routeData.places.length, userSessionId);
+          console.log("Using stored route generation ID:", storedRouteGenerationId);
+          console.log("Using stored user session ID:", storedUserSessionId);
+          
+          if (storedRouteGenerationId && storedUserSessionId) {
+            saveRoutePurchase(storedRouteGenerationId, routeData.origin, routeData.places.length, storedUserSessionId);
+            // Update the current state with stored values
+            setCurrentRouteGenerationId(storedRouteGenerationId);
+            setUserSessionId(storedUserSessionId);
           } else {
-            console.warn("No route generation ID available for purchase tracking");
+            console.warn("Missing stored route generation ID or user session ID for purchase tracking");
           }
           
-          // Clean up
+          // Clean up localStorage
           localStorage.removeItem('pendingRouteData');
+          localStorage.removeItem('pendingRouteGenerationId');
+          localStorage.removeItem('pendingUserSessionId');
         } catch (e) {
           console.error("Error parsing stored route data:", e);
         }
@@ -129,6 +141,8 @@ export default function ChatFlow() {
       window.history.replaceState({}, document.title, newUrl);
       // Clean up any stored data
       localStorage.removeItem('pendingRouteData');
+      localStorage.removeItem('pendingRouteGenerationId');
+      localStorage.removeItem('pendingUserSessionId');
     }
   }, []); // Remove dependencies to avoid infinite loops
 
@@ -253,6 +267,8 @@ export default function ChatFlow() {
     setCurrentRouteGenerationId(null);
     setUserSessionId(generateSessionId());
     localStorage.removeItem('pendingRouteData');
+    localStorage.removeItem('pendingRouteGenerationId');
+    localStorage.removeItem('pendingUserSessionId');
     setStep("welcome");
   }
 
@@ -334,10 +350,16 @@ export default function ChatFlow() {
       return;
     }
     
-    // Store route data in localStorage before redirecting to payment
+    // Store route data AND IDs in localStorage before redirecting to payment
     const routeData = { origin: location, places };
     localStorage.setItem('pendingRouteData', JSON.stringify(routeData));
-    console.log("Stored route data in localStorage:", routeData);
+    localStorage.setItem('pendingRouteGenerationId', currentRouteGenerationId || '');
+    localStorage.setItem('pendingUserSessionId', userSessionId);
+    console.log("Stored route data and IDs in localStorage:", {
+      routeData,
+      routeGenerationId: currentRouteGenerationId,
+      userSessionId
+    });
     
     // Track route purchase
     trackRoutePurchase(location, places.length);
