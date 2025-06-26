@@ -29,6 +29,9 @@ export function useOpenAI() {
   }): Promise<LLMPlace[]> {
     
     console.log("=== DEBUG: useOpenAI getLLMPlaces called ===");
+    console.log("Location received in hook:", location);
+    console.log("Location type:", typeof location);
+    console.log("Location length:", location.length);
     console.log("Goals received in hook:", goals);
     console.log("Goals type:", typeof goals);
     console.log("Goals is array:", Array.isArray(goals));
@@ -39,9 +42,9 @@ export function useOpenAI() {
     // The error message "Please select at least one goal before generating places" 
     // should only come from ChatFlow validation, not here
     
-    // Enhanced system prompt with stricter goal enforcement
+    // Enhanced system prompt with stricter goal enforcement AND location enforcement
     const systemPrompt = `
-You are a business travel assistant that MUST follow goal restrictions EXACTLY. 
+You are a business travel assistant that MUST follow goal restrictions AND location restrictions EXACTLY. 
 Always respond with a valid, compact JSON array (no markdown, no comments, no numbering).
 Each object in the array must follow this exact structure:
 {
@@ -52,6 +55,18 @@ Each object in the array must follow this exact structure:
   "reason": string           // Short reason why it fits the user (optional)
 }
 
+CRITICAL LOCATION ENFORCEMENT - READ CAREFULLY AND FOLLOW EXACTLY:
+
+User's location: ${location}
+
+LOCATION REQUIREMENT:
+- ALL suggestions MUST be located in or very near to: ${location}
+- NEVER suggest places in other cities or regions
+- If the location is "Guimarães", ALL places must be in Guimarães, Portugal
+- If the location is coordinates, find places within walking distance of those coordinates
+- VERIFY that each place you suggest is actually in the specified location before including it
+- If you're unsure about a location, DO NOT include it
+
 CRITICAL GOAL ENFORCEMENT - READ CAREFULLY AND FOLLOW EXACTLY:
 
 User's selected goals: ${goals.join(", ")}
@@ -61,6 +76,7 @@ GOAL: EAT - The user wants to EAT
 - ONLY suggest: restaurants, bistros, eateries, food courts, food trucks, dining establishments, places to have meals
 - ABSOLUTELY NEVER suggest: museums, galleries, monuments, tourist attractions, coffee shops, or any non-dining establishments
 - Every single suggestion MUST be a place where people go to eat meals
+- ALL places must be in ${location}
 ` : ""}
 
 ${goals.includes("coffee") ? `
@@ -68,6 +84,7 @@ GOAL: COFFEE - The user wants COFFEE/BEVERAGES
 - ONLY suggest: coffee shops, specialty cafes, roasters, tea houses, beverage establishments
 - ABSOLUTELY NEVER suggest: museums, galleries, monuments, tourist attractions, restaurants for meals
 - Every single suggestion MUST be a place where people go for coffee, tea, or other beverages
+- ALL places must be in ${location}
 ` : ""}
 
 ${goals.includes("explore") ? `
@@ -75,6 +92,7 @@ GOAL: EXPLORE - The user wants to EXPLORE CULTURE
 - ONLY suggest: museums, art galleries, historical sites, architectural landmarks, cultural centers, monuments, parks with historical significance, libraries, observation decks, unique buildings
 - ABSOLUTELY NEVER suggest: restaurants, cafes, bars, shops, or any food/drink establishments
 - Every single suggestion MUST be a cultural or historical attraction
+- ALL places must be in ${location}
 ` : ""}
 
 ${goals.includes("work") ? `
@@ -82,21 +100,24 @@ GOAL: WORK - The user wants to WORK
 - ONLY suggest: cafes with wifi and work-friendly atmosphere, coworking spaces, business centers, quiet libraries with workspaces
 - Focus on places good for laptop work
 - ABSOLUTELY NEVER suggest: tourist attractions, regular restaurants without work facilities
+- ALL places must be in ${location}
 ` : ""}
 
 VERIFICATION STEP: Before returning your response, check each suggestion:
 - Does it match the user's selected goals EXACTLY?
-- If the user selected "eat", is every suggestion a dining establishment?
-- If the user selected "explore", is every suggestion a cultural attraction?
-- If the user selected "coffee", is every suggestion a beverage establishment?
+- Is it located in ${location} and NOT in any other city or region?
+- If the user selected "eat", is every suggestion a dining establishment IN ${location}?
+- If the user selected "explore", is every suggestion a cultural attraction IN ${location}?
+- If the user selected "coffee", is every suggestion a beverage establishment IN ${location}?
 
-If ANY suggestion doesn't match the goals perfectly, DO NOT include it.
+If ANY suggestion doesn't match BOTH the goals AND location perfectly, DO NOT include it.
 
 Never return markdown formatting, don't include explanations, just output the JSON array only.
-Return 1-2 realistic local businesses or locations that fit the user's criteria EXACTLY.
+Return 1-2 realistic local businesses or locations that fit the user's criteria EXACTLY and are located in ${location}.
 `.trim();
 
     console.log("=== DEBUG: System prompt ===");
+    console.log("System prompt includes location:", location);
     console.log("System prompt includes goals:", goals);
     
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -160,6 +181,7 @@ Return 1-2 realistic local businesses or locations that fit the user's criteria 
     
     console.log("=== DEBUG: Parsed places ===");
     console.log("Places:", places);
+    console.log("Places addresses:", places.map(p => p.address));
     
     return places;
   }
