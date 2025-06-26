@@ -38,6 +38,7 @@ export default function ChatFlow() {
   const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string; places: LLMPlace[] } | null>(null);
   const [userSessionId, setUserSessionId] = useState<string>("");
   const [currentRouteGenerationId, setCurrentRouteGenerationId] = useState<string | null>(null);
+  const [regenerationCount, setRegenerationCount] = useState(0);
 
   const { getLLMPlaces } = useOpenAI();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
@@ -182,7 +183,7 @@ export default function ChatFlow() {
     }
   }
 
-  async function fetchPlacesWithGoals(goalsToUse: string[]) {
+  async function fetchPlacesWithGoals(goalsToUse: string[], isRegeneration = false) {
     console.log("=== DEBUG: fetchPlacesWithGoals called ===");
     console.log("Goals parameter:", goalsToUse);
     console.log("Goals length:", goalsToUse?.length);
@@ -191,6 +192,8 @@ export default function ChatFlow() {
     console.log("Is location coordinates?", /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location));
     console.log("TimeWindow:", timeWindow);
     console.log("User Session ID:", userSessionId);
+    console.log("Is regeneration:", isRegeneration);
+    console.log("Current regeneration count:", regenerationCount);
     
     setError(null);
     setGenerating(true);
@@ -239,8 +242,12 @@ export default function ChatFlow() {
       
       const goalsText = selectedGoalTexts.join(" and ");
       
-      // Create very explicit user prompt
+      // Create very explicit user prompt with regeneration context
       let userPrompt = `I am currently at ${locationForAI} and have ${timeWindow} available. `;
+      
+      if (isRegeneration) {
+        userPrompt += `This is a REGENERATION request - I need COMPLETELY DIFFERENT places than before. Please suggest places in different areas/neighborhoods of ${locationForAI}. `;
+      }
       
       // Add very specific instructions based on selected goals
       if (goalsToUse.includes("eat")) {
@@ -251,29 +258,46 @@ export default function ChatFlow() {
       }
       if (goalsToUse.includes("explore")) {
         userPrompt += "I ONLY want to explore cultural attractions like museums, galleries, historical sites, or architectural landmarks. DO NOT suggest restaurants or cafes. ";
+        if (isRegeneration) {
+          userPrompt += "Please avoid suggesting Paço dos Duques de Bragança and Castelo de Guimarães together as they are too close. ";
+        }
       }
       if (goalsToUse.includes("work")) {
         userPrompt += "I ONLY want to find work-friendly places like cafes with wifi or coworking spaces. ";
       }
       
-      userPrompt += `Please suggest 1-2 places that match EXACTLY what I'm looking for. My selected goals are: ${goalsToUse.join(", ")}.`;
+      userPrompt += `Please suggest 1-2 places in DIFFERENT areas of ${locationForAI} that match EXACTLY what I'm looking for. My selected goals are: ${goalsToUse.join(", ")}.`;
+      
+      if (isRegeneration) {
+        userPrompt += ` IMPORTANT: Provide different places than previous suggestions, in different neighborhoods.`;
+      }
       
       console.log("=== DEBUG: Final prompt ===");
       console.log("User prompt:", userPrompt);
       console.log("Goals being passed to API:", goalsToUse);
       console.log("Location being passed to API:", locationForAI);
       
+      const currentRegenerationCount = isRegeneration ? regenerationCount : 0;
+      
       const response: LLMPlace[] = await getLLMPlaces({
         location: locationForAI,
         goals: goalsToUse,
         timeWindow: timeWindow || "",
         userPrompt,
+        regenerationAttempt: currentRegenerationCount,
       });
       
       console.log("=== DEBUG: API Response ===");
       console.log("Places returned:", response);
       
       setPlaces(response);
+      
+      // Update regeneration count if this was a regeneration
+      if (isRegeneration) {
+        setRegenerationCount(prev => prev + 1);
+      } else {
+        setRegenerationCount(0); // Reset for new searches
+      }
       
       // Save route generation to database
       console.log("=== ATTEMPTING TO SAVE ROUTE GENERATION ===");
@@ -299,8 +323,9 @@ export default function ChatFlow() {
   function regenerate() {
     console.log("=== DEBUG: Regenerate called ===");
     console.log("Current goals before regenerate:", goals);
+    console.log("Current regeneration count:", regenerationCount);
     setStep("generating");
-    fetchPlacesWithGoals(goals);
+    fetchPlacesWithGoals(goals, true); // Pass true to indicate this is a regeneration
   }
 
   function reset() {
@@ -314,6 +339,7 @@ export default function ChatFlow() {
     setPurchaseRoute(null);
     setRouteRating(null);
     setCurrentRouteGenerationId(null);
+    setRegenerationCount(0); // Reset regeneration count
     // Don't regenerate session ID on reset, keep the same browser session
     localStorage.removeItem('pendingRouteData');
     localStorage.removeItem('pendingRouteGenerationId');

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 export type LLMPlace = {
@@ -21,11 +20,13 @@ export function useOpenAI() {
     goals,
     timeWindow,
     userPrompt,
+    regenerationAttempt = 0,
   }: {
     location: string;
     goals: string[];
     timeWindow: string;
     userPrompt: string;
+    regenerationAttempt?: number;
   }): Promise<LLMPlace[]> {
     
     console.log("=== DEBUG: useOpenAI getLLMPlaces called ===");
@@ -37,8 +38,9 @@ export function useOpenAI() {
     console.log("Goals is array:", Array.isArray(goals));
     console.log("Goals length:", goals?.length);
     console.log("User prompt:", userPrompt);
+    console.log("Regeneration attempt:", regenerationAttempt);
     
-    // Enhanced system prompt with ABSOLUTE location enforcement
+    // Enhanced system prompt with ABSOLUTE location enforcement and better distribution
     const systemPrompt = `
 You are a business travel assistant. You MUST follow these rules EXACTLY:
 
@@ -52,6 +54,22 @@ User's location: ${location}
 - If you're not 100% certain a place is in ${location}, DO NOT include it
 - Better to return fewer results than wrong locations
 
+🚨 GEOGRAPHIC DISTRIBUTION RULES - CRITICAL:
+- Places MUST be in DIFFERENT areas of ${location}
+- NEVER suggest places on the same street or with similar addresses
+- Ensure at least 200+ meters walking distance between suggestions
+- Look for places in different neighborhoods/districts of ${location}
+- Vary the street names and areas significantly
+
+${regenerationAttempt > 0 ? `
+🔄 REGENERATION RULES - THIS IS ATTEMPT ${regenerationAttempt + 1}:
+- You MUST provide COMPLETELY DIFFERENT places than previous attempts
+- Use DIFFERENT streets, DIFFERENT neighborhoods
+- Vary the types of establishments significantly
+- Think of alternative areas in ${location}
+- Be creative with different districts and areas
+` : ""}
+
 GOAL ENFORCEMENT:
 User's selected goals: ${goals.join(", ")}
 
@@ -61,6 +79,7 @@ GOAL: EAT - The user wants to EAT
 - ABSOLUTELY NEVER suggest: museums, galleries, monuments, tourist attractions, coffee shops
 - Every suggestion MUST be a place where people go to eat meals
 - ALL places MUST be in ${location} - check addresses carefully
+- ENSURE places are in DIFFERENT neighborhoods of ${location}
 ` : ""}
 
 ${goals.includes("coffee") ? `
@@ -69,6 +88,7 @@ GOAL: COFFEE - The user wants COFFEE/BEVERAGES
 - ABSOLUTELY NEVER suggest: museums, galleries, monuments, tourist attractions, restaurants for meals
 - Every suggestion MUST be for coffee, tea, or other beverages
 - ALL places MUST be in ${location} - check addresses carefully
+- ENSURE places are in DIFFERENT areas of ${location}
 ` : ""}
 
 ${goals.includes("explore") ? `
@@ -77,6 +97,8 @@ GOAL: EXPLORE - The user wants to EXPLORE CULTURE
 - ABSOLUTELY NEVER suggest: restaurants, cafes, bars, shops, or any food/drink establishments
 - Every suggestion MUST be a cultural or historical attraction
 - ALL places MUST be in ${location} - check addresses carefully
+- ENSURE places are in DIFFERENT parts of ${location}
+- For Guimarães specifically, avoid suggesting Paço dos Duques and Castelo de Guimarães together as they're too close
 ` : ""}
 
 ${goals.includes("work") ? `
@@ -85,6 +107,7 @@ GOAL: WORK - The user wants to WORK
 - Focus on places good for laptop work
 - ABSOLUTELY NEVER suggest: tourist attractions, regular restaurants without work facilities
 - ALL places MUST be in ${location} - check addresses carefully
+- ENSURE places are in DIFFERENT areas of ${location}
 ` : ""}
 
 OUTPUT FORMAT:
@@ -92,7 +115,7 @@ Return ONLY a valid JSON array with this exact structure:
 [
   {
     "name": "Exact business name",
-    "address": "Full address including ${location}",
+    "address": "Full address including ${location} - ENSURE DIFFERENT STREETS",
     "walkingTime": number_in_minutes,
     "type": "category",
     "reason": "why it fits the user"
@@ -104,15 +127,18 @@ Before responding, verify EACH suggestion:
 ✓ Does the address contain "${location}"?
 ✓ Is this place actually located in ${location} and not another city?
 ✓ Does it match the user's goals exactly?
+✓ Are the places in DIFFERENT neighborhoods/streets?
+✓ Is there good geographic distribution?
 ✓ If ANY answer is NO, remove that suggestion
 
-Return 1-2 places maximum. Quality over quantity.
+Return 1-2 places maximum. Quality and diversity over quantity.
 NO markdown, NO explanations, ONLY the JSON array.
 `.trim();
 
     console.log("=== DEBUG: Enhanced system prompt ===");
     console.log("System prompt includes location:", location);
     console.log("System prompt includes goals:", goals);
+    console.log("System prompt includes regeneration attempt:", regenerationAttempt);
     
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -132,7 +158,7 @@ NO markdown, NO explanations, ONLY the JSON array.
             content: userPrompt,
           },
         ],
-        temperature: 0.05, // Even lower temperature for maximum consistency
+        temperature: regenerationAttempt > 0 ? 0.7 : 0.05, // Higher temperature for regeneration
         max_tokens: 440,
       }),
     });
@@ -193,6 +219,21 @@ NO markdown, NO explanations, ONLY the JSON array.
       
       if (places.length === 0) {
         throw new Error(`No valid places found in ${location}. The AI suggested places in other cities. Please try again.`);
+      }
+    }
+    
+    // Additional validation for geographic distribution
+    if (places.length > 1) {
+      const addresses = places.map(p => p.address);
+      const streets = addresses.map(addr => addr.split(',')[0]); // Get street part
+      const uniqueStreets = new Set(streets);
+      
+      if (uniqueStreets.size < places.length) {
+        console.warn("=== DEBUG: Places too close together ===");
+        console.warn("Addresses:", addresses);
+        console.warn("Streets:", streets);
+        // Keep only the first place if they're too close
+        places = places.slice(0, 1);
       }
     }
     
