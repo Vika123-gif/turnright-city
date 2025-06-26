@@ -154,12 +154,23 @@ export default function ChatFlow() {
     console.log("Goals parameter:", goalsToUse);
     console.log("Goals length:", goalsToUse?.length);
     console.log("Location:", location);
+    console.log("Location type:", typeof location);
+    console.log("Is location coordinates?", /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location));
     console.log("TimeWindow:", timeWindow);
     console.log("User Session ID:", userSessionId);
     
     setError(null);
     setGenerating(true);
     setPlaces(null);
+    
+    // Check if location is coordinates and show better error
+    if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location)) {
+      console.error("Location is coordinates, not city name:", location);
+      setError("Please enter a city name (like 'Guimarães') instead of coordinates. Go back and enter your location as a city name.");
+      setStep("results");
+      setGenerating(false);
+      return;
+    }
     
     // Track route generation attempt
     trackRouteGeneration(location, timeWindow || "", goalsToUse);
@@ -375,6 +386,8 @@ export default function ChatFlow() {
   function handleLocationChange(newLocation: string, exitAction: 'detect_location' | 'manual_input') {
     console.log("=== DEBUG: handleLocationChange called ===");
     console.log("New location:", newLocation);
+    console.log("New location type:", typeof newLocation);
+    console.log("Is new location coordinates?", /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(newLocation));
     console.log("Exit action:", exitAction);
     console.log("Current location:", location);
     console.log("User session ID:", userSessionId);
