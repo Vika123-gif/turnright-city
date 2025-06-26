@@ -27,6 +27,7 @@ type Step =
 export default function ChatFlow() {
   const [step, setStep] = useState<Step>("welcome");
   const [location, setLocation] = useState("");
+  const [coordinates, setCoordinates] = useState(""); // Store coordinates separately for map
   const [timeWindow, setTimeWindow] = useState<string | null>(null);
   const [goals, setGoals] = useState<string[]>([]);
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
@@ -149,6 +150,38 @@ export default function ChatFlow() {
     }
   }, []); // Remove dependencies to avoid infinite loops
 
+  // Function to convert coordinates to city name using reverse geocoding
+  async function coordinatesToCityName(coords: string): Promise<string> {
+    try {
+      const [lat, lng] = coords.split(',').map(coord => parseFloat(coord.trim()));
+      console.log('Reverse geocoding coordinates:', lat, lng);
+      
+      // Use OpenStreetMap Nominatim for reverse geocoding (free)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Reverse geocoding failed');
+      }
+      
+      const data = await response.json();
+      console.log('Reverse geocoding result:', data);
+      
+      // Extract city name from the response
+      const cityName = data.address?.city || 
+                     data.address?.town || 
+                     data.address?.village || 
+                     data.address?.municipality ||
+                     data.display_name?.split(',')[0];
+      
+      return cityName || coords; // Fallback to coords if no city found
+    } catch (error) {
+      console.error('Error in reverse geocoding:', error);
+      return coords; // Fallback to original coordinates
+    }
+  }
+
   async function fetchPlacesWithGoals(goalsToUse: string[]) {
     console.log("=== DEBUG: fetchPlacesWithGoals called ===");
     console.log("Goals parameter:", goalsToUse);
@@ -163,21 +196,21 @@ export default function ChatFlow() {
     setGenerating(true);
     setPlaces(null);
     
-    // Check if location is coordinates and show better error
+    let locationForAI = location;
+    
+    // If location is coordinates, convert to city name for AI
     if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location)) {
-      console.error("Location is coordinates, not city name:", location);
-      setError("Please enter a city name (like 'Guimarães') instead of coordinates. Go back and enter your location as a city name.");
-      setStep("results");
-      setGenerating(false);
-      return;
+      console.log("Location is coordinates, converting to city name for AI...");
+      locationForAI = await coordinatesToCityName(location);
+      console.log("Converted location for AI:", locationForAI);
     }
     
     // Track route generation attempt
-    trackRouteGeneration(location, timeWindow || "", goalsToUse);
+    trackRouteGeneration(locationForAI, timeWindow || "", goalsToUse);
     
     try {
       // More detailed validation with better error messages
-      if (!location || location.trim() === "") {
+      if (!locationForAI || locationForAI.trim() === "") {
         throw new Error("Location is required. Please go back and enter your location.");
       }
       
@@ -207,7 +240,7 @@ export default function ChatFlow() {
       const goalsText = selectedGoalTexts.join(" and ");
       
       // Create very explicit user prompt
-      let userPrompt = `I am currently at ${location} and have ${timeWindow} available. `;
+      let userPrompt = `I am currently at ${locationForAI} and have ${timeWindow} available. `;
       
       // Add very specific instructions based on selected goals
       if (goalsToUse.includes("eat")) {
@@ -228,9 +261,10 @@ export default function ChatFlow() {
       console.log("=== DEBUG: Final prompt ===");
       console.log("User prompt:", userPrompt);
       console.log("Goals being passed to API:", goalsToUse);
+      console.log("Location being passed to API:", locationForAI);
       
       const response: LLMPlace[] = await getLLMPlaces({
-        location,
+        location: locationForAI,
         goals: goalsToUse,
         timeWindow: timeWindow || "",
         userPrompt,
@@ -244,7 +278,7 @@ export default function ChatFlow() {
       // Save route generation to database
       console.log("=== ATTEMPTING TO SAVE ROUTE GENERATION ===");
       console.log("Session ID for save:", userSessionId);
-      const savedGeneration = await saveRouteGeneration(location, timeWindow, goalsToUse, response, userSessionId);
+      const savedGeneration = await saveRouteGeneration(locationForAI, timeWindow, goalsToUse, response, userSessionId);
       if (savedGeneration) {
         console.log("Route generation saved with ID:", savedGeneration.id);
         setCurrentRouteGenerationId(savedGeneration.id);
@@ -272,6 +306,7 @@ export default function ChatFlow() {
   function reset() {
     console.log("=== DEBUG: Reset called ===");
     setLocation("");
+    setCoordinates("");
     setTimeWindow(null);
     setGoals([]);
     setPlaces(null);
@@ -356,6 +391,7 @@ export default function ChatFlow() {
     console.log("=== DEBUG: handleBuyRoute called ===");
     console.log("Places:", places);
     console.log("Location:", location);
+    console.log("Coordinates:", coordinates);
     console.log("Current route generation ID:", currentRouteGenerationId);
     console.log("User session ID:", userSessionId);
     
@@ -365,7 +401,9 @@ export default function ChatFlow() {
     }
     
     // Store route data AND IDs in localStorage before redirecting to payment
-    const routeData = { origin: location, places };
+    // Use coordinates for the map route if available, otherwise use location
+    const originForRoute = coordinates || location;
+    const routeData = { origin: originForRoute, places };
     localStorage.setItem('pendingRouteData', JSON.stringify(routeData));
     localStorage.setItem('pendingRouteGenerationId', currentRouteGenerationId || '');
     localStorage.setItem('pendingUserSessionId', userSessionId);
@@ -400,7 +438,15 @@ export default function ChatFlow() {
       console.warn("No user session ID available for location exit tracking");
     }
     
-    setLocation(newLocation);
+    // Store coordinates separately if they are detected
+    if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(newLocation)) {
+      setCoordinates(newLocation);
+      setLocation(newLocation); // We'll convert this to city name later
+    } else {
+      setLocation(newLocation);
+      setCoordinates(""); // Clear coordinates if manual input
+    }
+    
     setStep("time");
   }
 
