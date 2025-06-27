@@ -14,6 +14,41 @@ export type LLMPlace = {
 const OPENAI_API_KEY =
   "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";
 
+// Time spent at different types of locations (in minutes)
+const LOCATION_TIME_SPENT = {
+  restaurants: 30,
+  coffee: 30,
+  work: 60, // average between 30-90 minutes
+  museums: 60,
+  parks: 20,
+  monuments: 15,
+};
+
+// Calculate optimal number of places based on time window
+function calculateOptimalPlaces(timeWindow: string, goals: string[]): number {
+  const timeInMinutes = {
+    "30 minutes": 30,
+    "1 hour": 60,
+    "1.5 hours": 90,
+    "2+ hours": 120,
+  }[timeWindow] || 60;
+
+  // Average time spent per location based on selected goals
+  const avgTimePerLocation = goals.reduce((sum, goal) => {
+    return sum + (LOCATION_TIME_SPENT[goal as keyof typeof LOCATION_TIME_SPENT] || 30);
+  }, 0) / goals.length;
+
+  // Account for walking time between locations (average 8-12 minutes between places)
+  const avgWalkingTime = 10;
+  const totalTimePerLocation = avgTimePerLocation + avgWalkingTime;
+
+  // Calculate how many places fit in the time window
+  const optimalPlaces = Math.floor(timeInMinutes / totalTimePerLocation);
+  
+  // Ensure at least 1 place, maximum 4 places
+  return Math.max(1, Math.min(4, optimalPlaces));
+}
+
 export function useOpenAI() {
   async function getLLMPlaces({
     location,
@@ -34,88 +69,90 @@ export function useOpenAI() {
     console.log("=== DEBUG: useOpenAI getLLMPlaces called ===");
     console.log("Location received in hook:", location);
     console.log("Goals received in hook:", goals);
-    console.log("User prompt:", userPrompt);
+    console.log("Time window:", timeWindow);
     console.log("Regeneration attempt:", regenerationAttempt);
-    console.log("Max places:", maxPlaces);
+    
+    // Calculate optimal number of places based on time constraints
+    const optimalPlaces = calculateOptimalPlaces(timeWindow, goals);
+    console.log("Calculated optimal places:", optimalPlaces);
     
     const systemPrompt = `
-You are a LOCAL EXPERT for ${location}, Portugal with extensive knowledge of real businesses and places.
+You are a LOCAL EXPERT for ${location}, Portugal with extensive knowledge of real businesses and walking distances.
 
-CRITICAL INSTRUCTIONS:
-1. You MUST suggest only REAL, EXISTING places that you know from your training data
-2. Provide the most well-known and established businesses in ${location}
-3. Use actual business names, not generic descriptions
-4. Include the complete street address format used in Portugal
-5. Focus on popular, frequently visited places that tourists and locals know
+CRITICAL TASK: Create a REALISTIC WALKING ROUTE optimized for ${timeWindow}.
+
+TIME CONSTRAINTS ANALYSIS:
+- Available time: ${timeWindow}
+- Time spent per location type:
+  ${goals.includes("restaurants") ? "🍽️ Restaurants: 30 minutes" : ""}
+  ${goals.includes("coffee") ? "☕ Coffee: 30 minutes" : ""}
+  ${goals.includes("work") ? "💻 Work: 60 minutes average" : ""}
+  ${goals.includes("museums") ? "🏛️ Museums: 60 minutes" : ""}
+  ${goals.includes("parks") ? "🌳 Parks: 20 minutes" : ""}
+  ${goals.includes("monuments") ? "🏰 Monuments: 15 minutes" : ""}
+
+- Optimal number of places for this time window: ${optimalPlaces}
+
+WALKING TIME REQUIREMENTS:
+- Use REALISTIC walking times based on actual distances in ${location}
+- Walking times should be from the city center (starting point) to each location
+- Consider that people walk at 4-5 km/h (average pace)
+- Walking times in city centers: 2-15 minutes between nearby places
+- Account for hills, pedestrian areas, and actual street layout in ${location}
+
+ROUTE OPTIMIZATION:
+- Suggest exactly ${optimalPlaces} places that fit within ${timeWindow}
+- Consider the TOTAL journey time including:
+  * Walking time to each place
+  * Time spent at each place
+  * Walking time between places
+- Arrange places in a logical geographic sequence to minimize total walking
 
 LOCATION CONTEXT: ${location}, Portugal
-- This is a historic Portuguese city
-- Provide places within the city center and nearby neighborhoods
-- Walking times should be realistic from the city center (Largo do Toural area for Guimarães)
+${location === "Guimarães" ? `
+- Historic city center around Largo do Toural
+- Castelo area is uphill (5-8 minutes walk from center)
+- Most cafés and restaurants within 3-5 minutes of main square
+- Museums typically 3-7 minutes from center
+- Consider elevation changes and pedestrian-only areas
+` : `
+- Focus on the main city center area
+- Consider typical Portuguese city layout
+- Account for pedestrian areas and elevation changes
+`}
 
 TARGET GOALS: ${goals.join(", ")}
 
 ${regenerationAttempt > 0 ? `
 VARIATION ${regenerationAttempt + 1}:
 - Suggest DIFFERENT well-known places than previous attempts
-- Focus on other popular areas of ${location}
-- Include places locals frequent, not just tourist spots
-` : ""}
-
-BUSINESS CATEGORIES TO FOCUS ON:
-
-${goals.includes("restaurants") ? `
-🍽️ RESTAURANTS: Well-established restaurants, tascas, traditional Portuguese eateries
-Examples for reference: Casa do Bacalhau, Restaurante Solar do Bacalhau, traditional Portuguese restaurants
-` : ""}
-
-${goals.includes("coffee") ? `
-☕ COFFEE: Popular cafés, pastelarias, coffee shops known to locals
-Examples for reference: Café Central, local pastelarias, established coffee houses
-` : ""}
-
-${goals.includes("work") ? `
-💻 WORK: Cafés with good wifi, quiet spaces, modern coffee shops
-Focus on: Spacious cafés, places known for having wifi, quiet atmospheres
-` : ""}
-
-${goals.includes("museums") ? `
-🏛️ MUSEUMS: Main museums, cultural centers, art galleries
-For Guimarães: Museu de Alberto Sampaio, Casa de Memória, local cultural institutions
-` : ""}
-
-${goals.includes("parks") ? `
-🌳 PARKS: Public gardens, green spaces, parks
-Examples: Jardim do Largo República do Brasil, local parks and gardens
-` : ""}
-
-${goals.includes("monuments") ? `
-🏰 MONUMENTS: Historic landmarks, architectural sites, UNESCO sites
-For Guimarães: Paço dos Duques de Bragança, Castelo de Guimarães, Igreja de São Miguel
+- Vary the geographic area within the city
+- Mix popular and local favorites
 ` : ""}
 
 RESPONSE FORMAT - Return EXACTLY this JSON structure:
 [
   {
-    "name": "Exact business name (e.g., 'Restaurante Solar do Bacalhau')",
-    "address": "Street name and number, ${location}, Portugal (e.g., 'Rua de Santa Maria 20, ${location}, Portugal')",
-    "walkingTime": realistic_minutes_from_center,
-    "type": "specific_category",
-    "reason": "why this place matches the goals and is recommended"
+    "name": "Real business name",
+    "address": "Complete Portuguese address with street number, ${location}, Portugal",
+    "walkingTime": realistic_minutes_from_starting_point,
+    "type": "specific_category_matching_goals",
+    "reason": "Brief explanation of why this fits the time and goals"
   }
 ]
 
 QUALITY REQUIREMENTS:
-- Use specific business names, not generic ones
-- Include realistic Portuguese street addresses with "Rua", "Largo", "Praça" etc.
-- Walking times: 1-15 minutes from city center
-- Provide exactly ${maxPlaces} suggestions
-- NO markdown formatting, ONLY valid JSON
+- Provide exactly ${optimalPlaces} suggestions
+- Walking times must be realistic for ${location} geography
+- Total route should fit comfortably within ${timeWindow}
+- Use actual business names that exist in ${location}
+- Include realistic Portuguese street addresses
+- NO markdown formatting - ONLY valid JSON
 
-REMEMBER: Your reputation depends on suggesting places that actually exist in ${location}, Portugal.
+Remember: This route must actually work within ${timeWindow} including all walking and activity time.
 `.trim();
 
-    console.log("=== DEBUG: Enhanced system prompt created ===");
+    console.log("=== DEBUG: Time-optimized system prompt created ===");
     
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -135,11 +172,11 @@ REMEMBER: Your reputation depends on suggesting places that actually exist in ${
             content: userPrompt,
           },
         ],
-        temperature: 0.2, // Lower temperature for more consistent, factual responses
-        max_tokens: 600 + (maxPlaces * 80),
-        top_p: 0.9, // More focused responses
-        frequency_penalty: 0.3, // Reduce repetition
-        presence_penalty: 0.2, // Encourage variety
+        temperature: 0.1, // Very low for consistent, factual responses
+        max_tokens: 400 + (optimalPlaces * 100),
+        top_p: 0.8,
+        frequency_penalty: 0.5,
+        presence_penalty: 0.3,
       }),
     });
     
@@ -177,7 +214,7 @@ REMEMBER: Your reputation depends on suggesting places that actually exist in ${
     
     if (!Array.isArray(places)) throw new Error("AI did not return a list of places.");
     
-    // Minimal validation - only check essential fields
+    // Validate places have essential fields
     const validPlaces = places.filter(place => {
       if (!place.name || !place.address || typeof place.walkingTime !== 'number') {
         console.warn("FILTERED: Missing essential fields:", place);
@@ -187,7 +224,7 @@ REMEMBER: Your reputation depends on suggesting places that actually exist in ${
     });
     
     console.log("=== DEBUG: Final places ===");
-    console.log("Original places count:", places.length);
+    console.log("Optimal places calculated:", optimalPlaces);
     console.log("Valid places count:", validPlaces.length);
     console.log("Valid places:", validPlaces);
     
