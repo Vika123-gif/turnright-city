@@ -19,15 +19,14 @@ type Props = {
 
 const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
   const [selectedPlace, setSelectedPlace] = useState<LLMPlace | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handlePlaceClick = (place: LLMPlace) => {
+    console.log("Place clicked:", place.name);
     setSelectedPlace(place);
-    setIsDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
-    setIsDialogOpen(false);
+    console.log("Closing dialog");
     setSelectedPlace(null);
   };
 
@@ -90,7 +89,7 @@ const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
       </div>
 
       {/* Place Details Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={!!selectedPlace} onOpenChange={(open) => !open && handleCloseDialog()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">
