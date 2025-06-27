@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from '../_shared/cors.ts'
 
@@ -62,20 +61,52 @@ async function handlePlaceNameSearch(requestBody: any) {
   const { lat, lng } = geocodeData.results[0].geometry.location
   console.log('Geocoded coordinates:', lat, lng)
 
-  // Search for the specific place by name
-  let searchQuery = `${placeName} ${location}`
-  if (placeType) {
-    searchQuery += ` ${placeType}`
+  // Try multiple search strategies to find the exact place
+  const searchStrategies = [
+    // Strategy 1: Exact name with location
+    `"${placeName}" ${location}`,
+    // Strategy 2: Name with location and type
+    `${placeName} ${location} ${placeType || 'restaurant'}`,
+    // Strategy 3: Just the name in the area
+    `${placeName} near ${location}`,
+    // Strategy 4: Search without quotes
+    `${placeName} ${location}`
+  ]
+
+  let bestResults: any[] = []
+  
+  for (const searchQuery of searchStrategies) {
+    console.log(`Trying search strategy: "${searchQuery}"`)
+    
+    const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&location=${lat},${lng}&radius=5000&key=${GOOGLE_PLACES_API_KEY}`
+    
+    const searchResponse = await fetch(textSearchUrl)
+    const searchData = await searchResponse.json()
+    
+    if (searchData.status === 'OK' && searchData.results && searchData.results.length > 0) {
+      console.log(`Found ${searchData.results.length} results for: "${searchQuery}"`)
+      
+      // Filter results to find the best match
+      const filteredResults = searchData.results.filter((place: any) => {
+        const placeLowerName = place.name.toLowerCase()
+        const searchLowerName = placeName.toLowerCase()
+        
+        // Check if the place name contains the search term or vice versa
+        return placeLowerName.includes(searchLowerName) || searchLowerName.includes(placeLowerName)
+      })
+      
+      if (filteredResults.length > 0) {
+        bestResults = filteredResults
+        console.log(`Found ${filteredResults.length} matching results`)
+        break
+      } else if (bestResults.length === 0) {
+        // If no exact matches, use all results as fallback
+        bestResults = searchData.results
+      }
+    }
   }
 
-  const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&location=${lat},${lng}&radius=2000&key=${GOOGLE_PLACES_API_KEY}`
-  
-  console.log('Text search URL:', textSearchUrl)
-  
-  const searchResponse = await fetch(textSearchUrl)
-  const searchData = await searchResponse.json()
-  
-  if (searchData.status !== 'OK' || !searchData.results) {
+  if (bestResults.length === 0) {
     console.log('No results found for place name search')
     return new Response(
       JSON.stringify({
@@ -88,11 +119,26 @@ async function handlePlaceNameSearch(requestBody: any) {
     )
   }
 
-  console.log(`Found ${searchData.results.length} results for place name search`)
+  console.log(`Processing ${Math.min(bestResults.length, 3)} best results`)
 
   // Calculate walking times and format results
   const formattedPlaces = await Promise.all(
-    searchData.results.slice(0, 3).map(async (place: any) => {
+    bestResults.slice(0, 3).map(async (place: any) => {
+      // Get detailed place information
+      const placeDetailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,geometry,rating,types&key=${GOOGLE_PLACES_API_KEY}`
+      
+      let detailedPlace = place
+      try {
+        const detailsResponse = await fetch(placeDetailsUrl)
+        const detailsData = await detailsResponse.json()
+        
+        if (detailsData.status === 'OK' && detailsData.result) {
+          detailedPlace = { ...place, ...detailsData.result }
+        }
+      } catch (error) {
+        console.error('Error getting place details:', error)
+      }
+
       // Calculate walking distance/time using Distance Matrix API
       const distanceUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat},${lng}&destinations=place_id:${place.place_id}&mode=walking&key=${GOOGLE_PLACES_API_KEY}`
       
@@ -110,17 +156,18 @@ async function handlePlaceNameSearch(requestBody: any) {
       }
 
       return {
-        name: place.name,
-        address: place.formatted_address || place.vicinity || '',
+        name: detailedPlace.name,
+        address: detailedPlace.formatted_address || detailedPlace.vicinity || '',
         walkingTime,
         type: placeType || 'place',
-        rating: place.rating || null,
-        place_id: place.place_id
+        rating: detailedPlace.rating || null,
+        place_id: detailedPlace.place_id
       }
     })
   )
 
   console.log(`Returning ${formattedPlaces.length} places from name search`)
+  console.log('Final results:', formattedPlaces.map(p => ({ name: p.name, address: p.address })))
 
   return new Response(
     JSON.stringify({
