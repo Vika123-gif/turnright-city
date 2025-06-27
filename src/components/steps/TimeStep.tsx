@@ -10,6 +10,14 @@ const TIMINGS = [
   "2+ hours",
 ];
 
+// Map time windows to number of places
+const TIME_TO_PLACES_COUNT = {
+  "30 minutes": 1,
+  "1 hour": 2,
+  "1.5 hours": 3,
+  "2+ hours": 4,
+};
+
 type Props = {
   onNext: (choice: string) => void;
   value?: string | null;
@@ -18,6 +26,11 @@ type Props = {
 const TimeStep: React.FC<Props> = ({ onNext, value }) => {
   const [selected, setSelected] = useState<string | null>(value || null);
 
+  const handleTimeSelect = (time: string) => {
+    setSelected(time);
+    onNext(time);
+  };
+
   return (
     <div className="chat-card text-left">
       <div className="flex items-center gap-2 mb-5">
@@ -25,14 +38,24 @@ const TimeStep: React.FC<Props> = ({ onNext, value }) => {
         <span className="font-semibold text-lg">How much time do you have right now?</span>
       </div>
       <div className="flex flex-col gap-4">
-        {TIMINGS.map((t) => (
-          <Button
-            key={t}
-            variant={selected === t ? "primary" : "outline"}
-            onClick={() => { setSelected(t); onNext(t); }}
-            aria-pressed={selected === t}
-          >{t}</Button>
-        ))}
+        {TIMINGS.map((t) => {
+          const placesCount = TIME_TO_PLACES_COUNT[t as keyof typeof TIME_TO_PLACES_COUNT];
+          return (
+            <Button
+              key={t}
+              variant={selected === t ? "primary" : "outline"}
+              onClick={() => handleTimeSelect(t)}
+              aria-pressed={selected === t}
+            >
+              <div className="flex flex-col items-center">
+                <span>{t}</span>
+                <span className="text-xs opacity-70">
+                  {placesCount} place{placesCount > 1 ? 's' : ''}
+                </span>
+              </div>
+            </Button>
+          );
+        })}
       </div>
 
       {/* MVP Link */}
@@ -52,4 +75,6 @@ const TimeStep: React.FC<Props> = ({ onNext, value }) => {
     </div>
   )
 }
+
+export { TIME_TO_PLACES_COUNT };
 export default TimeStep;

@@ -4,7 +4,7 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { useDatabase } from "@/hooks/useDatabase";
 import { createClient } from "@supabase/supabase-js";
 import WelcomeStep from "./steps/WelcomeStep";
-import TimeStep from "./steps/TimeStep";
+import TimeStep, { TIME_TO_PLACES_COUNT } from "./steps/TimeStep";
 import GoalsStep from "./steps/GoalsStep";
 import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
@@ -143,6 +143,10 @@ export default function ChatFlow() {
       console.log("Converted location for AI:", locationForAI);
     }
     
+    // Calculate number of places based on time window
+    const placesCount = timeWindow ? TIME_TO_PLACES_COUNT[timeWindow as keyof typeof TIME_TO_PLACES_COUNT] || 2 : 2;
+    console.log("Places count based on time window:", placesCount);
+    
     // Track route generation attempt
     trackRouteGeneration(locationForAI, timeWindow || "", goalsToUse);
     
@@ -218,7 +222,7 @@ export default function ChatFlow() {
         userPrompt += "I want to enjoy parks, gardens, and green outdoor spaces. ";
       }
       
-      userPrompt += `Please suggest 1-2 places in DIFFERENT areas of ${locationForAI} that match EXACTLY what I'm looking for. My selected goals are: ${goalsToUse.join(", ")}.`;
+      userPrompt += `Please suggest exactly ${placesCount} place${placesCount > 1 ? 's' : ''} in DIFFERENT areas of ${locationForAI} that match EXACTLY what I'm looking for. My selected goals are: ${goalsToUse.join(", ")}.`;
       
       if (isRegeneration) {
         userPrompt += ` IMPORTANT: Provide different places than previous suggestions, in different neighborhoods.`;
@@ -228,6 +232,7 @@ export default function ChatFlow() {
       console.log("User prompt:", userPrompt);
       console.log("Goals being passed to API:", goalsToUse);
       console.log("Location being passed to API:", locationForAI);
+      console.log("Requested places count:", placesCount);
       
       const currentRegenerationCount = isRegeneration ? regenerationCount : 0;
       
@@ -237,6 +242,7 @@ export default function ChatFlow() {
         timeWindow: timeWindow || "",
         userPrompt,
         regenerationAttempt: currentRegenerationCount,
+        maxPlaces: placesCount,
       });
       
       console.log("=== DEBUG: API Response ===");

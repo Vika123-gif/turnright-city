@@ -1,4 +1,5 @@
 
+
 import { useState } from "react";
 
 export type LLMPlace = {
@@ -22,12 +23,14 @@ export function useOpenAI() {
     timeWindow,
     userPrompt,
     regenerationAttempt = 0,
+    maxPlaces = 2,
   }: {
     location: string;
     goals: string[];
     timeWindow: string;
     userPrompt: string;
     regenerationAttempt?: number;
+    maxPlaces?: number;
   }): Promise<LLMPlace[]> {
     
     console.log("=== DEBUG: useOpenAI getLLMPlaces called ===");
@@ -40,6 +43,7 @@ export function useOpenAI() {
     console.log("Goals length:", goals?.length);
     console.log("User prompt:", userPrompt);
     console.log("Regeneration attempt:", regenerationAttempt);
+    console.log("Max places:", maxPlaces);
     
     // Enhanced system prompt with ABSOLUTE location enforcement and better distribution
     const systemPrompt = `
@@ -69,6 +73,11 @@ User's location: ${location}
 - Ensure at least 200+ meters walking distance between suggestions
 - Look for places in different neighborhoods/districts of ${location}
 - Vary the street names and areas significantly
+
+🚨 QUANTITY REQUIREMENT - CRITICAL:
+- You MUST return EXACTLY ${maxPlaces} place${maxPlaces > 1 ? 's' : ''}
+- Do NOT return more or fewer than ${maxPlaces}
+- If you cannot find ${maxPlaces} suitable places, return fewer but NEVER more
 
 ${regenerationAttempt > 0 ? `
 🔄 REGENERATION RULES - THIS IS ATTEMPT ${regenerationAttempt + 1}:
@@ -139,9 +148,10 @@ Before responding, verify EACH suggestion:
 ✓ Are the places in DIFFERENT neighborhoods/streets?
 ✓ Is there good geographic distribution?
 ✓ Is the address as accurate as possible?
+✓ Do I have EXACTLY ${maxPlaces} place${maxPlaces > 1 ? 's' : ''}?
 ✓ If ANY answer is NO, remove that suggestion
 
-Return 1-2 places maximum. Quality and diversity over quantity.
+Return EXACTLY ${maxPlaces} place${maxPlaces > 1 ? 's' : ''} maximum. Quality and diversity over quantity.
 NO markdown, NO explanations, ONLY the JSON array.
 `.trim();
 
@@ -169,7 +179,7 @@ NO markdown, NO explanations, ONLY the JSON array.
           },
         ],
         temperature: regenerationAttempt > 0 ? 0.7 : 0.05, // Higher temperature for regeneration
-        max_tokens: 440,
+        max_tokens: 440 + (maxPlaces * 50), // Adjust tokens based on number of places
       }),
     });
     
