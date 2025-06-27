@@ -161,20 +161,14 @@ export default function ChatFlow() {
         throw new Error("Please select at least one goal before generating places.");
       }
 
-      // Enhanced goal descriptions to include both main categories and subcategories
+      // Updated goal descriptions for the new simplified categories
       const goalDescriptions = {
-        // Main categories
-        explore: "explore cultural attractions, museums, galleries, historical sites, or architectural landmarks",
-        eat: "find restaurants, bistros, eateries, or dining establishments for meals",
-        coffee: "find coffee shops, cafes, specialty roasters, or tea houses for beverages", 
-        work: "find cafes with wifi, coworking spaces, or quiet work-friendly locations for working",
-        // Subcategories
-        museums: "visit museums and art galleries with exhibitions and cultural displays",
-        theaters: "attend theaters, concert halls, or performing arts venues",
-        historical: "explore historical sites, monuments, and heritage landmarks",
-        bars: "visit bars, pubs, and establishments for drinks and socializing",
-        bakeries: "find bakeries, pastry shops, and places for fresh baked goods",
-        parks: "enjoy parks, gardens, and green outdoor spaces for relaxation"
+        restaurants: "find restaurants, bistros, eateries, dining establishments for meals and food",
+        coffee: "find coffee shops, cafes, specialty roasters, tea houses for beverages and drinks", 
+        work: "find cafes with wifi, coworking spaces, quiet work-friendly locations for working and productivity",
+        museums: "visit museums, art galleries, cultural centers with exhibitions and displays",
+        parks: "enjoy parks, gardens, green outdoor spaces for relaxation and nature",
+        monuments: "explore architectural monuments, historical landmarks, heritage sites, castles, palaces, and significant buildings"
       };
       
       const selectedGoalTexts = goalsToUse.map(goal => goalDescriptions[goal as keyof typeof goalDescriptions]).filter(Boolean);
@@ -196,30 +190,34 @@ export default function ChatFlow() {
         userPrompt += `This is a REGENERATION request - I need COMPLETELY DIFFERENT places than before. Please suggest places in different areas/neighborhoods of ${locationForAI}. `;
       }
       
-      // Add specific instructions based on selected goals (both main and subcategories)
-      const hasEatingGoals = goalsToUse.some(goal => ['eat', 'bakeries'].includes(goal));
-      const hasDrinkingGoals = goalsToUse.some(goal => ['coffee', 'bars'].includes(goal));
-      const hasExploringGoals = goalsToUse.some(goal => ['explore', 'museums', 'theaters', 'historical'].includes(goal));
-      const hasWorkGoals = goalsToUse.some(goal => ['work'].includes(goal));
-      const hasOutdoorGoals = goalsToUse.some(goal => ['parks'].includes(goal));
+      // Add specific instructions based on selected goals
+      const hasRestaurants = goalsToUse.includes('restaurants');
+      const hasCoffee = goalsToUse.includes('coffee');
+      const hasWork = goalsToUse.includes('work');
+      const hasMuseums = goalsToUse.includes('museums');
+      const hasParks = goalsToUse.includes('parks');
+      const hasMonuments = goalsToUse.includes('monuments');
       
-      if (hasEatingGoals) {
-        userPrompt += "I want to find restaurants, bistros, eateries, bakeries, or places where I can have food/meals. ";
+      if (hasRestaurants) {
+        userPrompt += "I want to find restaurants, bistros, eateries, or dining establishments where I can have meals and food. ";
       }
-      if (hasDrinkingGoals) {
-        userPrompt += "I want to find coffee shops, cafes, bars, pubs, or beverage establishments. ";
+      if (hasCoffee) {
+        userPrompt += "I want to find coffee shops, cafes, specialty roasters, or tea houses for beverages and drinks. ";
       }
-      if (hasExploringGoals) {
-        userPrompt += "I want to explore cultural attractions like museums, galleries, theaters, concert halls, historical sites, or architectural landmarks. ";
+      if (hasWork) {
+        userPrompt += "I want to find work-friendly places like cafes with wifi, coworking spaces, or quiet locations for working. ";
+      }
+      if (hasMuseums) {
+        userPrompt += "I want to visit museums, art galleries, or cultural centers with exhibitions and displays. ";
+      }
+      if (hasParks) {
+        userPrompt += "I want to enjoy parks, gardens, and green outdoor spaces for relaxation and nature. ";
+      }
+      if (hasMonuments) {
+        userPrompt += "I want to explore architectural monuments, historical landmarks, heritage sites, castles, palaces, and significant buildings. ";
         if (isRegeneration) {
           userPrompt += "Please avoid suggesting Paço dos Duques de Bragança and Castelo de Guimarães together as they are too close. ";
         }
-      }
-      if (hasWorkGoals) {
-        userPrompt += "I want to find work-friendly places like cafes with wifi or coworking spaces. ";
-      }
-      if (hasOutdoorGoals) {
-        userPrompt += "I want to enjoy parks, gardens, and green outdoor spaces. ";
       }
       
       userPrompt += `Please suggest exactly ${placesCount} place${placesCount > 1 ? 's' : ''} in DIFFERENT areas of ${locationForAI} that match EXACTLY what I'm looking for. My selected goals are: ${goalsToUse.join(", ")}.`;

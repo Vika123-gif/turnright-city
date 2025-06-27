@@ -99,8 +99,8 @@ ${regenerationAttempt > 0 ? `
 GOAL ENFORCEMENT:
 User's selected goals: ${goals.join(", ")}
 
-${goals.includes("eat") ? `
-🍽️ EATING GOAL:
+${goals.includes("restaurants") ? `
+🍽️ RESTAURANTS GOAL:
 - ONLY suggest VERIFIED restaurants with confirmed addresses in ${location}
 - Examples: established restaurants with online reviews, hotel restaurants, chain restaurants
 - NEVER suggest unknown or unverified eateries
@@ -113,18 +113,33 @@ ${goals.includes("coffee") ? `
 - NEVER suggest unknown coffee shops or made-up café names
 ` : ""}
 
-${goals.includes("explore") ? `
-🏛️ EXPLORATION GOAL:
-- ONLY suggest VERIFIED museums, galleries, historical sites in ${location}
-- Examples: official museums, UNESCO sites, government-recognized historical landmarks
-- NEVER suggest unofficial or unverified attractions
-` : ""}
-
 ${goals.includes("work") ? `
 💻 WORK GOAL:
 - ONLY suggest VERIFIED work-friendly locations in ${location}
 - Examples: hotel lobbies, established cafés with confirmed wifi, official coworking spaces
 - NEVER suggest unverified work locations
+` : ""}
+
+${goals.includes("museums") ? `
+🏛️ MUSEUMS GOAL:
+- ONLY suggest VERIFIED museums, galleries, cultural centers in ${location}
+- Examples: official museums, government-recognized cultural institutions
+- NEVER suggest unofficial or unverified cultural attractions
+` : ""}
+
+${goals.includes("parks") ? `
+🌳 PARKS GOAL:
+- ONLY suggest VERIFIED parks, gardens, green spaces in ${location}
+- Examples: municipal parks, public gardens, official recreational areas
+- NEVER suggest private or unverified outdoor spaces
+` : ""}
+
+${goals.includes("monuments") ? `
+🏰 MONUMENTS GOAL:
+- ONLY suggest VERIFIED architectural monuments, historical landmarks in ${location}
+- Examples: UNESCO sites, official historical monuments, government-recognized heritage sites
+- NEVER suggest unofficial or unverified monuments
+- Include castles, palaces, churches, significant historical buildings
 ` : ""}
 
 🚨 FINAL MANDATORY VERIFICATION CHECKLIST:
