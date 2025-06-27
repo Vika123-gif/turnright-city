@@ -78,7 +78,7 @@ Location: ${location}
 - Never suggest places in other cities like Vila Nova de Famalicão, Barcelos, Braga, Porto
 - Triple-check city name in every address
 
-${regenerationCount > 0 ? `
+${regenerationAttempt > 0 ? `
 🔄 REGENERATION ${regenerationAttempt + 1}:
 - Provide COMPLETELY different places than previous attempts
 - Different neighborhoods and streets
