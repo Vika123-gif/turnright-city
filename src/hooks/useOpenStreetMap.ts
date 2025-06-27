@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 export type OSMPlace = {
@@ -24,63 +23,42 @@ export function useOpenStreetMap() {
     console.log("Location:", location);
     
     try {
-      // Determine if location is coordinates or city name
-      let searchArea = location;
-      if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location)) {
-        // If coordinates, use them directly for bounded search
-        const [lat, lon] = location.split(',').map(coord => parseFloat(coord.trim()));
-        searchArea = `viewbox=${lon-0.05},${lat+0.05},${lon+0.05},${lat-0.05}&bounded=1`;
-      } else {
-        // If city name, add it to the query
-        query = `${query} ${location}`;
-        searchArea = "";
-      }
+      // Try multiple search strategies for better results
+      const searchStrategies = [
+        // Strategy 1: Exact business name search
+        `${query} ${location}`,
+        // Strategy 2: Business type + location search
+        `restaurant ${location}`,
+        // Strategy 3: Just location-based search
+        location
+      ];
 
-      const url = `https://nominatim.openstreetmap.org/search?` +
-        `q=${encodeURIComponent(query)}&` +
-        `format=json&` +
-        `addressdetails=1&` +
-        `limit=${limit}&` +
-        `countrycodes=pt&` + // Limit to Portugal
-        (searchArea.startsWith('viewbox') ? searchArea : '') +
-        `&accept-language=en`;
-
-      console.log("OSM API URL:", url);
-
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'TurnRightCity/1.0 (contact@turnright.city)'
+      let bestResults: OSMPlace[] = [];
+      
+      for (const searchQuery of searchStrategies) {
+        console.log("Trying search strategy:", searchQuery);
+        
+        const results = await performOSMSearch(searchQuery, location, limit);
+        
+        if (results.length > 0) {
+          // Check if we found a good match
+          const exactMatch = results.find(r => 
+            r.name.toLowerCase().includes(query.toLowerCase()) ||
+            query.toLowerCase().includes(r.name.toLowerCase())
+          );
+          
+          if (exactMatch) {
+            console.log("Found exact match:", exactMatch);
+            bestResults = [exactMatch];
+            break;
+          } else if (bestResults.length === 0) {
+            // Keep first set of results as fallback
+            bestResults = results;
+          }
         }
-      });
-
-      if (!response.ok) {
-        throw new Error(`OpenStreetMap API error: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log("OSM API Response:", data);
-
-      const places: OSMPlace[] = data
-        .filter((item: any) => {
-          // Filter for business/amenity results
-          return item.class === 'amenity' || 
-                 item.class === 'shop' || 
-                 item.class === 'tourism' ||
-                 item.class === 'leisure' ||
-                 (item.type && ['restaurant', 'cafe', 'bar', 'pub', 'museum', 'gallery', 'park'].includes(item.type));
-        })
-        .map((item: any) => ({
-          name: item.display_name.split(',')[0] || item.name || "Unknown Place",
-          address: formatAddressForMaps(item),
-          lat: parseFloat(item.lat),
-          lon: parseFloat(item.lon),
-          type: item.type,
-          category: item.class
-        }))
-        .slice(0, limit);
-
-      console.log("Processed OSM places:", places);
-      return places;
+      return bestResults;
 
     } catch (error) {
       console.error("OpenStreetMap search error:", error);
@@ -88,6 +66,67 @@ export function useOpenStreetMap() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function performOSMSearch(
+    query: string,
+    location: string,
+    limit: number
+  ): Promise<OSMPlace[]> {
+    // Determine if location is coordinates or city name
+    let searchArea = "";
+    if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location)) {
+      // If coordinates, use them for bounded search
+      const [lat, lon] = location.split(',').map(coord => parseFloat(coord.trim()));
+      searchArea = `viewbox=${lon-0.05},${lat+0.05},${lon+0.05},${lat-0.05}&bounded=1`;
+    }
+
+    const url = `https://nominatim.openstreetmap.org/search?` +
+      `q=${encodeURIComponent(query)}&` +
+      `format=json&` +
+      `addressdetails=1&` +
+      `limit=${limit}&` +
+      `countrycodes=pt&` + // Limit to Portugal
+      (searchArea ? searchArea + '&' : '') +
+      `accept-language=en`;
+
+    console.log("OSM API URL:", url);
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'TurnRightCity/1.0 (contact@turnright.city)'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenStreetMap API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("OSM API Response:", data);
+
+    const places: OSMPlace[] = data
+      .filter((item: any) => {
+        // Broader filter to include more types of places
+        return item.class === 'amenity' || 
+               item.class === 'shop' || 
+               item.class === 'tourism' ||
+               item.class === 'leisure' ||
+               item.class === 'place' ||
+               (item.type && ['restaurant', 'cafe', 'bar', 'pub', 'museum', 'gallery', 'park', 'attraction'].includes(item.type));
+      })
+      .map((item: any) => ({
+        name: item.display_name.split(',')[0] || item.name || "Unknown Place",
+        address: formatAddressForMaps(item),
+        lat: parseFloat(item.lat),
+        lon: parseFloat(item.lon),
+        type: item.type,
+        category: item.class
+      }))
+      .slice(0, limit);
+
+    console.log("Processed OSM places:", places);
+    return places;
   }
 
   // Format address in a way that's optimized for map applications
