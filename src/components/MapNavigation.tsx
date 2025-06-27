@@ -41,31 +41,31 @@ const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
           {places.map((place, i) => (
             <div 
               key={i} 
-              className="mb-3 p-3 rounded-lg hover:bg-white/50 cursor-pointer transition-colors border border-transparent hover:border-green-200"
+              className="mb-3 p-4 rounded-lg hover:bg-white/50 cursor-pointer transition-colors border border-transparent hover:border-green-200"
               onClick={() => handlePlaceClick(place)}
             >
-              {/* Display place NAME prominently */}
-              <div className="font-semibold text-lg flex items-center gap-2 mb-2">
+              {/* Display place NAME very prominently */}
+              <div className="font-bold text-xl text-gray-900 mb-2">
                 {`${i + 1}. ${place.name}`}
-                <Info className="w-4 h-4 text-gray-400" />
               </div>
               
-              {/* Show "Search for this place" instead of address */}
-              <div className="text-gray-600 text-sm flex items-center gap-1 mt-1">
-                <MapPin className="w-3 h-3" />
-                <span className="italic">Search for "{place.name}" in your map app</span>
+              {/* Instruction to search for the place name */}
+              <div className="text-gray-700 text-base flex items-center gap-2 mb-2">
+                <MapPin className="w-4 h-4 text-green-600" />
+                <span className="font-medium">Search for "{place.name}" in your map app</span>
               </div>
               
-              <div className="text-xs text-gray-500 mt-1 flex items-center gap-3">
+              <div className="text-sm text-gray-600 flex items-center gap-4">
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
+                  <Clock className="w-4 h-4" />
                   🚶 {place.walkingTime} min walk
                 </span>
                 {place.type && <span>Type: {place.type}</span>}
+                <Info className="w-4 h-4 text-gray-400" />
               </div>
               
               {place.reason && (
-                <div className="text-sm mt-1 text-[#008457]">{place.reason}</div>
+                <div className="text-sm mt-2 text-[#008457] font-medium">{place.reason}</div>
               )}
             </div>
           ))}
@@ -97,19 +97,22 @@ const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
       <Dialog open={!!selectedPlace} onOpenChange={(open) => !open && handleCloseDialog()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">
+            <DialogTitle className="text-xl font-bold">
               {selectedPlace?.name}
             </DialogTitle>
           </DialogHeader>
           
           {selectedPlace && (
             <div className="space-y-4">
-              {/* Show place name prominently in dialog too */}
-              <div className="p-3 bg-green-50 rounded-lg">
-                <DialogDescription className="text-sm text-[#008457] font-medium">
-                  🎯 Place to visit
+              {/* Emphasize place name for map searching */}
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <DialogDescription className="text-sm text-green-700 font-semibold mb-2">
+                  📍 How to find this place
                 </DialogDescription>
-                <p className="text-lg font-semibold text-gray-900 mt-1">{selectedPlace.name}</p>
+                <p className="text-lg font-bold text-gray-900 mb-2">{selectedPlace.name}</p>
+                <p className="text-sm text-gray-700">
+                  Search for exactly "<strong>{selectedPlace.name}</strong>" in Google Maps, Apple Maps, or your preferred navigation app.
+                </p>
               </div>
               
               <div className="flex items-center gap-2">
@@ -135,21 +138,12 @@ const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
                 </div>
               )}
 
-              <div className="p-3 bg-yellow-50 rounded-lg">
-                <DialogDescription className="text-sm text-yellow-700 font-medium">
-                  📍 How to find it
-                </DialogDescription>
-                <p className="text-sm text-gray-700 mt-1">
-                  Search for "{selectedPlace.name}" in your preferred map app (Google Maps, Apple Maps, etc.) to get accurate directions and current information.
-                </p>
-              </div>
-
-              {/* Show address only as reference in dialog */}
+              {/* Show address only as reference if available */}
               {selectedPlace.address && (
-                <div className="text-xs text-gray-500 border-t pt-2">
+                <div className="text-xs text-gray-500 border-t pt-3">
                   <span className="font-medium">Reference address:</span> {selectedPlace.address}
                   <br />
-                  <span className="italic">Note: Use the place name for most accurate results</span>
+                  <span className="italic">Note: Search by business name for best results</span>
                 </div>
               )}
             </div>

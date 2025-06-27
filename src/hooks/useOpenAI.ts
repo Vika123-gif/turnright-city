@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 
 export type LLMPlace = {
@@ -43,39 +44,45 @@ export function useOpenAI() {
     console.log("Regeneration attempt:", regenerationAttempt);
     console.log("Max places:", maxPlaces);
     
-    // ULTRA-STRICT system prompt with ZERO TOLERANCE for fake addresses
+    // EXTREME ULTRA-STRICT system prompt with ZERO TOLERANCE for fake addresses
     const systemPrompt = `
-You are a business travel assistant. You MUST follow these rules with ABSOLUTE PRECISION:
+🚨 CRITICAL MISSION: ONLY SUGGEST BUSINESSES THAT ACTUALLY EXIST 🚨
 
-🚨 CRITICAL LOCATION REQUIREMENT:
 User's location: ${location}
 
-🚨 ZERO TOLERANCE ADDRESS POLICY - THIS IS ABSOLUTELY CRITICAL:
-- You MUST ONLY suggest businesses that you are 100% CERTAIN exist in real life
-- You MUST ONLY use addresses that you KNOW are completely accurate
-- NEVER guess addresses, NEVER make up street numbers
-- NEVER suggest generic locations like "Largo do Toural" without a specific business
-- If you are not 100% certain about an address, DO NOT include that place
-- Better to return ZERO results than ONE fake address
-- Each address must be for a REAL, OPERATING business that actually exists at that exact location
+⚠️ ABSOLUTE ZERO-TOLERANCE ADDRESS POLICY - THIS IS LIFE OR DEATH CRITICAL:
+- You can ONLY suggest businesses if you are 1000% CERTAIN they exist in real life
+- You can ONLY use addresses that you KNOW are completely accurate and verified
+- NEVER EVER guess addresses, NEVER make up street numbers, NEVER fabricate locations
+- If you are not ABSOLUTELY CERTAIN about an address, DO NOT include that place
+- Better to return ZERO results than ONE single fake address
+- Each address must be for a REAL, OPERATING, CURRENTLY-EXISTING business at that EXACT location
+- DO NOT suggest "Restaurante Histórico" or other generic names - these are FAKE
+- DO NOT suggest places on "Largo do Toural" unless you can verify the EXACT business name and number
 
-🚨 BUSINESS VERIFICATION REQUIREMENTS:
-- ONLY suggest well-known, established businesses (cafés, restaurants, etc.)
-- ONLY use businesses you can verify actually exist in ${location}
-- Examples of what to look for: chain stores, famous local establishments, businesses with multiple online reviews
-- NEVER create fictional business names
-- NEVER suggest places that might exist but you're not certain about
+🚨 BUSINESS VERIFICATION REQUIREMENTS (MANDATORY):
+- ONLY suggest world-famous chains (McDonald's, Starbucks, etc.) OR extremely well-known local establishments
+- ONLY use businesses with VERIFIED online presence and reviews
+- Examples of SAFE suggestions: major hotel chains, international restaurant chains, famous historical sites with official names
+- NEVER create fictional business names like "Café Milenário" or "Fábrica do Chocolate"
+- NEVER suggest places that "sound right" but you're not certain about
 
 🚨 LOCATION ENFORCEMENT - ABSOLUTELY NO EXCEPTIONS:
-- If user says "Guimarães" - ALL places MUST be in Guimarães, Portugal
-- NEVER suggest places in other cities like Vila Nova de Famalicão, Barcelos, Braga, Porto
-- Double-check: Does this address actually contain "${location}"?
-- Triple-check: Is this business actually located in ${location} and not somewhere else?
+- If user says "Guimarães" - ALL places MUST be in Guimarães, Portugal ONLY
+- NEVER EVER suggest places in Vila Nova de Famalicão, Barcelos, Braga, Porto, or ANY other city
+- Triple-check: Is this business actually located in ${location} and nowhere else?
+- Quadruple-check: Does this address contain "${location}" and no other city names?
+
+🚨 ADDRESS ACCURACY VERIFICATION (MANDATORY):
+- Every single address must be 100% accurate down to the street number
+- You must be able to guarantee someone can find this exact business at this exact address
+- If you have ANY doubt about the street number or exact location, EXCLUDE that place
+- Cross-reference: Does this business name actually exist at this specific address?
 
 🚨 GEOGRAPHIC DISTRIBUTION:
 - Places MUST be in DIFFERENT neighborhoods of ${location}
-- NEVER suggest places on the same street
-- Ensure significant walking distance between suggestions (200+ meters minimum)
+- NEVER suggest places on the same street or within 200 meters
+- Ensure significant walking distance between suggestions
 
 🚨 QUANTITY REQUIREMENT:
 - You MUST return EXACTLY ${maxPlaces} place${maxPlaces > 1 ? 's' : ''}
@@ -86,7 +93,7 @@ ${regenerationAttempt > 0 ? `
 🔄 REGENERATION - ATTEMPT ${regenerationAttempt + 1}:
 - Provide COMPLETELY DIFFERENT places than previous attempts
 - Use DIFFERENT streets and neighborhoods
-- All verification rules still apply 100%
+- All verification rules still apply 1000%
 ` : ""}
 
 GOAL ENFORCEMENT:
@@ -94,59 +101,66 @@ User's selected goals: ${goals.join(", ")}
 
 ${goals.includes("eat") ? `
 🍽️ EATING GOAL:
-- ONLY suggest verified restaurants, bistros, eateries in ${location}
-- NEVER suggest coffee shops, museums, or attractions
-- Every suggestion must be a real place for meals
+- ONLY suggest VERIFIED restaurants with confirmed addresses in ${location}
+- Examples: established restaurants with online reviews, hotel restaurants, chain restaurants
+- NEVER suggest unknown or unverified eateries
 ` : ""}
 
 ${goals.includes("coffee") ? `
 ☕ COFFEE GOAL:
-- ONLY suggest verified coffee shops, cafés in ${location}
-- NEVER suggest restaurants for meals, museums, or attractions
-- Every suggestion must be a real coffee/beverage establishment
+- ONLY suggest VERIFIED coffee shops with confirmed addresses in ${location}
+- Examples: international chains, hotel cafés, well-established local cafés with online presence
+- NEVER suggest unknown coffee shops or made-up café names
 ` : ""}
 
 ${goals.includes("explore") ? `
 🏛️ EXPLORATION GOAL:
-- ONLY suggest verified museums, galleries, historical sites in ${location}
-- NEVER suggest restaurants, cafes, or commercial establishments
-- Every suggestion must be a real cultural attraction
+- ONLY suggest VERIFIED museums, galleries, historical sites in ${location}
+- Examples: official museums, UNESCO sites, government-recognized historical landmarks
+- NEVER suggest unofficial or unverified attractions
 ` : ""}
 
 ${goals.includes("work") ? `
 💻 WORK GOAL:
-- ONLY suggest verified work-friendly cafés, coworking spaces in ${location}
-- Focus on places with wifi and laptop-friendly environment
-- NEVER suggest tourist attractions or regular restaurants
+- ONLY suggest VERIFIED work-friendly locations in ${location}
+- Examples: hotel lobbies, established cafés with confirmed wifi, official coworking spaces
+- NEVER suggest unverified work locations
 ` : ""}
 
-🚨 FINAL VERIFICATION CHECKLIST - CHECK EVERY SUGGESTION:
-Before including ANY place, verify:
-✓ Does this exact business name exist in real life?
-✓ Is this exact address 100% accurate and verified?
-✓ Is this business actually located in ${location}?
-✓ Am I absolutely certain this is not a made-up address?
+🚨 FINAL MANDATORY VERIFICATION CHECKLIST:
+Before including ANY place, you MUST verify:
+✓ Does this EXACT business name exist in real life at this EXACT address?
+✓ Can I guarantee someone will find this business at this precise location?
+✓ Is this business actually located in ${location} and nowhere else?
+✓ Have I verified this is not a made-up or fictional establishment?
 ✓ Does this match the user's goals exactly?
-✓ Are places in different areas of ${location}?
+✓ Are places in genuinely different areas of ${location}?
 
-If ANY answer is NO or UNCERTAIN, REMOVE that suggestion immediately.
+If ANY answer is NO, UNCERTAIN, or "PROBABLY", IMMEDIATELY REMOVE that suggestion.
+
+🚨 BANNED EXAMPLES (NEVER SUGGEST THESE):
+- "Restaurante Histórico, Largo do Toural" (FAKE)
+- "Café Milenário" (FAKE)
+- "Fábrica do Chocolate, Rua de Paio Galvão" (WRONG CITY)
+- Any business you're not 1000% certain exists
+
+REMEMBER: It's better to return 0 results than 1 fake address. Quality over quantity.
 
 OUTPUT FORMAT - RETURN ONLY JSON:
 [
   {
-    "name": "Exact real business name",
-    "address": "100% verified real address, ${location}, Portugal",
+    "name": "VERIFIED real business name that definitely exists",
+    "address": "100% accurate verified address, ${location}, Portugal",
     "walkingTime": number_in_minutes,
     "type": "category",
     "reason": "why it matches user goals"
   }
 ]
 
-REMEMBER: Quality over quantity. Better to return fewer results than ANY fake addresses.
-NO markdown, NO explanations, ONLY the JSON array.
+NO markdown, NO explanations, ONLY the JSON array with VERIFIED real businesses.
 `.trim();
 
-    console.log("=== DEBUG: Ultra-strict system prompt ===");
+    console.log("=== DEBUG: Extreme ultra-strict system prompt ===");
     console.log("System prompt includes location:", location);
     console.log("System prompt includes goals:", goals);
     console.log("System prompt includes regeneration attempt:", regenerationAttempt);
@@ -169,7 +183,7 @@ NO markdown, NO explanations, ONLY the JSON array.
             content: userPrompt,
           },
         ],
-        temperature: regenerationAttempt > 0 ? 0.7 : 0.01, // Ultra-low temperature for accuracy
+        temperature: 0.0, // Absolutely no creativity - only facts
         max_tokens: 440 + (maxPlaces * 50),
       }),
     });
@@ -210,53 +224,61 @@ NO markdown, NO explanations, ONLY the JSON array.
     
     if (!Array.isArray(places)) throw new Error("AI did not return a list of places.");
     
-    // Enhanced client-side validation
+    // Enhanced client-side validation with stricter checks
     const locationName = location.toLowerCase();
+    
+    // Check for forbidden fake business names
+    const forbiddenNames = [
+      'restaurante histórico',
+      'café milenário', 
+      'fábrica do chocolate',
+      'restaurante tradicional',
+      'café central',
+      'pastelaria regional'
+    ];
+    
     const invalidPlaces = places.filter(place => {
+      const placeName = place.name?.toLowerCase() || '';
       const address = place.address?.toLowerCase() || '';
+      
+      // Check for forbidden fake names
+      const hasForbiddenName = forbiddenNames.some(forbidden => placeName.includes(forbidden));
+      
+      // Check location requirements
       const hasLocation = address.includes(locationName);
       
       // Additional check for common wrong cities near Guimarães
       const wrongCities = ['famalicão', 'barcelos', 'braga', 'porto'];
       const hasWrongCity = wrongCities.some(city => address.includes(city));
       
-      return !hasLocation || hasWrongCity;
+      // Check for generic/suspicious addresses
+      const isSuspiciousAddress = address.includes('largo do toural') && !placeName.includes('hotel') && !placeName.includes('pousada');
+      
+      return hasForbiddenName || !hasLocation || hasWrongCity || isSuspiciousAddress;
     });
     
     if (invalidPlaces.length > 0) {
-      console.error("=== DEBUG: Invalid locations detected ===");
+      console.error("=== DEBUG: Invalid places detected ===");
       console.error("Expected location:", location);
       console.error("Invalid places:", invalidPlaces);
       
-      // Filter out invalid places
+      // Filter out ALL invalid places
       places = places.filter(place => {
+        const placeName = place.name?.toLowerCase() || '';
         const address = place.address?.toLowerCase() || '';
+        
+        const hasForbiddenName = forbiddenNames.some(forbidden => placeName.includes(forbidden));
         const hasLocation = address.includes(locationName);
         const wrongCities = ['famalicão', 'barcelos', 'braga', 'porto'];
         const hasWrongCity = wrongCities.some(city => address.includes(city));
-        return hasLocation && !hasWrongCity;
+        const isSuspiciousAddress = address.includes('largo do toural') && !placeName.includes('hotel') && !placeName.includes('pousada');
+        
+        return !hasForbiddenName && hasLocation && !hasWrongCity && !isSuspiciousAddress;
       });
       
       if (places.length === 0) {
-        throw new Error(`No valid places found in ${location}. The AI suggested places in other cities. Please try again.`);
+        throw new Error(`No valid places found in ${location}. The AI suggested invalid or fake businesses. Please try again with different goals or try a regeneration.`);
       }
-    }
-    
-    // Additional validation for address accuracy
-    const suspiciousAddresses = places.filter(place => {
-      const address = place.address || '';
-      // Check for generic addresses that are likely fake
-      return address.includes('Largo do Toural') && !address.includes('Hotel') && !address.includes('Restaurante') && !address.includes('Café');
-    });
-    
-    if (suspiciousAddresses.length > 0) {
-      console.warn("=== DEBUG: Suspicious generic addresses detected ===");
-      console.warn("Suspicious places:", suspiciousAddresses);
-      // Remove suspicious generic addresses
-      places = places.filter(place => {
-        const address = place.address || '';
-        return !(address.includes('Largo do Toural') && !address.includes('Hotel') && !address.includes('Restaurante') && !address.includes('Café'));
-      });
     }
     
     // Geographic distribution validation
