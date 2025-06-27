@@ -1,252 +1,136 @@
 
-import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import type { LLMPlace } from '@/hooks/useOpenAI';
-
-// Fix for default markers in react-leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// Custom icons
-const userIcon = new L.Icon({
-  iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiMwMEJDNzIiLz4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iNCIgZmlsbD0id2hpdGUiLz4KPC9zdmc+',
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-});
-
-const destinationIcon = new L.Icon({
-  iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDOC4xMyAyIDUgNS4xMyA1IDljMCA1LjI1IDcgMTMgNyAxM3M3LTcuNzUgNy0xM2MwLTMuODctMy4xMy03LTctN3ptMCA5LjVjLTEuMzggMC0yLjUtMS4xMi0yLjUtMi41czEuMTItMi41IDIuNS0yLjUgMi41IDEuMTIgMi41IDIuNS0xLjEyIDIuNS0yLjUgMi41eiIgZmlsbD0iI0ZGNTc1NyIvPgo8L3N2Zz4=',
-  iconSize: [30, 30],
-  iconAnchor: [15, 30],
-});
+import React, { useState } from "react";
+import { MapPin, Clock, Info, ArrowLeft } from "lucide-react";
+import Button from "./Button";
+import type { LLMPlace } from "@/hooks/useOpenAI";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 type Props = {
-  origin: string;
   places: LLMPlace[];
-  onClose: () => void;
+  onBack: () => void;
+  location?: string;
 };
 
-function LocationUpdater({ userPosition }: { userPosition: [number, number] | null }) {
-  const map = useMap();
-  
-  useEffect(() => {
-    if (userPosition) {
-      console.log('Updating map view to user position:', userPosition);
-      map.setView(userPosition, 16);
-    }
-  }, [userPosition, map]);
-  
-  return null;
-}
+const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
+  const [selectedPlace, setSelectedPlace] = useState<LLMPlace | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-const MapNavigation: React.FC<Props> = ({ origin, places, onClose }) => {
-  console.log('MapNavigation rendered with:', { origin, places });
-  
-  const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
-  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
-  const [isTracking, setIsTracking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const watchIdRef = useRef<number | null>(null);
-
-  // Parse origin coordinates
-  const originCoords = React.useMemo(() => {
-    console.log('Parsing origin:', origin);
-    if (origin.includes(',')) {
-      const [lat, lng] = origin.split(',').map(coord => parseFloat(coord.trim()));
-      if (!isNaN(lat) && !isNaN(lng)) {
-        console.log('Parsed origin coords:', [lat, lng]);
-        return [lat, lng] as [number, number];
-      }
-    }
-    console.log('Failed to parse origin coords');
-    return null;
-  }, [origin]);
-
-  // Get coordinates for places (simplified - in real app you'd geocode addresses)
-  const placeCoordinates = React.useMemo(() => {
-    if (!originCoords) return [];
-    
-    const coords = places.map((place, index) => {
-      // Simple offset for demo - in real app you'd geocode the addresses
-      const latOffset = (index + 1) * 0.002;
-      const lngOffset = (index + 1) * 0.002;
-      return [originCoords[0] + latOffset, originCoords[1] + lngOffset] as [number, number];
-    });
-    console.log('Generated place coordinates:', coords);
-    return coords;
-  }, [places, originCoords]);
-
-  useEffect(() => {
-    if (originCoords && placeCoordinates.length > 0) {
-      const route = [originCoords, ...placeCoordinates];
-      console.log('Setting route coordinates:', route);
-      setRouteCoordinates(route);
-    }
-  }, [originCoords, placeCoordinates]);
-
-  const startTracking = () => {
-    console.log('Starting location tracking');
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by this browser');
-      return;
-    }
-
-    setIsTracking(true);
-    setError(null);
-
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        console.log('Got user position:', latitude, longitude);
-        setUserPosition([latitude, longitude]);
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        setError(`Location error: ${error.message}`);
-        setIsTracking(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      }
-    );
+  const handlePlaceClick = (place: LLMPlace) => {
+    setSelectedPlace(place);
+    setIsDialogOpen(true);
   };
 
-  const stopTracking = () => {
-    console.log('Stopping location tracking');
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
-    setIsTracking(false);
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedPlace(null);
   };
-
-  useEffect(() => {
-    return () => {
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
-    };
-  }, []);
-
-  if (!originCoords) {
-    console.log('No valid origin coordinates, showing error');
-    return (
-      <div className="p-4 text-center">
-        <p className="text-red-500 mb-4">Invalid origin coordinates: {origin}</p>
-        <button
-          onClick={onClose}
-          className="bg-[#00BC72] text-white px-4 py-2 rounded-lg"
-        >
-          Close Map
-        </button>
-      </div>
-    );
-  }
-
-  console.log('Rendering map with origin:', originCoords);
 
   return (
-    <div className="relative w-full h-96 bg-gray-100 rounded-lg overflow-hidden">
-      <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
-        <button
-          onClick={isTracking ? stopTracking : startTracking}
-          className={`px-3 py-2 rounded-lg text-white font-medium ${
-            isTracking ? 'bg-red-500 hover:bg-red-600' : 'bg-[#00BC72] hover:bg-[#00965c]'
-          }`}
-        >
-          {isTracking ? '⏹️ Stop Tracking' : '📍 Start Tracking'}
-        </button>
-        <button
-          onClick={onClose}
-          className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg font-medium"
-        >
-          ✕ Close Map
-        </button>
+    <div className="chat-card text-left">
+      <div className="font-semibold text-lg mb-3 flex items-center gap-2">
+        🗺️ Your Route in {location}
+      </div>
+      
+      <div className="bg-[#F6FDF9] px-4 py-3 rounded-lg text-base mb-6">
+        <div className="space-y-4">
+          {places.map((place, i) => (
+            <div 
+              key={i} 
+              className="mb-3 p-3 rounded-lg hover:bg-white/50 cursor-pointer transition-colors border border-transparent hover:border-green-200"
+              onClick={() => handlePlaceClick(place)}
+            >
+              <div className="font-semibold text-base flex items-center gap-2">
+                {`${i + 1}. ${place.name}`}
+                <Info className="w-4 h-4 text-gray-400" />
+              </div>
+              <div className="text-gray-600 text-sm flex items-center gap-1 mt-1">
+                <MapPin className="w-3 h-3" />
+                {place.address}
+              </div>
+              <div className="text-xs text-gray-500 mt-1 flex items-center gap-3">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  🚶 {place.walkingTime} min walk
+                </span>
+                {place.type && <span>Type: {place.type}</span>}
+              </div>
+              {place.reason && (
+                <div className="text-sm mt-1 text-[#008457]">{place.reason}</div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {error && (
-        <div className="absolute top-4 right-4 z-[1000] bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded-lg text-sm">
-          {error}
+      <div className="flex flex-col gap-4">
+        <Button variant="outline" onClick={onBack}>
+          <ArrowLeft className="w-5 h-5 mr-2 -ml-1" /> Back to Search
+        </Button>
+        
+        {/* MVP Link */}
+        <div className="border-t pt-4 text-center">
+          <p className="text-sm text-gray-600 mb-2">
+            Save for the next generations!
+          </p>
+          <a
+            href="https://turnright.city/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#008457] underline font-medium text-sm hover:text-[#00BC72] transition-colors"
+          >
+            Visit TurnRight.city
+          </a>
         </div>
-      )}
+      </div>
 
-      <MapContainer
-        center={originCoords}
-        zoom={15}
-        style={{ height: '100%', width: '100%' }}
-        className="z-0"
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        
-        {userPosition && <LocationUpdater userPosition={userPosition} />}
-        
-        {/* Route line */}
-        {routeCoordinates.length > 1 && (
-          <Polyline
-            positions={routeCoordinates}
-            color="#00BC72"
-            weight={4}
-            opacity={0.7}
-          />
-        )}
-
-        {/* Origin marker */}
-        <Marker position={originCoords} icon={userIcon}>
-          <Popup>
-            <div className="text-center">
-              <strong>Start Location</strong>
-              <br />
-              Your journey begins here
-            </div>
-          </Popup>
-        </Marker>
-
-        {/* User's current position */}
-        {userPosition && (
-          <Marker position={userPosition} icon={userIcon}>
-            <Popup>
-              <div className="text-center">
-                <strong>You are here</strong>
-                <br />
-                Current location
+      {/* Place Details Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">
+              {selectedPlace?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedPlace && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-gray-500 mt-1 flex-shrink-0" />
+                <span className="text-sm text-gray-600">{selectedPlace.address}</span>
               </div>
-            </Popup>
-          </Marker>
-        )}
-
-        {/* Place markers */}
-        {placeCoordinates.map((coord, index) => (
-          <Marker key={index} position={coord} icon={destinationIcon}>
-            <Popup>
-              <div className="max-w-xs">
-                <strong>{places[index].name}</strong>
-                <br />
-                <span className="text-sm text-gray-600">{places[index].address}</span>
-                <br />
-                <span className="text-xs text-green-600">
-                  🚶 {places[index].walkingTime} min walk
-                </span>
-                {places[index].reason && (
-                  <div className="text-xs mt-1 text-blue-600">
-                    {places[index].reason}
+              
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gray-500" />
+                <span className="text-sm">🚶 {selectedPlace.walkingTime} minutes walk</span>
+              </div>
+              
+              {selectedPlace.type && (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-gray-400 rounded"></div>
                   </div>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+                  <span className="text-sm text-gray-600">Type: {selectedPlace.type}</span>
+                </div>
+              )}
+              
+              {selectedPlace.reason && (
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <DialogDescription className="text-sm text-[#008457] font-medium">
+                    Why this place?
+                  </DialogDescription>
+                  <p className="text-sm text-gray-700 mt-1">{selectedPlace.reason}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
