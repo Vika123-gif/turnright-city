@@ -20,7 +20,7 @@ serve(async (req) => {
     console.log('Place name:', placeName);
     console.log('Location:', location);
     console.log('API key exists:', !!mapboxApiKey);
-    console.log('API key length:', mapboxApiKey?.length || 0);
+    console.log('API key configured properly:', mapboxApiKey ? 'YES' : 'NO');
 
     if (!mapboxApiKey) {
       console.error('MAPBOX_API_KEY environment variable not found');
@@ -29,11 +29,11 @@ serve(async (req) => {
 
     console.log(`Searching for "${placeName}" near ${location}`);
 
-    // Use Mapbox Geocoding API with more specific parameters for detailed addresses
+    // Enhanced Mapbox Geocoding API request for detailed addresses
     const searchQuery = encodeURIComponent(`${placeName}, ${location}, Portugal`);
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${searchQuery}.json?access_token=${mapboxApiKey}&country=pt&limit=10&types=poi,address&language=pt&routing=true`;
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${searchQuery}.json?access_token=${mapboxApiKey}&country=pt&limit=10&types=poi,address&language=pt&routing=true&proximity=auto`;
 
-    console.log('Mapbox URL (without API key):', url.replace(mapboxApiKey, '[REDACTED]'));
+    console.log('Making Mapbox API request...');
 
     const response = await fetch(url);
     
@@ -48,10 +48,11 @@ serve(async (req) => {
     console.log(`Mapbox returned ${data.features?.length || 0} results for "${placeName}"`);
     
     if (data.features && data.features.length > 0) {
-      console.log('First result sample:', JSON.stringify(data.features[0], null, 2));
+      console.log('Sample result:', JSON.stringify(data.features[0], null, 2));
     }
 
     if (!data.features || data.features.length === 0) {
+      console.log('No results found, trying fallback search...');
       // Fallback: try a broader search
       const broadQuery = encodeURIComponent(`${location}, Portugal`);
       const fallbackUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${broadQuery}.json?access_token=${mapboxApiKey}&country=pt&limit=1`;
@@ -69,123 +70,109 @@ serve(async (req) => {
       });
     }
 
-    // Find the best match with the most detailed address
-    let bestMatch = null;
+    // Find the best match with detailed address
+    let bestMatch = data.features[0];
     
-    // First priority: exact POI match with detailed address
+    // Priority: POI with detailed address components
     for (const feature of data.features) {
-      if (feature.place_type?.includes('poi') || feature.properties?.category) {
-        // Check if this result has detailed address components
-        const hasStreetAddress = feature.context?.some(ctx => 
-          ctx.id?.startsWith('address') || ctx.id?.startsWith('street')
-        );
-        
-        if (hasStreetAddress) {
-          bestMatch = feature;
-          break;
-        }
+      const hasDetailedAddress = feature.context?.some(ctx => 
+        ctx.id?.includes('address') || ctx.id?.includes('postcode')
+      );
+      
+      if ((feature.place_type?.includes('poi') || feature.properties?.category) && hasDetailedAddress) {
+        bestMatch = feature;
+        break;
       }
     }
-    
-    // Second priority: any POI
-    if (!bestMatch) {
-      bestMatch = data.features.find(f => 
-        f.place_type?.includes('poi') || f.properties?.category
-      );
-    }
-    
-    // Third priority: address type
-    if (!bestMatch) {
-      bestMatch = data.features.find(f => f.place_type?.includes('address'));
-    }
-    
-    // Last resort: first result
-    if (!bestMatch) {
-      bestMatch = data.features[0];
-    }
 
-    console.log('Selected best match:', JSON.stringify(bestMatch, null, 2));
+    console.log('Selected match:', JSON.stringify(bestMatch, null, 2));
 
-    // Build detailed address from components with Portuguese format
+    // Build detailed Portuguese address format
     let detailedAddress = bestMatch.place_name;
     
-    if (bestMatch.context) {
-      const addressComponents = {
-        street: null,
-        number: null,
-        postcode: null,
-        place: null,
-        locality: null
+    if (bestMatch.context && bestMatch.context.length > 0) {
+      const components = {
+        street: null as string | null,
+        number: null as string | null,
+        postcode: null as string | null,
+        locality: null as string | null,
+        place: null as string | null
       };
       
-      // Extract address components more thoroughly
-      for (const component of bestMatch.context) {
-        console.log('Processing context component:', component);
+      // Extract components from context
+      for (const ctx of bestMatch.context) {
+        console.log('Processing context:', ctx);
         
-        if (component.id?.startsWith('address') || component.id?.startsWith('street')) {
-          addressComponents.street = component.text;
-        } else if (component.id?.startsWith('postcode')) {
-          addressComponents.postcode = component.text;
-        } else if (component.id?.startsWith('place')) {
-          addressComponents.place = component.text;
-        } else if (component.id?.startsWith('locality')) {
-          addressComponents.locality = component.text;
+        if (ctx.id?.includes('address') || ctx.id?.includes('street')) {
+          components.street = ctx.text;
+        } else if (ctx.id?.includes('postcode')) {
+          components.postcode = ctx.text;
+        } else if (ctx.id?.includes('place')) {
+          components.place = ctx.text;
+        } else if (ctx.id?.includes('locality')) {
+          components.locality = ctx.text;
         }
       }
       
-      // Also check if the main feature has address properties
-      if (bestMatch.properties?.address) {
-        addressComponents.street = bestMatch.properties.address;
+      // Try to extract house number from the feature text
+      const numberMatch = bestMatch.text?.match(/\b\d+[A-Za-z]?\b/) || 
+                         bestMatch.place_name?.match /\b\d+[A-Za-z]?\b/);
+      if (numberMatch) {
+        components.number = numberMatch[0];
       }
       
-      // Check for house number in the text or properties
-      const houseNumberMatch = bestMatch.text?.match(/\d+/) || bestMatch.place_name?.match(/\b\d+\b/);
-      if (houseNumberMatch) {
-        addressComponents.number = houseNumberMatch[0];
+      // Also check properties for address info
+      if (bestMatch.properties?.address && !components.street) {
+        components.street = bestMatch.properties.address;
       }
       
-      console.log('Extracted address components:', addressComponents);
+      console.log('Extracted components:', components);
       
-      // If we have detailed components, construct a Portuguese-style address
-      if (addressComponents.street || addressComponents.postcode) {
-        const parts = [];
+      // Build Portuguese format address: Street Number, Postal Code City, Country
+      if (components.street || components.postcode || components.place) {
+        const addressParts = [];
         
-        // Portuguese address format: Street Number, Postal Code City, Country
-        if (addressComponents.street) {
-          let streetPart = addressComponents.street;
-          if (addressComponents.number && !streetPart.includes(addressComponents.number)) {
-            streetPart += ` ${addressComponents.number}`;
+        // Street with number
+        if (components.street) {
+          let streetPart = components.street;
+          if (components.number && !streetPart.includes(components.number)) {
+            streetPart += ` ${components.number}`;
           }
-          parts.push(streetPart);
+          addressParts.push(streetPart);
         }
         
-        if (addressComponents.postcode) {
-          let locationPart = addressComponents.postcode;
-          if (addressComponents.place || addressComponents.locality) {
-            locationPart += ` ${addressComponents.place || addressComponents.locality}`;
-          }
-          parts.push(locationPart);
-        } else if (addressComponents.place || addressComponents.locality) {
-          parts.push(addressComponents.place || addressComponents.locality);
+        // Postal code with city
+        if (components.postcode && (components.place || components.locality)) {
+          const cityPart = `${components.postcode} ${components.place || components.locality}`;
+          addressParts.push(cityPart);
+        } else if (components.postcode) {
+          addressParts.push(components.postcode);
+        } else if (components.place || components.locality) {
+          addressParts.push(components.place || components.locality);
         }
         
-        parts.push('Portugal');
+        // Add Portugal
+        addressParts.push('Portugal');
         
-        if (parts.length > 1) {
-          detailedAddress = parts.join(', ');
-          console.log('Constructed detailed address:', detailedAddress);
+        if (addressParts.length > 1) {
+          detailedAddress = addressParts.join(', ');
+          console.log('Built detailed address:', detailedAddress);
         }
       }
     }
 
-    return new Response(JSON.stringify({
+    const result = {
       found: true,
       placeName,
       address: detailedAddress,
       coordinates: bestMatch.geometry.coordinates, // [lng, lat]
       category: bestMatch.properties?.category,
       confidence: bestMatch.relevance
-    }), {
+    };
+
+    console.log('Final result:', JSON.stringify(result, null, 2));
+
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
