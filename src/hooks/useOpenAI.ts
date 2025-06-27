@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 
 export type LLMPlace = {
@@ -53,6 +54,14 @@ User's location: ${location}
 - Check each address carefully - it MUST contain "Guimarães" 
 - If you're not 100% certain a place is in ${location}, DO NOT include it
 - Better to return fewer results than wrong locations
+
+🚨 ADDRESS ACCURACY RULES - CRITICAL:
+- Provide COMPLETE and ACCURATE addresses including street names and numbers when possible
+- Include the city name "${location}" in every address
+- Use the format: "Street Name, Number, ${location}, Portugal" (or appropriate country)
+- If you don't know the exact street address, provide at least the area/neighborhood within ${location}
+- NEVER make up specific street numbers if you're not certain
+- It's better to say "Historic Center, ${location}" than provide a wrong street address
 
 🚨 GEOGRAPHIC DISTRIBUTION RULES - CRITICAL:
 - Places MUST be in DIFFERENT areas of ${location}
@@ -114,8 +123,8 @@ OUTPUT FORMAT:
 Return ONLY a valid JSON array with this exact structure:
 [
   {
-    "name": "Exact business name",
-    "address": "Full address including ${location} - ENSURE DIFFERENT STREETS",
+    "name": "Exact business name - this will be prominently displayed",
+    "address": "Most accurate address possible in ${location} - include neighborhood if exact address unknown",
     "walkingTime": number_in_minutes,
     "type": "category",
     "reason": "why it fits the user"
@@ -129,6 +138,7 @@ Before responding, verify EACH suggestion:
 ✓ Does it match the user's goals exactly?
 ✓ Are the places in DIFFERENT neighborhoods/streets?
 ✓ Is there good geographic distribution?
+✓ Is the address as accurate as possible?
 ✓ If ANY answer is NO, remove that suggestion
 
 Return 1-2 places maximum. Quality and diversity over quantity.

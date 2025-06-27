@@ -50,7 +50,7 @@ const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
               </div>
               <div className="text-gray-600 text-sm flex items-center gap-1 mt-1">
                 <MapPin className="w-3 h-3" />
-                {place.address}
+                {place.address || 'Address not specified'}
               </div>
               <div className="text-xs text-gray-500 mt-1 flex items-center gap-3">
                 <span className="flex items-center gap-1">
@@ -99,10 +99,18 @@ const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
           
           {selectedPlace && (
             <div className="space-y-4">
-              <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-gray-500 mt-1 flex-shrink-0" />
-                <span className="text-sm text-gray-600">{selectedPlace.address}</span>
-              </div>
+              {selectedPlace.address && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-gray-500 mt-1 flex-shrink-0" />
+                  <div className="text-sm text-gray-600">
+                    <div className="font-medium mb-1">Location:</div>
+                    <div>{selectedPlace.address}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Note: Address accuracy may vary - please verify before visiting
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-gray-500" />
@@ -126,6 +134,15 @@ const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
                   <p className="text-sm text-gray-700 mt-1">{selectedPlace.reason}</p>
                 </div>
               )}
+
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <DialogDescription className="text-sm text-blue-700 font-medium">
+                  💡 Tip
+                </DialogDescription>
+                <p className="text-sm text-gray-700 mt-1">
+                  Search for "{selectedPlace.name}" on your map app for the most accurate directions and current information.
+                </p>
+              </div>
             </div>
           )}
         </DialogContent>
