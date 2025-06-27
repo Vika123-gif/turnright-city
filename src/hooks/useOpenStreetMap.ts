@@ -1,0 +1,149 @@
+
+import { useState } from "react";
+
+export type OSMPlace = {
+  name: string;
+  address: string;
+  lat: number;
+  lon: number;
+  type?: string;
+  category?: string;
+};
+
+export function useOpenStreetMap() {
+  const [loading, setLoading] = useState(false);
+
+  async function searchPlaces(
+    query: string,
+    location: string,
+    limit: number = 10
+  ): Promise<OSMPlace[]> {
+    setLoading(true);
+    console.log("=== DEBUG: OpenStreetMap search ===");
+    console.log("Query:", query);
+    console.log("Location:", location);
+    
+    try {
+      // Determine if location is coordinates or city name
+      let searchArea = location;
+      if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location)) {
+        // If coordinates, use them directly for bounded search
+        const [lat, lon] = location.split(',').map(coord => parseFloat(coord.trim()));
+        searchArea = `viewbox=${lon-0.05},${lat+0.05},${lon+0.05},${lat-0.05}&bounded=1`;
+      } else {
+        // If city name, add it to the query
+        query = `${query} ${location}`;
+        searchArea = "";
+      }
+
+      const url = `https://nominatim.openstreetmap.org/search?` +
+        `q=${encodeURIComponent(query)}&` +
+        `format=json&` +
+        `addressdetails=1&` +
+        `limit=${limit}&` +
+        `countrycodes=pt&` + // Limit to Portugal
+        (searchArea.startsWith('viewbox') ? searchArea : '') +
+        `&accept-language=en`;
+
+      console.log("OSM API URL:", url);
+
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'TurnRightCity/1.0 (contact@turnright.city)'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenStreetMap API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("OSM API Response:", data);
+
+      const places: OSMPlace[] = data
+        .filter((item: any) => {
+          // Filter for business/amenity results
+          return item.class === 'amenity' || 
+                 item.class === 'shop' || 
+                 item.class === 'tourism' ||
+                 item.class === 'leisure' ||
+                 (item.type && ['restaurant', 'cafe', 'bar', 'pub', 'museum', 'gallery', 'park'].includes(item.type));
+        })
+        .map((item: any) => ({
+          name: item.display_name.split(',')[0] || item.name || "Unknown Place",
+          address: item.display_name,
+          lat: parseFloat(item.lat),
+          lon: parseFloat(item.lon),
+          type: item.type,
+          category: item.class
+        }))
+        .slice(0, limit);
+
+      console.log("Processed OSM places:", places);
+      return places;
+
+    } catch (error) {
+      console.error("OpenStreetMap search error:", error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function calculateWalkingTime(
+    fromLat: number,
+    fromLon: number,
+    toLat: number,
+    toLon: number
+  ): Promise<number> {
+    try {
+      // Use OSRM (Open Source Routing Machine) for walking directions
+      const url = `https://router.project-osrm.org/route/v1/foot/${fromLon},${fromLat};${toLon},${toLat}?overview=false&steps=false`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("OSRM API error");
+      }
+
+      const data = await response.json();
+      if (data.routes && data.routes.length > 0) {
+        const durationSeconds = data.routes[0].duration;
+        return Math.ceil(durationSeconds / 60); // Convert to minutes and round up
+      }
+      
+      // Fallback to straight-line distance calculation
+      return calculateStraightLineWalkingTime(fromLat, fromLon, toLat, toLon);
+    } catch (error) {
+      console.warn("OSRM routing failed, using straight-line estimation:", error);
+      return calculateStraightLineWalkingTime(fromLat, fromLon, toLat, toLon);
+    }
+  }
+
+  function calculateStraightLineWalkingTime(
+    fromLat: number,
+    fromLon: number,
+    toLat: number,
+    toLon: number
+  ): number {
+    // Haversine formula for distance calculation
+    const R = 6371; // Earth's radius in km
+    const dLat = (toLat - fromLat) * (Math.PI / 180);
+    const dLon = (toLon - fromLon) * (Math.PI / 180);
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(fromLat * (Math.PI / 180)) * Math.cos(toLat * (Math.PI / 180)) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c; // Distance in km
+    
+    // Average walking speed: 5 km/h, add 20% buffer for city walking
+    const walkingTimeMinutes = (distance / 5) * 60 * 1.2;
+    return Math.max(3, Math.ceil(walkingTimeMinutes)); // Minimum 3 minutes
+  }
+
+  return {
+    searchPlaces,
+    calculateWalkingTime,
+    loading
+  };
+}

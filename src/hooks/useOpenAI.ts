@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useOpenStreetMap } from "./useOpenStreetMap";
 
 export type LLMPlace = {
   name: string;
@@ -7,6 +8,8 @@ export type LLMPlace = {
   walkingTime: number;
   type?: string;
   reason?: string;
+  lat?: number;
+  lon?: number;
 };
 
 // Inserted user-provided OpenAI API key below.
@@ -23,6 +26,8 @@ const TIME_TO_PLACES = {
 };
 
 export function useOpenAI() {
+  const { searchPlaces, calculateWalkingTime } = useOpenStreetMap();
+
   async function getLLMPlaces({
     location,
     goals,
@@ -39,78 +44,34 @@ export function useOpenAI() {
     maxPlaces?: number;
   }): Promise<LLMPlace[]> {
     
-    console.log("=== DEBUG: useOpenAI getLLMPlaces called ===");
+    console.log("=== DEBUG: useOpenAI getLLMPlaces called with OSM integration ===");
     console.log("Location received in hook:", location);
     console.log("Goals received in hook:", goals);
-    console.log("Time window:", timeWindow);
-    console.log("Regeneration attempt:", regenerationAttempt);
     
     // Use simple place count logic
     const placesCount = TIME_TO_PLACES[timeWindow as keyof typeof TIME_TO_PLACES] || 2;
-    console.log("Places count based on time window:", placesCount);
     
+    // Modified system prompt to focus on place names/types rather than specific addresses
     const systemPrompt = `
-You are a LOCAL EXPERT for ${location}, Portugal with EXTENSIVE KNOWLEDGE of REAL walking distances and times.
+You are a LOCAL EXPERT for ${location}, Portugal with knowledge of businesses and places.
 
-CRITICAL: WALKING TIMES MUST BE REALISTIC AND ACCURATE
-
-WALKING TIME EXAMPLES for ${location}:
-${location === "Guimarães" ? `
-- From city center (Largo do Toural) to Castelo de Guimarães: 12-15 minutes uphill walk
-- From Largo do Toural to Paço dos Duques: 8-10 minutes walk  
-- Between nearby cafés in historic center: 5-8 minutes walk
-- To places outside historic center: 15-25+ minutes walk
-- Consider that Guimarães historic center is compact but has hills and pedestrian areas
-` : `
-- Most Portuguese city centers: places within 2-3 blocks = 6-10 minutes walk
-- Across main squares or avenues: 10-15 minutes walk
-- From center to outskirts: 20-30+ minutes walk
-- Account for pedestrian areas, hills, and actual street layout
-`}
-
-WALKING TIME CALCULATION RULES:
-- Average walking speed: 4-5 km/h (normal pace)
-- Add 2-3 minutes for hills, stairs, or complicated routes
-- Historic Portuguese cities often have narrow streets and elevation changes
-- Be CONSERVATIVE - it's better to overestimate than underestimate walking time
-- If you're unsure, add 3-5 extra minutes to your estimate
-
-EXAMPLES OF REALISTIC WALKING TIMES:
-- Very close (same street/square): 3-5 minutes
-- Nearby (2-3 blocks): 6-10 minutes  
-- Medium distance (across city center): 10-18 minutes
-- Far (edge of walkable area): 20-30+ minutes
+Your task: Suggest ${placesCount} place NAME(S) and TYPE(S) that match the user's goals.
+Don't worry about exact addresses - we'll verify those separately.
 
 LOCATION CONTEXT: ${location}, Portugal
-${location === "Guimarães" ? `
-- Historic city center around Largo do Toural
-- Castelo area is uphill (12-15 minutes walk from center)
-- Most cafés and restaurants within 6-10 minutes of main square
-- Museums typically 8-12 minutes from center
-- Consider elevation changes and pedestrian-only areas
-- DO NOT underestimate walking times - Guimarães has hills and winding streets
-` : `
-- Focus on the main city center area
-- Consider typical Portuguese city layout with main square as reference point
-- Account for pedestrian areas and elevation changes
-- Be realistic about distances - Portuguese cities are walkable but not tiny
-`}
-
 TARGET GOALS: ${goals.join(", ")}
 
 ${regenerationAttempt > 0 ? `
 VARIATION ${regenerationAttempt + 1}:
-- Suggest DIFFERENT well-known places than previous attempts
-- Vary the geographic area within the city
+- Suggest DIFFERENT places than previous attempts
+- Vary the type of establishments
 - Mix popular and local favorites
 ` : ""}
 
 RESPONSE FORMAT - Return EXACTLY this JSON structure:
 [
   {
-    "name": "Real business name",
-    "address": "Complete Portuguese address with street number, ${location}, Portugal",
-    "walkingTime": REALISTIC_minutes_from_city_center,
+    "name": "Business name or place name",
     "type": "specific_category_matching_goals",
     "reason": "Brief explanation of why this place is good for the selected goals"
   }
@@ -118,21 +79,15 @@ RESPONSE FORMAT - Return EXACTLY this JSON structure:
 
 CRITICAL REQUIREMENTS:
 - Provide exactly ${placesCount} suggestions
-- Walking times MUST be realistic for ${location} geography - do NOT underestimate
-- Use actual business names that exist in ${location}
-- Include realistic Portuguese street addresses
+- Focus on place NAMES and TYPES, not addresses
+- Use actual business names that likely exist in ${location}
 - NO markdown formatting - ONLY valid JSON
-- Do NOT include walking time information in the reason field
+- Don't include address or walking time information
 
-WALKING TIME VALIDATION:
-- Double-check each walking time estimate
-- Ask yourself: "Can I really walk this distance in this time in ${location}?"
-- Remember: it's better to overestimate than to disappoint users with impossible times
-
-Remember: Focus on accurate walking times but keep descriptions focused on why the place matches the user's goals.
+Remember: We just need good place suggestions - addresses will be verified separately.
 `.trim();
 
-    console.log("=== DEBUG: Simplified system prompt created ===");
+    console.log("=== DEBUG: Modified system prompt created ===");
     
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -153,7 +108,7 @@ Remember: Focus on accurate walking times but keep descriptions focused on why t
           },
         ],
         temperature: 0.1,
-        max_tokens: 400 + (placesCount * 100),
+        max_tokens: 300 + (placesCount * 80),
         top_p: 0.8,
         frequency_penalty: 0.3,
         presence_penalty: 0.2,
@@ -167,12 +122,11 @@ Remember: Focus on accurate walking times but keep descriptions focused on why t
     console.log("=== DEBUG: OpenAI Response ===");
     console.log("Raw response:", text);
     
-    let places: LLMPlace[] = [];
+    let aiSuggestions: any[] = [];
     try {
-      // Try to extract JSON array from response
       const match = text.match(/\[.*?\]/s);
       if (match) {
-        places = JSON.parse(match[0]);
+        aiSuggestions = JSON.parse(match[0]);
       } else {
         const parsed = JSON.parse(
           text
@@ -180,9 +134,7 @@ Remember: Focus on accurate walking times but keep descriptions focused on why t
             .trim()
         );
         if (Array.isArray(parsed)) {
-          places = parsed;
-        } else if (parsed && typeof parsed === "object" && Array.isArray(parsed.places)) {
-          places = parsed.places;
+          aiSuggestions = parsed;
         } else {
           throw new Error("AI did not return a list of places.");
         }
@@ -192,23 +144,98 @@ Remember: Focus on accurate walking times but keep descriptions focused on why t
       throw new Error("AI could not generate a valid route.\n\n" + text?.slice(0, 120));
     }
     
-    if (!Array.isArray(places)) throw new Error("AI did not return a list of places.");
+    console.log("=== DEBUG: AI Suggestions ===", aiSuggestions);
     
-    // Validate places have essential fields
-    const validPlaces = places.filter(place => {
-      if (!place.name || !place.address || typeof place.walkingTime !== 'number') {
-        console.warn("FILTERED: Missing essential fields:", place);
-        return false;
+    // Now use OpenStreetMap to find real addresses for these suggestions
+    const verifiedPlaces: LLMPlace[] = [];
+    
+    // Get origin coordinates if location is a string
+    let originLat = 0, originLon = 0;
+    if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location)) {
+      [originLat, originLon] = location.split(',').map(coord => parseFloat(coord.trim()));
+    } else {
+      // Try to get coordinates for the city
+      try {
+        const citySearch = await searchPlaces(location, "", 1);
+        if (citySearch.length > 0) {
+          originLat = citySearch[0].lat;
+          originLon = citySearch[0].lon;
+        }
+      } catch (error) {
+        console.warn("Could not get city coordinates:", error);
       }
-      return true;
-    });
+    }
     
-    console.log("=== DEBUG: Final places ===");
-    console.log("Places count:", placesCount);
-    console.log("Valid places count:", validPlaces.length);
-    console.log("Valid places:", validPlaces);
+    console.log("=== DEBUG: Origin coordinates ===", { originLat, originLon });
     
-    return validPlaces;
+    // Search for each AI suggestion using OpenStreetMap
+    for (const suggestion of aiSuggestions) {
+      console.log("=== DEBUG: Searching OSM for ===", suggestion);
+      
+      try {
+        // Create search query based on suggestion type and goals
+        let searchQuery = suggestion.name;
+        if (suggestion.type) {
+          searchQuery += ` ${suggestion.type}`;
+        }
+        
+        // Add goal-based search terms
+        if (goals.includes('restaurants')) searchQuery += ' restaurant dining';
+        if (goals.includes('coffee')) searchQuery += ' cafe coffee';
+        if (goals.includes('work')) searchQuery += ' coworking wifi';
+        if (goals.includes('museums')) searchQuery += ' museum gallery';
+        if (goals.includes('parks')) searchQuery += ' park garden';
+        if (goals.includes('monuments')) searchQuery += ' monument castle historic';
+        
+        const osmResults = await searchPlaces(searchQuery, location, 3);
+        console.log("=== DEBUG: OSM results for", suggestion.name, ":", osmResults);
+        
+        if (osmResults.length > 0) {
+          const bestMatch = osmResults[0];
+          
+          // Calculate walking time if we have origin coordinates
+          let walkingTime = 15; // Default fallback
+          if (originLat && originLon) {
+            walkingTime = await calculateWalkingTime(originLat, originLon, bestMatch.lat, bestMatch.lon);
+          }
+          
+          verifiedPlaces.push({
+            name: suggestion.name,
+            address: bestMatch.address,
+            walkingTime,
+            type: suggestion.type,
+            reason: suggestion.reason,
+            lat: bestMatch.lat,
+            lon: bestMatch.lon
+          });
+        } else {
+          // Fallback: use AI suggestion with estimated data
+          console.warn("No OSM results for", suggestion.name, "- using AI fallback");
+          verifiedPlaces.push({
+            name: suggestion.name,
+            address: `${suggestion.name}, ${location}, Portugal`,
+            walkingTime: 15, // Default estimate
+            type: suggestion.type,
+            reason: suggestion.reason
+          });
+        }
+      } catch (error) {
+        console.error("Error processing suggestion", suggestion.name, ":", error);
+        // Fallback: use AI suggestion
+        verifiedPlaces.push({
+          name: suggestion.name,
+          address: `${suggestion.name}, ${location}, Portugal`,
+          walkingTime: 15,
+          type: suggestion.type,
+          reason: suggestion.reason
+        });
+      }
+    }
+    
+    console.log("=== DEBUG: Final verified places ===");
+    console.log("Verified places:", verifiedPlaces);
+    
+    return verifiedPlaces;
   }
   
   return { getLLMPlaces };
