@@ -26,7 +26,7 @@ const TIME_TO_PLACES = {
 };
 
 export function useOpenAI() {
-  const { getNearbyPlaces } = useGooglePlaces();
+  const { searchPlacesByName } = useGooglePlaces();
 
   async function getLLMPlaces({
     location,
@@ -44,50 +44,64 @@ export function useOpenAI() {
     maxPlaces?: number;
   }): Promise<LLMPlace[]> {
     
-    console.log("=== DEBUG: useOpenAI getLLMPlaces called with Google Places integration ===");
+    console.log("=== DEBUG: useOpenAI getLLMPlaces called with AI + Google Places ===");
     console.log("Location received in hook:", location);
     console.log("Goals received in hook:", goals);
     
-    // Use Google Places API directly for better results
-    try {
-      const googlePlaces = await getNearbyPlaces({
-        location,
-        goals,
-        timeWindow
-      });
+    // First, get place suggestions from OpenAI
+    const aiSuggestions = await getAIPlaceSuggestions({
+      location,
+      goals,
+      timeWindow,
+      userPrompt,
+      regenerationAttempt,
+      maxPlaces
+    });
 
-      console.log("=== DEBUG: Google Places results ===", googlePlaces);
+    console.log("=== DEBUG: AI Suggestions ===", aiSuggestions);
 
-      // Convert Google Places results to LLMPlace format
-      const llmPlaces: LLMPlace[] = googlePlaces.map((place, index) => ({
-        name: place.name,
-        address: place.address,
-        walkingTime: place.walkingTime,
-        type: place.type,
-        reason: `Great ${place.type || 'place'} for your selected goals`,
-      }));
+    // Then, use Google Places to find real addresses for these suggestions
+    const placesWithRealAddresses: LLMPlace[] = [];
 
-      console.log("=== DEBUG: Final LLM places ===", llmPlaces);
-      
-      return llmPlaces;
-      
-    } catch (error) {
-      console.error("Error getting Google Places:", error);
-      
-      // Fallback to AI-only suggestions if Google Places fails
-      return await getAIOnlyPlaces({
-        location,
-        goals,
-        timeWindow,
-        userPrompt,
-        regenerationAttempt,
-        maxPlaces
-      });
+    for (const suggestion of aiSuggestions) {
+      try {
+        console.log(`Searching Google Places for: ${suggestion.name} near ${location}`);
+        
+        const googleResults = await searchPlacesByName({
+          placeName: suggestion.name,
+          location: location,
+          placeType: suggestion.type
+        });
+
+        if (googleResults.length > 0) {
+          // Use the first (best) result from Google Places
+          const googlePlace = googleResults[0];
+          placesWithRealAddresses.push({
+            name: googlePlace.name,
+            address: googlePlace.address,
+            walkingTime: googlePlace.walkingTime,
+            type: suggestion.type,
+            reason: suggestion.reason,
+          });
+        } else {
+          // Fallback to AI suggestion if Google Places doesn't find it
+          console.log(`No Google Places results for ${suggestion.name}, using AI fallback`);
+          placesWithRealAddresses.push(suggestion);
+        }
+      } catch (error) {
+        console.error(`Error searching Google Places for ${suggestion.name}:`, error);
+        // Use AI suggestion as fallback
+        placesWithRealAddresses.push(suggestion);
+      }
     }
+
+    console.log("=== DEBUG: Final places with real addresses ===", placesWithRealAddresses);
+    
+    return placesWithRealAddresses;
   }
 
-  // Fallback AI-only function
-  async function getAIOnlyPlaces({
+  // Get place suggestions from OpenAI
+  async function getAIPlaceSuggestions({
     location,
     goals,
     timeWindow,
@@ -103,7 +117,7 @@ export function useOpenAI() {
     maxPlaces?: number;
   }): Promise<LLMPlace[]> {
     
-    console.log("=== DEBUG: Fallback to AI-only suggestions ===");
+    console.log("=== DEBUG: Getting AI place suggestions ===");
     
     // Use simple place count logic
     const placesCount = TIME_TO_PLACES[timeWindow as keyof typeof TIME_TO_PLACES] || 2;
@@ -111,7 +125,7 @@ export function useOpenAI() {
     const systemPrompt = `
 You are a LOCAL EXPERT for ${location}, Portugal with knowledge of businesses and places.
 
-Your task: Suggest ${placesCount} specific place(s) with exact addresses that match the user's goals.
+Your task: Suggest ${placesCount} specific place(s) that match the user's goals. Focus on suggesting REAL place names that exist.
 
 LOCATION CONTEXT: ${location}, Portugal
 TARGET GOALS: ${goals.join(", ")}
@@ -126,8 +140,8 @@ VARIATION ${regenerationAttempt + 1}:
 RESPONSE FORMAT - Return EXACTLY this JSON structure:
 [
   {
-    "name": "Exact business name",
-    "address": "Full street address including postal code, city, Portugal",
+    "name": "Specific business or place name (e.g., 'Café Central', 'Museu Nacional')",
+    "address": "General area or street name",
     "walkingTime": estimated_walking_minutes_as_number,
     "type": "specific_category_matching_goals",
     "reason": "Brief explanation of why this place is good for the selected goals"
@@ -136,15 +150,15 @@ RESPONSE FORMAT - Return EXACTLY this JSON structure:
 
 CRITICAL REQUIREMENTS:
 - Provide exactly ${placesCount} suggestions
-- Use REAL business names and EXACT addresses that exist in ${location}
-- Include full addresses with street, postal code, city, Portugal
+- Focus on REAL place names that likely exist in ${location}
+- Use specific business names when possible (not generic descriptions)
 - NO markdown formatting - ONLY valid JSON
-- Walking times should be realistic estimates
+- Walking times should be realistic estimates (5-15 minutes)
 
-Remember: Provide complete, accurate information for real places.
+Remember: Suggest real place names that Google Places API can likely find.
 `.trim();
 
-    console.log("=== DEBUG: AI fallback system prompt created ===");
+    console.log("=== DEBUG: AI system prompt created ===");
     
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -198,7 +212,7 @@ Remember: Provide complete, accurate information for real places.
         }
       }
       
-      console.log("=== DEBUG: AI Fallback Suggestions ===", aiSuggestions);
+      console.log("=== DEBUG: AI Place Suggestions ===", aiSuggestions);
       return aiSuggestions as LLMPlace[];
       
     } catch (err) {

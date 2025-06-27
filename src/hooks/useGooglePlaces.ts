@@ -83,5 +83,46 @@ export function useGooglePlaces() {
     }
   }
 
-  return { getNearbyPlaces, loading, error, debugInfo };
+  /**
+   * Search for a specific place by name near a location
+   * @param opts 
+   * @returns Place[] (matching places)
+   */
+  async function searchPlacesByName(opts: {
+    placeName: string;
+    location: string;
+    placeType?: string;
+  }): Promise<Place[]> {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/google-places", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          location: opts.location,
+          placeName: opts.placeName,
+          placeType: opts.placeType,
+          searchMode: "by_name"
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to search places by name.");
+      const data = await response.json();
+
+      if (!data.success || !Array.isArray(data.places)) {
+        throw new Error("Invalid response from place search.");
+      }
+
+      return data.places as Place[];
+    } catch (err: any) {
+      setError(err.message || "Unknown place search error.");
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return { getNearbyPlaces, searchPlacesByName, loading, error, debugInfo };
 }
