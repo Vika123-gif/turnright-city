@@ -157,12 +157,20 @@ export default function ChatFlow() {
         throw new Error("Please select at least one goal before generating places.");
       }
 
-      // Create a very explicit user prompt that clearly states the selected goals
+      // Enhanced goal descriptions to include both main categories and subcategories
       const goalDescriptions = {
+        // Main categories
         explore: "explore cultural attractions, museums, galleries, historical sites, or architectural landmarks",
         eat: "find restaurants, bistros, eateries, or dining establishments for meals",
         coffee: "find coffee shops, cafes, specialty roasters, or tea houses for beverages", 
-        work: "find cafes with wifi, coworking spaces, or quiet work-friendly locations for working"
+        work: "find cafes with wifi, coworking spaces, or quiet work-friendly locations for working",
+        // Subcategories
+        museums: "visit museums and art galleries with exhibitions and cultural displays",
+        theaters: "attend theaters, concert halls, or performing arts venues",
+        historical: "explore historical sites, monuments, and heritage landmarks",
+        bars: "visit bars, pubs, and establishments for drinks and socializing",
+        bakeries: "find bakeries, pastry shops, and places for fresh baked goods",
+        parks: "enjoy parks, gardens, and green outdoor spaces for relaxation"
       };
       
       const selectedGoalTexts = goalsToUse.map(goal => goalDescriptions[goal as keyof typeof goalDescriptions]).filter(Boolean);
@@ -184,21 +192,30 @@ export default function ChatFlow() {
         userPrompt += `This is a REGENERATION request - I need COMPLETELY DIFFERENT places than before. Please suggest places in different areas/neighborhoods of ${locationForAI}. `;
       }
       
-      // Add very specific instructions based on selected goals
-      if (goalsToUse.includes("eat")) {
-        userPrompt += "I ONLY want to find restaurants, bistros, eateries, or places where I can have a meal. DO NOT suggest museums, galleries, or tourist attractions. ";
+      // Add specific instructions based on selected goals (both main and subcategories)
+      const hasEatingGoals = goalsToUse.some(goal => ['eat', 'bakeries'].includes(goal));
+      const hasDrinkingGoals = goalsToUse.some(goal => ['coffee', 'bars'].includes(goal));
+      const hasExploringGoals = goalsToUse.some(goal => ['explore', 'museums', 'theaters', 'historical'].includes(goal));
+      const hasWorkGoals = goalsToUse.some(goal => ['work'].includes(goal));
+      const hasOutdoorGoals = goalsToUse.some(goal => ['parks'].includes(goal));
+      
+      if (hasEatingGoals) {
+        userPrompt += "I want to find restaurants, bistros, eateries, bakeries, or places where I can have food/meals. ";
       }
-      if (goalsToUse.includes("coffee")) {
-        userPrompt += "I ONLY want to find coffee shops, cafes, or beverage establishments. DO NOT suggest museums, galleries, or tourist attractions. ";
+      if (hasDrinkingGoals) {
+        userPrompt += "I want to find coffee shops, cafes, bars, pubs, or beverage establishments. ";
       }
-      if (goalsToUse.includes("explore")) {
-        userPrompt += "I ONLY want to explore cultural attractions like museums, galleries, historical sites, or architectural landmarks. DO NOT suggest restaurants or cafes. ";
+      if (hasExploringGoals) {
+        userPrompt += "I want to explore cultural attractions like museums, galleries, theaters, concert halls, historical sites, or architectural landmarks. ";
         if (isRegeneration) {
           userPrompt += "Please avoid suggesting Paço dos Duques de Bragança and Castelo de Guimarães together as they are too close. ";
         }
       }
-      if (goalsToUse.includes("work")) {
-        userPrompt += "I ONLY want to find work-friendly places like cafes with wifi or coworking spaces. ";
+      if (hasWorkGoals) {
+        userPrompt += "I want to find work-friendly places like cafes with wifi or coworking spaces. ";
+      }
+      if (hasOutdoorGoals) {
+        userPrompt += "I want to enjoy parks, gardens, and green outdoor spaces. ";
       }
       
       userPrompt += `Please suggest 1-2 places in DIFFERENT areas of ${locationForAI} that match EXACTLY what I'm looking for. My selected goals are: ${goalsToUse.join(", ")}.`;
