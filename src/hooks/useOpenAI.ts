@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 export type LLMPlace = {
@@ -77,9 +76,36 @@ export function useOpenAI() {
     console.log("Calculated optimal places:", optimalPlaces);
     
     const systemPrompt = `
-You are a LOCAL EXPERT for ${location}, Portugal with extensive knowledge of real businesses and walking distances.
+You are a LOCAL EXPERT for ${location}, Portugal with EXTENSIVE KNOWLEDGE of REAL walking distances and times.
 
-CRITICAL TASK: Create a REALISTIC WALKING ROUTE optimized for ${timeWindow}.
+CRITICAL: WALKING TIMES MUST BE REALISTIC AND ACCURATE
+
+WALKING TIME EXAMPLES for ${location}:
+${location === "Guimarães" ? `
+- From city center (Largo do Toural) to Castelo de Guimarães: 8-12 minutes uphill walk
+- From Largo do Toural to Paço dos Duques: 6-9 minutes walk  
+- Between nearby cafés in historic center: 4-7 minutes walk
+- To places outside historic center: 10-20+ minutes walk
+- Consider that Guimarães historic center is compact but has hills and pedestrian areas
+` : `
+- Most Portuguese city centers: places within 2-3 blocks = 5-8 minutes walk
+- Across main squares or avenues: 8-12 minutes walk
+- From center to outskirts: 15-25+ minutes walk
+- Account for pedestrian areas, hills, and actual street layout
+`}
+
+WALKING TIME CALCULATION RULES:
+- Average walking speed: 4-5 km/h (normal pace)
+- Add 1-2 minutes for hills, stairs, or complicated routes
+- Historic Portuguese cities often have narrow streets and elevation changes
+- Be CONSERVATIVE - it's better to overestimate than underestimate walking time
+- If you're unsure, add 2-3 extra minutes to your estimate
+
+EXAMPLES OF REALISTIC WALKING TIMES:
+- Very close (same street/square): 2-4 minutes
+- Nearby (2-3 blocks): 5-8 minutes  
+- Medium distance (across city center): 8-15 minutes
+- Far (edge of walkable area): 15-25+ minutes
 
 TIME CONSTRAINTS ANALYSIS:
 - Available time: ${timeWindow}
@@ -93,17 +119,10 @@ TIME CONSTRAINTS ANALYSIS:
 
 - Optimal number of places for this time window: ${optimalPlaces}
 
-WALKING TIME REQUIREMENTS:
-- Use REALISTIC walking times based on actual distances in ${location}
-- Walking times should be from the city center (starting point) to each location
-- Consider that people walk at 4-5 km/h (average pace)
-- Walking times in city centers: 2-15 minutes between nearby places
-- Account for hills, pedestrian areas, and actual street layout in ${location}
-
 ROUTE OPTIMIZATION:
 - Suggest exactly ${optimalPlaces} places that fit within ${timeWindow}
 - Consider the TOTAL journey time including:
-  * Walking time to each place
+  * REALISTIC walking time to each place from city center
   * Time spent at each place
   * Walking time between places
 - Arrange places in a logical geographic sequence to minimize total walking
@@ -111,14 +130,16 @@ ROUTE OPTIMIZATION:
 LOCATION CONTEXT: ${location}, Portugal
 ${location === "Guimarães" ? `
 - Historic city center around Largo do Toural
-- Castelo area is uphill (5-8 minutes walk from center)
-- Most cafés and restaurants within 3-5 minutes of main square
-- Museums typically 3-7 minutes from center
+- Castelo area is uphill (8-12 minutes walk from center)
+- Most cafés and restaurants within 5-8 minutes of main square
+- Museums typically 6-10 minutes from center
 - Consider elevation changes and pedestrian-only areas
+- DO NOT underestimate walking times - Guimarães has hills and winding streets
 ` : `
 - Focus on the main city center area
-- Consider typical Portuguese city layout
+- Consider typical Portuguese city layout with main square as reference point
 - Account for pedestrian areas and elevation changes
+- Be realistic about distances - Portuguese cities are walkable but not tiny
 `}
 
 TARGET GOALS: ${goals.join(", ")}
@@ -135,24 +156,29 @@ RESPONSE FORMAT - Return EXACTLY this JSON structure:
   {
     "name": "Real business name",
     "address": "Complete Portuguese address with street number, ${location}, Portugal",
-    "walkingTime": realistic_minutes_from_starting_point,
+    "walkingTime": REALISTIC_minutes_from_city_center,
     "type": "specific_category_matching_goals",
     "reason": "Brief explanation of why this fits the time and goals"
   }
 ]
 
-QUALITY REQUIREMENTS:
+CRITICAL REQUIREMENTS:
 - Provide exactly ${optimalPlaces} suggestions
-- Walking times must be realistic for ${location} geography
-- Total route should fit comfortably within ${timeWindow}
+- Walking times MUST be realistic for ${location} geography - do NOT underestimate
+- Total route should fit comfortably within ${timeWindow} including ALL walking and activity time
 - Use actual business names that exist in ${location}
 - Include realistic Portuguese street addresses
 - NO markdown formatting - ONLY valid JSON
 
+WALKING TIME VALIDATION:
+- Double-check each walking time estimate
+- Ask yourself: "Can I really walk this distance in this time in ${location}?"
+- Remember: it's better to overestimate than to disappoint users with impossible times
+
 Remember: This route must actually work within ${timeWindow} including all walking and activity time.
 `.trim();
 
-    console.log("=== DEBUG: Time-optimized system prompt created ===");
+    console.log("=== DEBUG: Enhanced realistic walking time system prompt created ===");
     
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -172,11 +198,11 @@ Remember: This route must actually work within ${timeWindow} including all walki
             content: userPrompt,
           },
         ],
-        temperature: 0.1, // Very low for consistent, factual responses
+        temperature: 0.05, // Even lower for more consistent, factual responses
         max_tokens: 400 + (optimalPlaces * 100),
-        top_p: 0.8,
-        frequency_penalty: 0.5,
-        presence_penalty: 0.3,
+        top_p: 0.7, // More focused responses
+        frequency_penalty: 0.3,
+        presence_penalty: 0.2,
       }),
     });
     
