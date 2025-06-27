@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { useGooglePlaces } from "./useGooglePlaces";
 
 export type LLMPlace = {
   name: string;
@@ -26,8 +25,6 @@ const TIME_TO_PLACES = {
 };
 
 export function useOpenAI() {
-  const { searchPlacesByName } = useGooglePlaces();
-
   async function getLLMPlaces({
     location,
     goals,
@@ -44,88 +41,17 @@ export function useOpenAI() {
     maxPlaces?: number;
   }): Promise<LLMPlace[]> {
     
-    console.log("=== DEBUG: useOpenAI getLLMPlaces called with AI + Google Places ===");
+    console.log("=== DEBUG: useOpenAI getLLMPlaces called ===");
     console.log("Location received in hook:", location);
     console.log("Goals received in hook:", goals);
-    
-    // First, get place suggestions from OpenAI
-    const aiSuggestions = await getAIPlaceSuggestions({
-      location,
-      goals,
-      timeWindow,
-      userPrompt,
-      regenerationAttempt,
-      maxPlaces
-    });
-
-    console.log("=== DEBUG: AI Suggestions ===", aiSuggestions);
-
-    // Then, use Google Places to find real addresses for these suggestions
-    const placesWithRealAddresses: LLMPlace[] = [];
-
-    for (const suggestion of aiSuggestions) {
-      try {
-        console.log(`Searching Google Places for: ${suggestion.name} near ${location}`);
-        
-        const googleResults = await searchPlacesByName({
-          placeName: suggestion.name,
-          location: location,
-          placeType: suggestion.type
-        });
-
-        if (googleResults.length > 0) {
-          // Use the first (best) result from Google Places
-          const googlePlace = googleResults[0];
-          placesWithRealAddresses.push({
-            name: googlePlace.name,
-            address: googlePlace.address,
-            walkingTime: googlePlace.walkingTime,
-            type: suggestion.type,
-            reason: suggestion.reason,
-          });
-        } else {
-          // Fallback to AI suggestion if Google Places doesn't find it
-          console.log(`No Google Places results for ${suggestion.name}, using AI fallback`);
-          placesWithRealAddresses.push(suggestion);
-        }
-      } catch (error) {
-        console.error(`Error searching Google Places for ${suggestion.name}:`, error);
-        // Use AI suggestion as fallback
-        placesWithRealAddresses.push(suggestion);
-      }
-    }
-
-    console.log("=== DEBUG: Final places with real addresses ===", placesWithRealAddresses);
-    
-    return placesWithRealAddresses;
-  }
-
-  // Get place suggestions from OpenAI
-  async function getAIPlaceSuggestions({
-    location,
-    goals,
-    timeWindow,
-    userPrompt,
-    regenerationAttempt = 0,
-    maxPlaces = 2,
-  }: {
-    location: string;
-    goals: string[];
-    timeWindow: string;
-    userPrompt: string;
-    regenerationAttempt?: number;
-    maxPlaces?: number;
-  }): Promise<LLMPlace[]> {
-    
-    console.log("=== DEBUG: Getting AI place suggestions ===");
     
     // Use simple place count logic
     const placesCount = TIME_TO_PLACES[timeWindow as keyof typeof TIME_TO_PLACES] || 2;
     
     const systemPrompt = `
-You are a LOCAL EXPERT for ${location}, Portugal with knowledge of businesses and places.
+You are a LOCAL EXPERT for ${location}, Portugal with detailed knowledge of specific businesses, restaurants, cafes, and attractions.
 
-Your task: Suggest ${placesCount} specific place(s) that match the user's goals. Focus on suggesting REAL place names that exist.
+Your task: Suggest ${placesCount} specific, real places with COMPLETE and ACCURATE addresses.
 
 LOCATION CONTEXT: ${location}, Portugal
 TARGET GOALS: ${goals.join(", ")}
@@ -140,8 +66,8 @@ VARIATION ${regenerationAttempt + 1}:
 RESPONSE FORMAT - Return EXACTLY this JSON structure:
 [
   {
-    "name": "Specific business or place name (e.g., 'Café Central', 'Museu Nacional')",
-    "address": "General area or street name",
+    "name": "Specific business name (e.g., 'Café Central', 'Restaurante Dom Pedro')",
+    "address": "Complete street address with number, postal code, and city",
     "walkingTime": estimated_walking_minutes_as_number,
     "type": "specific_category_matching_goals",
     "reason": "Brief explanation of why this place is good for the selected goals"
@@ -150,12 +76,13 @@ RESPONSE FORMAT - Return EXACTLY this JSON structure:
 
 CRITICAL REQUIREMENTS:
 - Provide exactly ${placesCount} suggestions
-- Focus on REAL place names that likely exist in ${location}
-- Use specific business names when possible (not generic descriptions)
+- Use REAL business names that exist in ${location}
+- Include COMPLETE addresses with street numbers and postal codes
 - NO markdown formatting - ONLY valid JSON
 - Walking times should be realistic estimates (5-15 minutes)
+- Focus on well-known, established places in ${location}
 
-Remember: Suggest real place names that Google Places API can likely find.
+Remember: You must provide complete, accurate addresses as they would appear on Google Maps.
 `.trim();
 
     console.log("=== DEBUG: AI system prompt created ===");
@@ -212,7 +139,7 @@ Remember: Suggest real place names that Google Places API can likely find.
         }
       }
       
-      console.log("=== DEBUG: AI Place Suggestions ===", aiSuggestions);
+      console.log("=== DEBUG: Final AI Place Suggestions ===", aiSuggestions);
       return aiSuggestions as LLMPlace[];
       
     } catch (err) {

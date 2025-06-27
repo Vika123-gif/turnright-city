@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useAnalytics } from "@/hooks/useAnalytics";
@@ -119,7 +120,7 @@ export default function ChatFlow() {
   }
 
   async function fetchPlacesWithGoals(goalsToUse: string[], isRegeneration = false) {
-    console.log("=== DEBUG: fetchPlacesWithGoals called with Google Places ===");
+    console.log("=== DEBUG: fetchPlacesWithGoals called with OpenAI only ===");
     console.log("Goals parameter:", goalsToUse);
     console.log("Goals length:", goalsToUse?.length);
     console.log("Location:", location);
@@ -157,7 +158,7 @@ export default function ChatFlow() {
         throw new Error("Please select at least one goal before generating places.");
       }
 
-      // Create user prompt for potential AI fallback
+      // Create user prompt for AI
       const goalDescriptions = {
         restaurants: "find restaurants, bistros, eateries, dining establishments for meals and food",
         coffee: "find coffee shops, cafes, specialty roasters, tea houses for beverages and drinks", 
@@ -176,7 +177,7 @@ export default function ChatFlow() {
         userPrompt += ` This is a regeneration request - please provide different places than before.`;
       }
       
-      console.log("=== DEBUG: Calling getLLMPlaces with Google Places ===");
+      console.log("=== DEBUG: Calling getLLMPlaces with OpenAI only ===");
       
       const currentRegenerationCount = isRegeneration ? regenerationCount : 0;
       
