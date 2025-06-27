@@ -10,12 +10,12 @@ const TIMINGS = [
   "2+ hours",
 ];
 
-// Map time windows to number of places
+// Simplified place count mapping
 const TIME_TO_PLACES_COUNT = {
   "30 minutes": 1,
   "1 hour": 2,
-  "1.5 hours": 3,
-  "2+ hours": 4,
+  "1.5 hours": 2,
+  "2+ hours": 3,
 };
 
 type Props = {

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 
 export type LLMPlace = {
@@ -13,40 +14,13 @@ export type LLMPlace = {
 const OPENAI_API_KEY =
   "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";
 
-// Time spent at different types of locations (in minutes)
-const LOCATION_TIME_SPENT = {
-  restaurants: 30,
-  coffee: 30,
-  work: 60, // average between 30-90 minutes
-  museums: 60,
-  parks: 20,
-  monuments: 15,
+// Simple place count logic
+const TIME_TO_PLACES = {
+  "30 minutes": 1,
+  "1 hour": 2,
+  "1.5 hours": 2,
+  "2+ hours": 3,
 };
-
-// Calculate optimal number of places based on time window
-function calculateOptimalPlaces(timeWindow: string, goals: string[]): number {
-  const timeInMinutes = {
-    "30 minutes": 30,
-    "1 hour": 60,
-    "1.5 hours": 90,
-    "2+ hours": 120,
-  }[timeWindow] || 60;
-
-  // Average time spent per location based on selected goals
-  const avgTimePerLocation = goals.reduce((sum, goal) => {
-    return sum + (LOCATION_TIME_SPENT[goal as keyof typeof LOCATION_TIME_SPENT] || 30);
-  }, 0) / goals.length;
-
-  // Account for walking time between locations (average 8-12 minutes between places)
-  const avgWalkingTime = 10;
-  const totalTimePerLocation = avgTimePerLocation + avgWalkingTime;
-
-  // Calculate how many places fit in the time window
-  const optimalPlaces = Math.floor(timeInMinutes / totalTimePerLocation);
-  
-  // Ensure at least 1 place, maximum 4 places
-  return Math.max(1, Math.min(4, optimalPlaces));
-}
 
 export function useOpenAI() {
   async function getLLMPlaces({
@@ -71,9 +45,9 @@ export function useOpenAI() {
     console.log("Time window:", timeWindow);
     console.log("Regeneration attempt:", regenerationAttempt);
     
-    // Calculate optimal number of places based on time constraints
-    const optimalPlaces = calculateOptimalPlaces(timeWindow, goals);
-    console.log("Calculated optimal places:", optimalPlaces);
+    // Use simple place count logic
+    const placesCount = TIME_TO_PLACES[timeWindow as keyof typeof TIME_TO_PLACES] || 2;
+    console.log("Places count based on time window:", placesCount);
     
     const systemPrompt = `
 You are a LOCAL EXPERT for ${location}, Portugal with EXTENSIVE KNOWLEDGE of REAL walking distances and times.
@@ -82,57 +56,37 @@ CRITICAL: WALKING TIMES MUST BE REALISTIC AND ACCURATE
 
 WALKING TIME EXAMPLES for ${location}:
 ${location === "Guimarães" ? `
-- From city center (Largo do Toural) to Castelo de Guimarães: 8-12 minutes uphill walk
-- From Largo do Toural to Paço dos Duques: 6-9 minutes walk  
-- Between nearby cafés in historic center: 4-7 minutes walk
-- To places outside historic center: 10-20+ minutes walk
+- From city center (Largo do Toural) to Castelo de Guimarães: 12-15 minutes uphill walk
+- From Largo do Toural to Paço dos Duques: 8-10 minutes walk  
+- Between nearby cafés in historic center: 5-8 minutes walk
+- To places outside historic center: 15-25+ minutes walk
 - Consider that Guimarães historic center is compact but has hills and pedestrian areas
 ` : `
-- Most Portuguese city centers: places within 2-3 blocks = 5-8 minutes walk
-- Across main squares or avenues: 8-12 minutes walk
-- From center to outskirts: 15-25+ minutes walk
+- Most Portuguese city centers: places within 2-3 blocks = 6-10 minutes walk
+- Across main squares or avenues: 10-15 minutes walk
+- From center to outskirts: 20-30+ minutes walk
 - Account for pedestrian areas, hills, and actual street layout
 `}
 
 WALKING TIME CALCULATION RULES:
 - Average walking speed: 4-5 km/h (normal pace)
-- Add 1-2 minutes for hills, stairs, or complicated routes
+- Add 2-3 minutes for hills, stairs, or complicated routes
 - Historic Portuguese cities often have narrow streets and elevation changes
 - Be CONSERVATIVE - it's better to overestimate than underestimate walking time
-- If you're unsure, add 2-3 extra minutes to your estimate
+- If you're unsure, add 3-5 extra minutes to your estimate
 
 EXAMPLES OF REALISTIC WALKING TIMES:
-- Very close (same street/square): 2-4 minutes
-- Nearby (2-3 blocks): 5-8 minutes  
-- Medium distance (across city center): 8-15 minutes
-- Far (edge of walkable area): 15-25+ minutes
-
-TIME CONSTRAINTS ANALYSIS:
-- Available time: ${timeWindow}
-- Time spent per location type:
-  ${goals.includes("restaurants") ? "🍽️ Restaurants: 30 minutes" : ""}
-  ${goals.includes("coffee") ? "☕ Coffee: 30 minutes" : ""}
-  ${goals.includes("work") ? "💻 Work: 60 minutes average" : ""}
-  ${goals.includes("museums") ? "🏛️ Museums: 60 minutes" : ""}
-  ${goals.includes("parks") ? "🌳 Parks: 20 minutes" : ""}
-  ${goals.includes("monuments") ? "🏰 Monuments: 15 minutes" : ""}
-
-- Optimal number of places for this time window: ${optimalPlaces}
-
-ROUTE OPTIMIZATION:
-- Suggest exactly ${optimalPlaces} places that fit within ${timeWindow}
-- Consider the TOTAL journey time including:
-  * REALISTIC walking time to each place from city center
-  * Time spent at each place
-  * Walking time between places
-- Arrange places in a logical geographic sequence to minimize total walking
+- Very close (same street/square): 3-5 minutes
+- Nearby (2-3 blocks): 6-10 minutes  
+- Medium distance (across city center): 10-18 minutes
+- Far (edge of walkable area): 20-30+ minutes
 
 LOCATION CONTEXT: ${location}, Portugal
 ${location === "Guimarães" ? `
 - Historic city center around Largo do Toural
-- Castelo area is uphill (8-12 minutes walk from center)
-- Most cafés and restaurants within 5-8 minutes of main square
-- Museums typically 6-10 minutes from center
+- Castelo area is uphill (12-15 minutes walk from center)
+- Most cafés and restaurants within 6-10 minutes of main square
+- Museums typically 8-12 minutes from center
 - Consider elevation changes and pedestrian-only areas
 - DO NOT underestimate walking times - Guimarães has hills and winding streets
 ` : `
@@ -158,27 +112,27 @@ RESPONSE FORMAT - Return EXACTLY this JSON structure:
     "address": "Complete Portuguese address with street number, ${location}, Portugal",
     "walkingTime": REALISTIC_minutes_from_city_center,
     "type": "specific_category_matching_goals",
-    "reason": "Brief explanation of why this fits the time and goals"
+    "reason": "Brief explanation of why this place is good for the selected goals"
   }
 ]
 
 CRITICAL REQUIREMENTS:
-- Provide exactly ${optimalPlaces} suggestions
+- Provide exactly ${placesCount} suggestions
 - Walking times MUST be realistic for ${location} geography - do NOT underestimate
-- Total route should fit comfortably within ${timeWindow} including ALL walking and activity time
 - Use actual business names that exist in ${location}
 - Include realistic Portuguese street addresses
 - NO markdown formatting - ONLY valid JSON
+- Do NOT include walking time information in the reason field
 
 WALKING TIME VALIDATION:
 - Double-check each walking time estimate
 - Ask yourself: "Can I really walk this distance in this time in ${location}?"
 - Remember: it's better to overestimate than to disappoint users with impossible times
 
-Remember: This route must actually work within ${timeWindow} including all walking and activity time.
+Remember: Focus on accurate walking times but keep descriptions focused on why the place matches the user's goals.
 `.trim();
 
-    console.log("=== DEBUG: Enhanced realistic walking time system prompt created ===");
+    console.log("=== DEBUG: Simplified system prompt created ===");
     
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -198,9 +152,9 @@ Remember: This route must actually work within ${timeWindow} including all walki
             content: userPrompt,
           },
         ],
-        temperature: 0.05, // Even lower for more consistent, factual responses
-        max_tokens: 400 + (optimalPlaces * 100),
-        top_p: 0.7, // More focused responses
+        temperature: 0.1,
+        max_tokens: 400 + (placesCount * 100),
+        top_p: 0.8,
         frequency_penalty: 0.3,
         presence_penalty: 0.2,
       }),
@@ -250,7 +204,7 @@ Remember: This route must actually work within ${timeWindow} including all walki
     });
     
     console.log("=== DEBUG: Final places ===");
-    console.log("Optimal places calculated:", optimalPlaces);
+    console.log("Places count:", placesCount);
     console.log("Valid places count:", validPlaces.length);
     console.log("Valid places:", validPlaces);
     
