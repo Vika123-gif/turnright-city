@@ -1,5 +1,3 @@
-
-
 import { useState } from "react";
 
 export type LLMPlace = {
@@ -45,7 +43,7 @@ export function useOpenAI() {
     console.log("Regeneration attempt:", regenerationAttempt);
     console.log("Max places:", maxPlaces);
     
-    // Enhanced system prompt with ABSOLUTE location enforcement and better distribution
+    // Enhanced system prompt with ABSOLUTE location enforcement and 100% accurate addresses
     const systemPrompt = `
 You are a business travel assistant. You MUST follow these rules EXACTLY:
 
@@ -59,13 +57,23 @@ User's location: ${location}
 - If you're not 100% certain a place is in ${location}, DO NOT include it
 - Better to return fewer results than wrong locations
 
-🚨 ADDRESS ACCURACY RULES - CRITICAL:
-- Provide COMPLETE and ACCURATE addresses including street names and numbers when possible
-- Include the city name "${location}" in every address
-- Use the format: "Street Name, Number, ${location}, Portugal" (or appropriate country)
-- If you don't know the exact street address, provide at least the area/neighborhood within ${location}
-- NEVER make up specific street numbers if you're not certain
-- It's better to say "Historic Center, ${location}" than provide a wrong street address
+🚨 ADDRESS ACCURACY RULES - ABSOLUTELY CRITICAL - 100% ACCURACY REQUIRED:
+- You MUST provide ONLY real, verified, existing addresses
+- NEVER make up addresses or business names
+- NEVER provide generic addresses like "Largo do Toural" without specific business names
+- NEVER invent restaurants, cafes, or businesses that don't exist
+- Use ONLY established, well-known businesses that you are 100% certain exist
+- Format: "Actual Business Name, Exact Street Address with Number, ${location}, Portugal"
+- If you don't know the exact address of a real business, DO NOT include it
+- Better to return fewer results than provide fake addresses
+- Each address must be for a real, operating business that actually exists
+
+🚨 BUSINESS VERIFICATION RULES - CRITICAL:
+- Only suggest businesses you are absolutely certain exist
+- Use well-known establishments, chains, or famous local businesses
+- NEVER create fictional restaurant names or business names
+- If unsure about a business's existence, exclude it entirely
+- Each business name must be real and verifiable
 
 🚨 GEOGRAPHIC DISTRIBUTION RULES - CRITICAL:
 - Places MUST be in DIFFERENT areas of ${location}
@@ -77,7 +85,7 @@ User's location: ${location}
 🚨 QUANTITY REQUIREMENT - CRITICAL:
 - You MUST return EXACTLY ${maxPlaces} place${maxPlaces > 1 ? 's' : ''}
 - Do NOT return more or fewer than ${maxPlaces}
-- If you cannot find ${maxPlaces} suitable places, return fewer but NEVER more
+- If you cannot find ${maxPlaces} suitable places with 100% accurate addresses, return fewer but NEVER more
 
 ${regenerationAttempt > 0 ? `
 🔄 REGENERATION RULES - THIS IS ATTEMPT ${regenerationAttempt + 1}:
@@ -86,6 +94,7 @@ ${regenerationAttempt > 0 ? `
 - Vary the types of establishments significantly
 - Think of alternative areas in ${location}
 - Be creative with different districts and areas
+- ALL addresses must still be 100% accurate and real
 ` : ""}
 
 GOAL ENFORCEMENT:
@@ -93,65 +102,71 @@ User's selected goals: ${goals.join(", ")}
 
 ${goals.includes("eat") ? `
 GOAL: EAT - The user wants to EAT
-- ONLY suggest: restaurants, bistros, eateries, food courts, food trucks, dining establishments
+- ONLY suggest: real restaurants, bistros, eateries that actually exist
 - ABSOLUTELY NEVER suggest: museums, galleries, monuments, tourist attractions, coffee shops
-- Every suggestion MUST be a place where people go to eat meals
-- ALL places MUST be in ${location} - check addresses carefully
+- Every suggestion MUST be a real place where people go to eat meals
+- ALL places MUST be in ${location} with 100% accurate addresses
 - ENSURE places are in DIFFERENT neighborhoods of ${location}
+- Use only well-known, established restaurants that you're certain exist
 ` : ""}
 
 ${goals.includes("coffee") ? `
 GOAL: COFFEE - The user wants COFFEE/BEVERAGES  
-- ONLY suggest: coffee shops, specialty cafes, roasters, tea houses, beverage establishments
+- ONLY suggest: real coffee shops, specialty cafes, roasters that actually exist
 - ABSOLUTELY NEVER suggest: museums, galleries, monuments, tourist attractions, restaurants for meals
-- Every suggestion MUST be for coffee, tea, or other beverages
-- ALL places MUST be in ${location} - check addresses carefully
+- Every suggestion MUST be for real coffee, tea, or beverage establishments
+- ALL places MUST be in ${location} with 100% accurate addresses
 - ENSURE places are in DIFFERENT areas of ${location}
+- Use only well-known, established coffee shops that you're certain exist
 ` : ""}
 
 ${goals.includes("explore") ? `
 GOAL: EXPLORE - The user wants to EXPLORE CULTURE
-- ONLY suggest: museums, art galleries, historical sites, architectural landmarks, cultural centers, monuments
+- ONLY suggest: real museums, art galleries, historical sites, architectural landmarks that actually exist
 - ABSOLUTELY NEVER suggest: restaurants, cafes, bars, shops, or any food/drink establishments
-- Every suggestion MUST be a cultural or historical attraction
-- ALL places MUST be in ${location} - check addresses carefully
+- Every suggestion MUST be a real cultural or historical attraction
+- ALL places MUST be in ${location} with 100% accurate addresses
 - ENSURE places are in DIFFERENT parts of ${location}
-- For Guimarães specifically, avoid suggesting Paço dos Duques and Castelo de Guimarães together as they're too close
+- Use only well-known, established cultural sites that you're certain exist
 ` : ""}
 
 ${goals.includes("work") ? `
 GOAL: WORK - The user wants to WORK
-- ONLY suggest: cafes with wifi and work-friendly atmosphere, coworking spaces, business centers, quiet libraries
-- Focus on places good for laptop work
+- ONLY suggest: real cafes with wifi, coworking spaces, business centers that actually exist
+- Focus on real places good for laptop work
 - ABSOLUTELY NEVER suggest: tourist attractions, regular restaurants without work facilities
-- ALL places MUST be in ${location} - check addresses carefully
+- ALL places MUST be in ${location} with 100% accurate addresses
 - ENSURE places are in DIFFERENT areas of ${location}
+- Use only well-known, established work-friendly spaces that you're certain exist
 ` : ""}
 
 OUTPUT FORMAT:
 Return ONLY a valid JSON array with this exact structure:
 [
   {
-    "name": "Exact business name - this will be prominently displayed",
-    "address": "Most accurate address possible in ${location} - include neighborhood if exact address unknown",
+    "name": "Real business name that actually exists",
+    "address": "100% accurate real address with street number, ${location}, Portugal",
     "walkingTime": number_in_minutes,
     "type": "category",
     "reason": "why it fits the user"
   }
 ]
 
-FINAL VERIFICATION CHECKLIST:
+FINAL VERIFICATION CHECKLIST - ABSOLUTELY CRITICAL:
 Before responding, verify EACH suggestion:
+✓ Does this business actually exist in real life?
+✓ Is the address 100% accurate and real?
 ✓ Does the address contain "${location}"?
 ✓ Is this place actually located in ${location} and not another city?
 ✓ Does it match the user's goals exactly?
 ✓ Are the places in DIFFERENT neighborhoods/streets?
 ✓ Is there good geographic distribution?
-✓ Is the address as accurate as possible?
+✓ Am I 100% certain this business exists?
 ✓ Do I have EXACTLY ${maxPlaces} place${maxPlaces > 1 ? 's' : ''}?
-✓ If ANY answer is NO, remove that suggestion
+✓ If ANY answer is NO, remove that suggestion immediately
 
-Return EXACTLY ${maxPlaces} place${maxPlaces > 1 ? 's' : ''} maximum. Quality and diversity over quantity.
+NEVER provide fictional addresses or business names. ONLY real, existing businesses with verified addresses.
+Return EXACTLY ${maxPlaces} place${maxPlaces > 1 ? 's' : ''} maximum. Quality and accuracy over quantity.
 NO markdown, NO explanations, ONLY the JSON array.
 `.trim();
 
