@@ -26,50 +26,19 @@ const RoutePreviewStep: React.FC<Props> = ({
 }) => {
   const [processing, setProcessing] = useState(false);
 
-  async function handlePayment() {
-    console.log("=== DEBUG: handlePayment called ===");
+  // Temporarily disable payment - show route directly
+  function handleShowRoute() {
+    console.log("=== DEBUG: handleShowRoute called (payment disabled) ===");
     console.log("Current places:", places);
     console.log("Current location:", location);
     
-    // Track the buy button click
+    // Track the buy button click for analytics
     if (onTrackBuyClick) {
       onTrackBuyClick(location, places.length);
     }
     
-    setProcessing(true);
-    try {
-      console.log("Starting payment process...");
-      console.log("Places to purchase:", places);
-      
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: JSON.stringify({
-          places: places,
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (error) {
-        console.error("Payment error:", error);
-        throw error;
-      }
-
-      if (data?.url) {
-        console.log("Redirecting to Stripe checkout:", data.url);
-        // Call onBuy first to set up the route data
-        onBuy();
-        // Then redirect to Stripe checkout in the same window
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL received");
-      }
-    } catch (err: any) {
-      console.error("Payment failed:", err);
-      alert("Payment failed: " + (err.message || "Unknown error"));
-    } finally {
-      setProcessing(false);
-    }
+    // Directly call onBuy to show the route without payment
+    onBuy();
   }
 
   return (
@@ -113,10 +82,10 @@ const RoutePreviewStep: React.FC<Props> = ({
         {!error && places.length > 0 && (
           <Button 
             variant="primary" 
-            onClick={handlePayment} 
+            onClick={handleShowRoute} 
             disabled={purchasing || processing}
           >
-            {processing ? "Opening Payment..." : "Buy Route"}
+            {processing ? "Loading Route..." : "Show Route"}
           </Button>
         )}
 

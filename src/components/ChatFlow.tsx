@@ -69,79 +69,14 @@ export default function ChatFlow() {
     initializeSession();
   }, [userSessionId, generateSessionId, trackVisitorSession, testConnection]);
 
-  // Check for payment success on component mount
+  // Simplified payment success check - no longer needed but keeping for potential future use
   useEffect(() => {
-    console.log("=== DEBUG: Payment success check ===");
+    console.log("=== DEBUG: Payment success check (disabled) ===");
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
-    const sessionId = urlParams.get('session_id');
     
-    console.log("Payment status from URL:", paymentStatus);
-    console.log("Session ID from URL:", sessionId);
-    console.log("Current places:", places);
-    console.log("Current location:", location);
-    
-    if (paymentStatus === 'success' && sessionId) {
-      console.log("Payment success detected, setting up purchase route");
-      
-      // Store the session data in localStorage temporarily
-      const storedRouteData = localStorage.getItem('pendingRouteData');
-      if (storedRouteData) {
-        try {
-          const routeData = JSON.parse(storedRouteData);
-          console.log("Restored route data from localStorage:", routeData);
-          
-          setPurchaseRoute(routeData);
-          setPlaces(routeData.places);
-          setLocation(routeData.origin);
-          setStep("purchase");
-          
-          // Get the stored route generation ID
-          const storedRouteGenerationId = localStorage.getItem('pendingRouteGenerationId');
-          const storedUserSessionId = localStorage.getItem('pendingUserSessionId');
-          
-          // Save purchase to database with stored IDs
-          console.log("Attempting to save purchase after payment success...");
-          console.log("Using stored route generation ID:", storedRouteGenerationId);
-          console.log("Using stored user session ID:", storedUserSessionId);
-          
-          if (storedRouteGenerationId && storedUserSessionId) {
-            saveRoutePurchase(storedRouteGenerationId, routeData.origin, routeData.places.length, storedUserSessionId);
-            // Update the current state with stored values
-            setCurrentRouteGenerationId(storedRouteGenerationId);
-            setUserSessionId(storedUserSessionId);
-          } else {
-            console.warn("Missing stored route generation ID or user session ID for purchase tracking");
-          }
-          
-          // Clean up localStorage
-          localStorage.removeItem('pendingRouteData');
-          localStorage.removeItem('pendingRouteGenerationId');
-          localStorage.removeItem('pendingUserSessionId');
-        } catch (e) {
-          console.error("Error parsing stored route data:", e);
-        }
-      } else if (places && location) {
-        // Fallback to current state
-        console.log("Using current state for purchase route");
-        setPurchaseRoute({ origin: location, places });
-        setStep("purchase");
-        
-        // Save purchase to database
-        console.log("Attempting to save purchase with current state...");
-        if (currentRouteGenerationId) {
-          saveRoutePurchase(currentRouteGenerationId, location, places.length, userSessionId);
-        } else {
-          console.warn("No route generation ID available for purchase tracking");
-        }
-      }
-      
+    if (paymentStatus === 'success' || paymentStatus === 'cancel') {
       // Clean up URL parameters
-      const newUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
-    } else if (paymentStatus === 'cancel') {
-      console.log("Payment was cancelled");
-      // Payment was cancelled, clean up URL
       const newUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
       // Clean up any stored data
@@ -149,7 +84,7 @@ export default function ChatFlow() {
       localStorage.removeItem('pendingRouteGenerationId');
       localStorage.removeItem('pendingUserSessionId');
     }
-  }, []); // Remove dependencies to avoid infinite loops
+  }, []);
 
   // Function to convert coordinates to city name using reverse geocoding
   async function coordinatesToCityName(coords: string): Promise<string> {
@@ -413,8 +348,9 @@ export default function ChatFlow() {
     }
   }
 
+  // Modified to skip payment and go directly to purchase step
   function handleBuyRoute() {
-    console.log("=== DEBUG: handleBuyRoute called ===");
+    console.log("=== DEBUG: handleBuyRoute called (payment disabled) ===");
     console.log("Places:", places);
     console.log("Location:", location);
     console.log("Coordinates:", coordinates);
@@ -422,26 +358,18 @@ export default function ChatFlow() {
     console.log("User session ID:", userSessionId);
     
     if (!places || !location) {
-      console.error("Missing places or location for purchase");
+      console.error("Missing places or location for route display");
       return;
     }
     
-    // Store route data AND IDs in localStorage before redirecting to payment
     // Use coordinates for the map route if available, otherwise use location
     const originForRoute = coordinates || location;
     const routeData = { origin: originForRoute, places };
-    localStorage.setItem('pendingRouteData', JSON.stringify(routeData));
-    localStorage.setItem('pendingRouteGenerationId', currentRouteGenerationId || '');
-    localStorage.setItem('pendingUserSessionId', userSessionId);
-    console.log("Stored route data and IDs in localStorage:", {
-      routeData,
-      routeGenerationId: currentRouteGenerationId,
-      userSessionId
-    });
     
-    // Track route purchase
+    // Track route "purchase" (now just viewing)
     trackRoutePurchase(location, places.length);
     
+    // Set purchase route and go directly to purchase step (now route display step)
     setPurchaseRoute(routeData);
     setStep("purchase");
   }
