@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useMapbox } from "./useMapbox";
 
 export type LLMPlace = {
   name: string;
@@ -9,12 +10,11 @@ export type LLMPlace = {
   reason?: string;
   lat?: number;
   lon?: number;
+  coordinates?: [number, number]; // [lng, lat] from Mapbox
 };
 
 // Inserted user-provided OpenAI API key below.
-// Make sure this string only contains standard ASCII characters, no invisible whitespace!
-const OPENAI_API_KEY =
-  "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";
+const OPENAI_API_KEY = "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";
 
 // Simple place count logic
 const TIME_TO_PLACES = {
@@ -25,6 +25,8 @@ const TIME_TO_PLACES = {
 };
 
 export function useOpenAI() {
+  const { geocodePlace } = useMapbox();
+
   async function getLLMPlaces({
     location,
     goals,
@@ -41,7 +43,7 @@ export function useOpenAI() {
     maxPlaces?: number;
   }): Promise<LLMPlace[]> {
     
-    console.log("=== DEBUG: useOpenAI getLLMPlaces called ===");
+    console.log("=== DEBUG: useOpenAI getLLMPlaces called with Mapbox integration ===");
     console.log("Location received in hook:", location);
     console.log("Goals received in hook:", goals);
     
@@ -49,9 +51,9 @@ export function useOpenAI() {
     const placesCount = TIME_TO_PLACES[timeWindow as keyof typeof TIME_TO_PLACES] || 2;
     
     const systemPrompt = `
-You are a LOCAL EXPERT for ${location}, Portugal with detailed knowledge of specific businesses, restaurants, cafes, and attractions.
+You are a LOCAL EXPERT for ${location}, Portugal with knowledge of businesses and attractions.
 
-Your task: Suggest ${placesCount} specific, real places with COMPLETE and ACCURATE addresses.
+Your task: Suggest ${placesCount} specific, real place NAMES (business names only, no addresses needed).
 
 LOCATION CONTEXT: ${location}, Portugal
 TARGET GOALS: ${goals.join(", ")}
@@ -66,8 +68,7 @@ VARIATION ${regenerationAttempt + 1}:
 RESPONSE FORMAT - Return EXACTLY this JSON structure:
 [
   {
-    "name": "Specific business name (e.g., 'Café Central', 'Restaurante Dom Pedro')",
-    "address": "Complete street address with number, postal code, and city",
+    "name": "Specific business name only (e.g., 'Café Central', 'Restaurante Dom Pedro')",
     "walkingTime": estimated_walking_minutes_as_number,
     "type": "specific_category_matching_goals",
     "reason": "Brief explanation of why this place is good for the selected goals"
@@ -77,12 +78,12 @@ RESPONSE FORMAT - Return EXACTLY this JSON structure:
 CRITICAL REQUIREMENTS:
 - Provide exactly ${placesCount} suggestions
 - Use REAL business names that exist in ${location}
-- Include COMPLETE addresses with street numbers and postal codes
+- Only provide the BUSINESS NAME, no addresses
 - NO markdown formatting - ONLY valid JSON
 - Walking times should be realistic estimates (5-15 minutes)
 - Focus on well-known, established places in ${location}
 
-Remember: You must provide complete, accurate addresses as they would appear on Google Maps.
+Note: Addresses will be found separately, so only provide accurate business names.
 `.trim();
 
     console.log("=== DEBUG: AI system prompt created ===");
@@ -139,8 +140,33 @@ Remember: You must provide complete, accurate addresses as they would appear on 
         }
       }
       
-      console.log("=== DEBUG: Final AI Place Suggestions ===", aiSuggestions);
-      return aiSuggestions as LLMPlace[];
+      console.log("=== DEBUG: AI Place Suggestions ===", aiSuggestions);
+      
+      // Now geocode each place using Mapbox
+      const geocodedPlaces: LLMPlace[] = [];
+      
+      for (const place of aiSuggestions) {
+        console.log(`Geocoding place: ${place.name}`);
+        
+        const mapboxResult = await geocodePlace(place.name, location);
+        
+        const geocodedPlace: LLMPlace = {
+          name: place.name,
+          address: mapboxResult.address,
+          walkingTime: place.walkingTime,
+          type: place.type,
+          reason: place.reason,
+          coordinates: mapboxResult.coordinates,
+          // Convert coordinates to lat/lon if available
+          lat: mapboxResult.coordinates ? mapboxResult.coordinates[1] : undefined,
+          lon: mapboxResult.coordinates ? mapboxResult.coordinates[0] : undefined,
+        };
+        
+        geocodedPlaces.push(geocodedPlace);
+      }
+      
+      console.log("=== DEBUG: Final Geocoded Places ===", geocodedPlaces);
+      return geocodedPlaces;
       
     } catch (err) {
       console.error("=== DEBUG: JSON Parse Error ===", err);
