@@ -114,9 +114,9 @@ serve(async (req) => {
         }
       }
       
-      // Try to extract house number from the feature text
+      // Try to extract house number from the feature text - FIXED SYNTAX ERROR
       const numberMatch = bestMatch.text?.match(/\b\d+[A-Za-z]?\b/) || 
-                         bestMatch.place_name?.match /\b\d+[A-Za-z]?\b/);
+                         bestMatch.place_name?.match(/\b\d+[A-Za-z]?\b/);
       if (numberMatch) {
         components.number = numberMatch[0];
       }
