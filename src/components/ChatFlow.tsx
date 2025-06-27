@@ -119,7 +119,7 @@ export default function ChatFlow() {
   }
 
   async function fetchPlacesWithGoals(goalsToUse: string[], isRegeneration = false) {
-    console.log("=== DEBUG: fetchPlacesWithGoals called ===");
+    console.log("=== DEBUG: fetchPlacesWithGoals called with Google Places ===");
     console.log("Goals parameter:", goalsToUse);
     console.log("Goals length:", goalsToUse?.length);
     console.log("Location:", location);
@@ -134,25 +134,21 @@ export default function ChatFlow() {
     setGenerating(true);
     setPlaces(null);
     
-    let locationForAI = location;
+    let locationForSearch = location;
     
-    // If location is coordinates, convert to city name for AI
+    // If location is coordinates, convert to city name
     if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location)) {
-      console.log("Location is coordinates, converting to city name for AI...");
-      locationForAI = await coordinatesToCityName(location);
-      console.log("Converted location for AI:", locationForAI);
+      console.log("Location is coordinates, converting to city name...");
+      locationForSearch = await coordinatesToCityName(location);
+      console.log("Converted location for search:", locationForSearch);
     }
     
-    // Calculate number of places based on time window
-    const placesCount = timeWindow ? TIME_TO_PLACES_COUNT[timeWindow as keyof typeof TIME_TO_PLACES_COUNT] || 2 : 2;
-    console.log("Places count based on time window:", placesCount);
-    
     // Track route generation attempt
-    trackRouteGeneration(locationForAI, timeWindow || "", goalsToUse);
+    trackRouteGeneration(locationForSearch, timeWindow || "", goalsToUse);
     
     try {
-      // More detailed validation with better error messages
-      if (!locationForAI || locationForAI.trim() === "") {
+      // Validation
+      if (!locationForSearch || locationForSearch.trim() === "") {
         throw new Error("Location is required. Please go back and enter your location.");
       }
       
@@ -161,7 +157,7 @@ export default function ChatFlow() {
         throw new Error("Please select at least one goal before generating places.");
       }
 
-      // Updated goal descriptions for the new simplified categories
+      // Create user prompt for potential AI fallback
       const goalDescriptions = {
         restaurants: "find restaurants, bistros, eateries, dining establishments for meals and food",
         coffee: "find coffee shops, cafes, specialty roasters, tea houses for beverages and drinks", 
@@ -172,78 +168,28 @@ export default function ChatFlow() {
       };
       
       const selectedGoalTexts = goalsToUse.map(goal => goalDescriptions[goal as keyof typeof goalDescriptions]).filter(Boolean);
-      
-      console.log("=== DEBUG: Goal processing ===");
-      console.log("Selected goal texts:", selectedGoalTexts);
-      console.log("Goals being sent:", goalsToUse);
-      
-      if (selectedGoalTexts.length === 0) {
-        throw new Error("No valid goals selected. Please select at least one goal.");
-      }
-      
       const goalsText = selectedGoalTexts.join(" and ");
       
-      // Create very explicit user prompt with regeneration context
-      let userPrompt = `I am currently at ${locationForAI} and have ${timeWindow} available. `;
+      let userPrompt = `I am currently at ${locationForSearch} and have ${timeWindow} available. I want to ${goalsText}. Please suggest places that match my goals: ${goalsToUse.join(", ")}.`;
       
       if (isRegeneration) {
-        userPrompt += `This is a REGENERATION request - I need COMPLETELY DIFFERENT places than before. Please suggest places in different areas/neighborhoods of ${locationForAI}. `;
+        userPrompt += ` This is a regeneration request - please provide different places than before.`;
       }
       
-      // Add specific instructions based on selected goals
-      const hasRestaurants = goalsToUse.includes('restaurants');
-      const hasCoffee = goalsToUse.includes('coffee');
-      const hasWork = goalsToUse.includes('work');
-      const hasMuseums = goalsToUse.includes('museums');
-      const hasParks = goalsToUse.includes('parks');
-      const hasMonuments = goalsToUse.includes('monuments');
-      
-      if (hasRestaurants) {
-        userPrompt += "I want to find restaurants, bistros, eateries, or dining establishments where I can have meals and food. ";
-      }
-      if (hasCoffee) {
-        userPrompt += "I want to find coffee shops, cafes, specialty roasters, or tea houses for beverages and drinks. ";
-      }
-      if (hasWork) {
-        userPrompt += "I want to find work-friendly places like cafes with wifi, coworking spaces, or quiet locations for working. ";
-      }
-      if (hasMuseums) {
-        userPrompt += "I want to visit museums, art galleries, or cultural centers with exhibitions and displays. ";
-      }
-      if (hasParks) {
-        userPrompt += "I want to enjoy parks, gardens, and green outdoor spaces for relaxation and nature. ";
-      }
-      if (hasMonuments) {
-        userPrompt += "I want to explore architectural monuments, historical landmarks, heritage sites, castles, palaces, and significant buildings. ";
-        if (isRegeneration) {
-          userPrompt += "Please avoid suggesting Paço dos Duques de Bragança and Castelo de Guimarães together as they are too close. ";
-        }
-      }
-      
-      userPrompt += `Please suggest exactly ${placesCount} place${placesCount > 1 ? 's' : ''} in DIFFERENT areas of ${locationForAI} that match EXACTLY what I'm looking for. My selected goals are: ${goalsToUse.join(", ")}.`;
-      
-      if (isRegeneration) {
-        userPrompt += ` IMPORTANT: Provide different places than previous suggestions, in different neighborhoods.`;
-      }
-      
-      console.log("=== DEBUG: Final prompt ===");
-      console.log("User prompt:", userPrompt);
-      console.log("Goals being passed to API:", goalsToUse);
-      console.log("Location being passed to API:", locationForAI);
-      console.log("Requested places count:", placesCount);
+      console.log("=== DEBUG: Calling getLLMPlaces with Google Places ===");
       
       const currentRegenerationCount = isRegeneration ? regenerationCount : 0;
       
       const response: LLMPlace[] = await getLLMPlaces({
-        location: locationForAI,
+        location: locationForSearch,
         goals: goalsToUse,
         timeWindow: timeWindow || "",
         userPrompt,
         regenerationAttempt: currentRegenerationCount,
-        maxPlaces: placesCount,
+        maxPlaces: 3,
       });
       
-      console.log("=== DEBUG: API Response ===");
+      console.log("=== DEBUG: Places Response ===");
       console.log("Places returned:", response);
       
       setPlaces(response);
@@ -252,13 +198,13 @@ export default function ChatFlow() {
       if (isRegeneration) {
         setRegenerationCount(prev => prev + 1);
       } else {
-        setRegenerationCount(0); // Reset for new searches
+        setRegenerationCount(0);
       }
       
       // Save route generation to database
       console.log("=== ATTEMPTING TO SAVE ROUTE GENERATION ===");
       console.log("Session ID for save:", userSessionId);
-      const savedGeneration = await saveRouteGeneration(locationForAI, timeWindow, goalsToUse, response, userSessionId);
+      const savedGeneration = await saveRouteGeneration(locationForSearch, timeWindow, goalsToUse, response, userSessionId);
       if (savedGeneration) {
         console.log("Route generation saved with ID:", savedGeneration.id);
         setCurrentRouteGenerationId(savedGeneration.id);

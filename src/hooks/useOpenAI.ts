@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useOpenStreetMap } from "./useOpenStreetMap";
+import { useGooglePlaces } from "./useGooglePlaces";
 
 export type LLMPlace = {
   name: string;
@@ -26,7 +26,7 @@ const TIME_TO_PLACES = {
 };
 
 export function useOpenAI() {
-  const { searchPlaces, calculateWalkingTime } = useOpenStreetMap();
+  const { getNearbyPlaces } = useGooglePlaces();
 
   async function getLLMPlaces({
     location,
@@ -44,19 +44,74 @@ export function useOpenAI() {
     maxPlaces?: number;
   }): Promise<LLMPlace[]> {
     
-    console.log("=== DEBUG: useOpenAI getLLMPlaces called with OSM integration ===");
+    console.log("=== DEBUG: useOpenAI getLLMPlaces called with Google Places integration ===");
     console.log("Location received in hook:", location);
     console.log("Goals received in hook:", goals);
+    
+    // Use Google Places API directly for better results
+    try {
+      const googlePlaces = await getNearbyPlaces({
+        location,
+        goals,
+        timeWindow
+      });
+
+      console.log("=== DEBUG: Google Places results ===", googlePlaces);
+
+      // Convert Google Places results to LLMPlace format
+      const llmPlaces: LLMPlace[] = googlePlaces.map((place, index) => ({
+        name: place.name,
+        address: place.address,
+        walkingTime: place.walkingTime,
+        type: place.type,
+        reason: `Great ${place.type || 'place'} for your selected goals`,
+      }));
+
+      console.log("=== DEBUG: Final LLM places ===", llmPlaces);
+      
+      return llmPlaces;
+      
+    } catch (error) {
+      console.error("Error getting Google Places:", error);
+      
+      // Fallback to AI-only suggestions if Google Places fails
+      return await getAIOnlyPlaces({
+        location,
+        goals,
+        timeWindow,
+        userPrompt,
+        regenerationAttempt,
+        maxPlaces
+      });
+    }
+  }
+
+  // Fallback AI-only function
+  async function getAIOnlyPlaces({
+    location,
+    goals,
+    timeWindow,
+    userPrompt,
+    regenerationAttempt = 0,
+    maxPlaces = 2,
+  }: {
+    location: string;
+    goals: string[];
+    timeWindow: string;
+    userPrompt: string;
+    regenerationAttempt?: number;
+    maxPlaces?: number;
+  }): Promise<LLMPlace[]> {
+    
+    console.log("=== DEBUG: Fallback to AI-only suggestions ===");
     
     // Use simple place count logic
     const placesCount = TIME_TO_PLACES[timeWindow as keyof typeof TIME_TO_PLACES] || 2;
     
-    // Modified system prompt to focus on place names/types rather than specific addresses
     const systemPrompt = `
 You are a LOCAL EXPERT for ${location}, Portugal with knowledge of businesses and places.
 
-Your task: Suggest ${placesCount} place NAME(S) and TYPE(S) that match the user's goals.
-Don't worry about exact addresses - we'll verify those separately.
+Your task: Suggest ${placesCount} specific place(s) with exact addresses that match the user's goals.
 
 LOCATION CONTEXT: ${location}, Portugal
 TARGET GOALS: ${goals.join(", ")}
@@ -71,7 +126,9 @@ VARIATION ${regenerationAttempt + 1}:
 RESPONSE FORMAT - Return EXACTLY this JSON structure:
 [
   {
-    "name": "Business name or place name",
+    "name": "Exact business name",
+    "address": "Full street address including postal code, city, Portugal",
+    "walkingTime": estimated_walking_minutes_as_number,
     "type": "specific_category_matching_goals",
     "reason": "Brief explanation of why this place is good for the selected goals"
   }
@@ -79,15 +136,15 @@ RESPONSE FORMAT - Return EXACTLY this JSON structure:
 
 CRITICAL REQUIREMENTS:
 - Provide exactly ${placesCount} suggestions
-- Focus on place NAMES and TYPES, not addresses
-- Use actual business names that likely exist in ${location}
+- Use REAL business names and EXACT addresses that exist in ${location}
+- Include full addresses with street, postal code, city, Portugal
 - NO markdown formatting - ONLY valid JSON
-- Don't include address or walking time information
+- Walking times should be realistic estimates
 
-Remember: We just need good place suggestions - addresses will be verified separately.
+Remember: Provide complete, accurate information for real places.
 `.trim();
 
-    console.log("=== DEBUG: Modified system prompt created ===");
+    console.log("=== DEBUG: AI fallback system prompt created ===");
     
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -108,7 +165,7 @@ Remember: We just need good place suggestions - addresses will be verified separ
           },
         ],
         temperature: 0.1,
-        max_tokens: 300 + (placesCount * 80),
+        max_tokens: 300 + (placesCount * 100),
         top_p: 0.8,
         frequency_penalty: 0.3,
         presence_penalty: 0.2,
@@ -122,9 +179,10 @@ Remember: We just need good place suggestions - addresses will be verified separ
     console.log("=== DEBUG: OpenAI Response ===");
     console.log("Raw response:", text);
     
-    let aiSuggestions: any[] = [];
     try {
       const match = text.match(/\[.*?\]/s);
+      let aiSuggestions: any[] = [];
+      
       if (match) {
         aiSuggestions = JSON.parse(match[0]);
       } else {
@@ -139,103 +197,14 @@ Remember: We just need good place suggestions - addresses will be verified separ
           throw new Error("AI did not return a list of places.");
         }
       }
+      
+      console.log("=== DEBUG: AI Fallback Suggestions ===", aiSuggestions);
+      return aiSuggestions as LLMPlace[];
+      
     } catch (err) {
       console.error("=== DEBUG: JSON Parse Error ===", err);
       throw new Error("AI could not generate a valid route.\n\n" + text?.slice(0, 120));
     }
-    
-    console.log("=== DEBUG: AI Suggestions ===", aiSuggestions);
-    
-    // Now use OpenStreetMap to find real addresses for these suggestions
-    const verifiedPlaces: LLMPlace[] = [];
-    
-    // Get origin coordinates if location is a string
-    let originLat = 0, originLon = 0;
-    if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location)) {
-      [originLat, originLon] = location.split(',').map(coord => parseFloat(coord.trim()));
-    } else {
-      // Try to get coordinates for the city
-      try {
-        const citySearch = await searchPlaces(location, "", 1);
-        if (citySearch.length > 0) {
-          originLat = citySearch[0].lat;
-          originLon = citySearch[0].lon;
-        }
-      } catch (error) {
-        console.warn("Could not get city coordinates:", error);
-      }
-    }
-    
-    console.log("=== DEBUG: Origin coordinates ===", { originLat, originLon });
-    
-    // Search for each AI suggestion using OpenStreetMap
-    for (const suggestion of aiSuggestions) {
-      console.log("=== DEBUG: Searching OSM for ===", suggestion);
-      
-      try {
-        // Create search query based on suggestion type and goals
-        let searchQuery = suggestion.name;
-        if (suggestion.type) {
-          searchQuery += ` ${suggestion.type}`;
-        }
-        
-        // Add goal-based search terms
-        if (goals.includes('restaurants')) searchQuery += ' restaurant dining';
-        if (goals.includes('coffee')) searchQuery += ' cafe coffee';
-        if (goals.includes('work')) searchQuery += ' coworking wifi';
-        if (goals.includes('museums')) searchQuery += ' museum gallery';
-        if (goals.includes('parks')) searchQuery += ' park garden';
-        if (goals.includes('monuments')) searchQuery += ' monument castle historic';
-        
-        const osmResults = await searchPlaces(searchQuery, location, 3);
-        console.log("=== DEBUG: OSM results for", suggestion.name, ":", osmResults);
-        
-        if (osmResults.length > 0) {
-          const bestMatch = osmResults[0];
-          
-          // Calculate walking time if we have origin coordinates
-          let walkingTime = 15; // Default fallback
-          if (originLat && originLon) {
-            walkingTime = await calculateWalkingTime(originLat, originLon, bestMatch.lat, bestMatch.lon);
-          }
-          
-          verifiedPlaces.push({
-            name: suggestion.name,
-            address: bestMatch.address,
-            walkingTime,
-            type: suggestion.type,
-            reason: suggestion.reason,
-            lat: bestMatch.lat,
-            lon: bestMatch.lon
-          });
-        } else {
-          // Fallback: use AI suggestion with estimated data
-          console.warn("No OSM results for", suggestion.name, "- using AI fallback");
-          verifiedPlaces.push({
-            name: suggestion.name,
-            address: `${suggestion.name}, ${location}, Portugal`,
-            walkingTime: 15, // Default estimate
-            type: suggestion.type,
-            reason: suggestion.reason
-          });
-        }
-      } catch (error) {
-        console.error("Error processing suggestion", suggestion.name, ":", error);
-        // Fallback: use AI suggestion
-        verifiedPlaces.push({
-          name: suggestion.name,
-          address: `${suggestion.name}, ${location}, Portugal`,
-          walkingTime: 15,
-          type: suggestion.type,
-          reason: suggestion.reason
-        });
-      }
-    }
-    
-    console.log("=== DEBUG: Final verified places ===");
-    console.log("Verified places:", verifiedPlaces);
-    
-    return verifiedPlaces;
   }
   
   return { getLLMPlaces };
