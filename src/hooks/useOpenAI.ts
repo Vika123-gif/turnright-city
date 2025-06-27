@@ -39,63 +39,83 @@ export function useOpenAI() {
     console.log("Max places:", maxPlaces);
     
     const systemPrompt = `
-You are a local guide for ${location}, Portugal. Your task is to suggest REAL, EXISTING places with accurate addresses.
+You are a LOCAL EXPERT for ${location}, Portugal with extensive knowledge of real businesses and places.
 
-LOCATION: ${location}, Portugal
+CRITICAL INSTRUCTIONS:
+1. You MUST suggest only REAL, EXISTING places that you know from your training data
+2. Provide the most well-known and established businesses in ${location}
+3. Use actual business names, not generic descriptions
+4. Include the complete street address format used in Portugal
+5. Focus on popular, frequently visited places that tourists and locals know
 
-REQUIREMENTS:
-1. All suggestions must be in ${location}, Portugal
-2. Provide accurate, real addresses with postal codes
-3. Only suggest places that actually exist
-4. Include walking times from city center
-5. Match the user's selected goals: ${goals.join(", ")}
+LOCATION CONTEXT: ${location}, Portugal
+- This is a historic Portuguese city
+- Provide places within the city center and nearby neighborhoods
+- Walking times should be realistic from the city center (Largo do Toural area for Guimarães)
+
+TARGET GOALS: ${goals.join(", ")}
 
 ${regenerationAttempt > 0 ? `
-REGENERATION ${regenerationAttempt + 1}:
-- Provide different places than previous attempts
-- Different areas/neighborhoods of ${location}
+VARIATION ${regenerationAttempt + 1}:
+- Suggest DIFFERENT well-known places than previous attempts
+- Focus on other popular areas of ${location}
+- Include places locals frequent, not just tourist spots
 ` : ""}
 
-GOALS EXPLANATION:
+BUSINESS CATEGORIES TO FOCUS ON:
+
 ${goals.includes("restaurants") ? `
-🍽️ RESTAURANTS: Find dining establishments, restaurants, bistros, eateries for meals and food.
+🍽️ RESTAURANTS: Well-established restaurants, tascas, traditional Portuguese eateries
+Examples for reference: Casa do Bacalhau, Restaurante Solar do Bacalhau, traditional Portuguese restaurants
 ` : ""}
 
 ${goals.includes("coffee") ? `
-☕ COFFEE: Find coffee shops, cafés, specialty roasters, tea houses for beverages.
+☕ COFFEE: Popular cafés, pastelarias, coffee shops known to locals
+Examples for reference: Café Central, local pastelarias, established coffee houses
 ` : ""}
 
 ${goals.includes("work") ? `
-💻 WORK: Find work-friendly places like cafés with wifi, coworking spaces, quiet locations.
+💻 WORK: Cafés with good wifi, quiet spaces, modern coffee shops
+Focus on: Spacious cafés, places known for having wifi, quiet atmospheres
 ` : ""}
 
 ${goals.includes("museums") ? `
-🏛️ MUSEUMS: Find museums, art galleries, cultural centers with exhibitions.
+🏛️ MUSEUMS: Main museums, cultural centers, art galleries
+For Guimarães: Museu de Alberto Sampaio, Casa de Memória, local cultural institutions
 ` : ""}
 
 ${goals.includes("parks") ? `
-🌳 PARKS: Find parks, gardens, green outdoor spaces for relaxation.
+🌳 PARKS: Public gardens, green spaces, parks
+Examples: Jardim do Largo República do Brasil, local parks and gardens
 ` : ""}
 
 ${goals.includes("monuments") ? `
-🏰 MONUMENTS: Find architectural monuments, historical landmarks, heritage sites, castles, palaces.
+🏰 MONUMENTS: Historic landmarks, architectural sites, UNESCO sites
+For Guimarães: Paço dos Duques de Bragança, Castelo de Guimarães, Igreja de São Miguel
 ` : ""}
 
-RETURN FORMAT - JSON ONLY:
+RESPONSE FORMAT - Return EXACTLY this JSON structure:
 [
   {
-    "name": "Real business/place name",
-    "address": "Complete accurate address, ${location}, Portugal",
-    "walkingTime": minutes_from_center,
-    "type": "category",
-    "reason": "why it matches the goals"
+    "name": "Exact business name (e.g., 'Restaurante Solar do Bacalhau')",
+    "address": "Street name and number, ${location}, Portugal (e.g., 'Rua de Santa Maria 20, ${location}, Portugal')",
+    "walkingTime": realistic_minutes_from_center,
+    "type": "specific_category",
+    "reason": "why this place matches the goals and is recommended"
   }
 ]
 
-Provide exactly ${maxPlaces} real places in ${location}. NO markdown, NO explanations, ONLY JSON.
+QUALITY REQUIREMENTS:
+- Use specific business names, not generic ones
+- Include realistic Portuguese street addresses with "Rua", "Largo", "Praça" etc.
+- Walking times: 1-15 minutes from city center
+- Provide exactly ${maxPlaces} suggestions
+- NO markdown formatting, ONLY valid JSON
+
+REMEMBER: Your reputation depends on suggesting places that actually exist in ${location}, Portugal.
 `.trim();
 
-    console.log("=== DEBUG: System prompt created ===");
+    console.log("=== DEBUG: Enhanced system prompt created ===");
     
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -115,8 +135,11 @@ Provide exactly ${maxPlaces} real places in ${location}. NO markdown, NO explana
             content: userPrompt,
           },
         ],
-        temperature: 0.1,
-        max_tokens: 440 + (maxPlaces * 50),
+        temperature: 0.2, // Lower temperature for more consistent, factual responses
+        max_tokens: 600 + (maxPlaces * 80),
+        top_p: 0.9, // More focused responses
+        frequency_penalty: 0.3, // Reduce repetition
+        presence_penalty: 0.2, // Encourage variety
       }),
     });
     
@@ -154,23 +177,12 @@ Provide exactly ${maxPlaces} real places in ${location}. NO markdown, NO explana
     
     if (!Array.isArray(places)) throw new Error("AI did not return a list of places.");
     
-    // Basic validation - only check for essential requirements
-    const locationName = location.toLowerCase();
-    
+    // Minimal validation - only check essential fields
     const validPlaces = places.filter(place => {
-      if (!place.name || !place.address) {
-        console.warn("FILTERED: Missing name or address:", place);
+      if (!place.name || !place.address || typeof place.walkingTime !== 'number') {
+        console.warn("FILTERED: Missing essential fields:", place);
         return false;
       }
-      
-      const address = place.address.toLowerCase();
-      
-      // Only check that address contains the target location
-      if (!address.includes(locationName)) {
-        console.warn("FILTERED: Address doesn't contain location:", place.address);
-        return false;
-      }
-      
       return true;
     });
     
