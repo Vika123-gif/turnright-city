@@ -1,9 +1,16 @@
 
 import React, { useState } from "react";
 import Button from "../Button";
-import { Repeat } from "lucide-react";
+import { Repeat, MapPin, Clock, Info } from "lucide-react";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 type Props = {
   places: LLMPlace[];
@@ -25,6 +32,8 @@ const RoutePreviewStep: React.FC<Props> = ({
   onTrackBuyClick,
 }) => {
   const [processing, setProcessing] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<LLMPlace | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Temporarily disable payment - show route directly
   function handleShowRoute() {
@@ -41,6 +50,16 @@ const RoutePreviewStep: React.FC<Props> = ({
     onBuy();
   }
 
+  const handlePlaceClick = (place: LLMPlace) => {
+    setSelectedPlace(place);
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedPlace(null);
+  };
+
   return (
     <div className="chat-card text-left">
       <div className="font-semibold text-lg mb-3 flex items-center gap-2">
@@ -56,12 +75,25 @@ const RoutePreviewStep: React.FC<Props> = ({
           {places && places.length > 0 ? (
             <div className="space-y-4">
               {places.map((p, i) => (
-                <div key={i} className="mb-3">
-                  <div className="font-semibold text-base">{`${i + 1}. ${p.name}`}</div>
-                  <div className="text-gray-600 text-sm">{p.address}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    🚶 {p.walkingTime} min walk
-                    {p.type && ` | Type: ${p.type}`}
+                <div 
+                  key={i} 
+                  className="mb-3 p-3 rounded-lg hover:bg-white/50 cursor-pointer transition-colors border border-transparent hover:border-green-200"
+                  onClick={() => handlePlaceClick(p)}
+                >
+                  <div className="font-semibold text-base flex items-center gap-2">
+                    {`${i + 1}. ${p.name}`}
+                    <Info className="w-4 h-4 text-gray-400" />
+                  </div>
+                  <div className="text-gray-600 text-sm flex items-center gap-1 mt-1">
+                    <MapPin className="w-3 h-3" />
+                    {p.address}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      🚶 {p.walkingTime} min walk
+                    </span>
+                    {p.type && <span>Type: {p.type}</span>}
                   </div>
                   {p.reason && (
                     <div className="text-sm mt-1 text-[#008457]">{p.reason}</div>
@@ -104,6 +136,49 @@ const RoutePreviewStep: React.FC<Props> = ({
           </a>
         </div>
       </div>
+
+      {/* Place Details Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">
+              {selectedPlace?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedPlace && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-gray-500 mt-1 flex-shrink-0" />
+                <span className="text-sm text-gray-600">{selectedPlace.address}</span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gray-500" />
+                <span className="text-sm">🚶 {selectedPlace.walkingTime} minutes walk</span>
+              </div>
+              
+              {selectedPlace.type && (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-gray-400 rounded"></div>
+                  </div>
+                  <span className="text-sm text-gray-600">Type: {selectedPlace.type}</span>
+                </div>
+              )}
+              
+              {selectedPlace.reason && (
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <DialogDescription className="text-sm text-[#008457] font-medium">
+                    Why this place?
+                  </DialogDescription>
+                  <p className="text-sm text-gray-700 mt-1">{selectedPlace.reason}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
