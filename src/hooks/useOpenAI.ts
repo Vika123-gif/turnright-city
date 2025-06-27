@@ -34,151 +34,109 @@ export function useOpenAI() {
     
     console.log("=== DEBUG: useOpenAI getLLMPlaces called ===");
     console.log("Location received in hook:", location);
-    console.log("Location type:", typeof location);
-    console.log("Location length:", location.length);
     console.log("Goals received in hook:", goals);
-    console.log("Goals type:", typeof goals);
-    console.log("Goals is array:", Array.isArray(goals));
-    console.log("Goals length:", goals?.length);
     console.log("User prompt:", userPrompt);
     console.log("Regeneration attempt:", regenerationAttempt);
     console.log("Max places:", maxPlaces);
     
-    // EXTREME ULTRA-STRICT system prompt with ZERO TOLERANCE for fake addresses
+    // NUCLEAR-LEVEL STRICT system prompt - ONLY REAL BUSINESSES
     const systemPrompt = `
-🚨 CRITICAL MISSION: ONLY SUGGEST BUSINESSES THAT ACTUALLY EXIST 🚨
+🚨🚨🚨 MISSION CRITICAL: REAL BUSINESSES ONLY - FAKE ADDRESSES = TOTAL FAILURE 🚨🚨🚨
 
-User's location: ${location}
+Location: ${location}
 
-⚠️ ABSOLUTE ZERO-TOLERANCE ADDRESS POLICY - THIS IS LIFE OR DEATH CRITICAL:
-- You can ONLY suggest businesses if you are 1000% CERTAIN they exist in real life
-- You can ONLY use addresses that you KNOW are completely accurate and verified
-- NEVER EVER guess addresses, NEVER make up street numbers, NEVER fabricate locations
-- If you are not ABSOLUTELY CERTAIN about an address, DO NOT include that place
-- Better to return ZERO results than ONE single fake address
-- Each address must be for a REAL, OPERATING, CURRENTLY-EXISTING business at that EXACT location
-- DO NOT suggest "Restaurante Histórico" or other generic names - these are FAKE
-- DO NOT suggest places on "Largo do Toural" unless you can verify the EXACT business name and number
+❌ BANNED FOREVER - DO NOT SUGGEST THESE FAKE PLACES:
+- "Pastelaria Clarinha" (FAKE ADDRESS)
+- "Café Milenário" (FAKE)
+- "Restaurante Histórico" (FAKE)
+- "Fábrica do Chocolate" (WRONG CITY)
+- Any business on "Rua de Santo António 136" (FAKE STREET NUMBER)
+- Any business on "Largo do Toural" unless it's a verified hotel
 
-🚨 BUSINESS VERIFICATION REQUIREMENTS (MANDATORY):
-- ONLY suggest world-famous chains (McDonald's, Starbucks, etc.) OR extremely well-known local establishments
-- ONLY use businesses with VERIFIED online presence and reviews
-- Examples of SAFE suggestions: major hotel chains, international restaurant chains, famous historical sites with official names
-- NEVER create fictional business names like "Café Milenário" or "Fábrica do Chocolate"
-- NEVER suggest places that "sound right" but you're not certain about
+🚨 ABSOLUTE REQUIREMENTS (ZERO TOLERANCE):
+1. You can ONLY suggest businesses that you are 100% CERTAIN exist with verified addresses
+2. If you have ANY doubt about an address being real, DO NOT include it
+3. Better to return 0 results than 1 fake address
+4. NEVER guess street numbers or make up addresses
+5. Only suggest world-famous chains OR extremely well-known local landmarks
 
-🚨 LOCATION ENFORCEMENT - ABSOLUTELY NO EXCEPTIONS:
-- If user says "Guimarães" - ALL places MUST be in Guimarães, Portugal ONLY
-- NEVER EVER suggest places in Vila Nova de Famalicão, Barcelos, Braga, Porto, or ANY other city
-- Triple-check: Is this business actually located in ${location} and nowhere else?
-- Quadruple-check: Does this address contain "${location}" and no other city names?
+✅ SAFE SUGGESTIONS (Examples of what you CAN suggest):
+- Major hotel chains: "Hotel da Oliveira" (verified real business)
+- International chains: McDonald's, Starbucks (if they exist in ${location})
+- Official UNESCO sites and government monuments
+- Municipal parks with official names
+- Well-documented historical sites
 
-🚨 ADDRESS ACCURACY VERIFICATION (MANDATORY):
-- Every single address must be 100% accurate down to the street number
-- You must be able to guarantee someone can find this exact business at this exact address
-- If you have ANY doubt about the street number or exact location, EXCLUDE that place
-- Cross-reference: Does this business name actually exist at this specific address?
+🚨 ADDRESS VERIFICATION PROTOCOL:
+- Every address must be 100% accurate and verifiable
+- Include full postal codes (4xxx-xxx format for Portugal)
+- Cross-check: Can someone actually find this business at this exact address?
+- If uncertain about ANY part of an address, EXCLUDE that place entirely
 
-🚨 GEOGRAPHIC DISTRIBUTION:
-- Places MUST be in DIFFERENT neighborhoods of ${location}
-- NEVER suggest places on the same street or within 200 meters
-- Ensure significant walking distance between suggestions
+🚨 LOCATION ENFORCEMENT:
+- ALL suggestions must be in ${location}, Portugal ONLY
+- Never suggest places in other cities like Vila Nova de Famalicão, Barcelos, Braga, Porto
+- Triple-check city name in every address
 
-🚨 QUANTITY REQUIREMENT:
-- You MUST return EXACTLY ${maxPlaces} place${maxPlaces > 1 ? 's' : ''}
-- If you cannot find ${maxPlaces} places with 100% verified addresses, return fewer
-- NEVER return more than ${maxPlaces}
-
-${regenerationAttempt > 0 ? `
-🔄 REGENERATION - ATTEMPT ${regenerationAttempt + 1}:
-- Provide COMPLETELY DIFFERENT places than previous attempts
-- Use DIFFERENT streets and neighborhoods
+${regenerationCount > 0 ? `
+🔄 REGENERATION ${regenerationAttempt + 1}:
+- Provide COMPLETELY different places than previous attempts
+- Different neighborhoods and streets
 - All verification rules still apply 1000%
 ` : ""}
 
-GOAL ENFORCEMENT:
-User's selected goals: ${goals.join(", ")}
+🎯 GOALS: ${goals.join(", ")}
 
 ${goals.includes("restaurants") ? `
-🍽️ RESTAURANTS GOAL:
-- ONLY suggest VERIFIED restaurants with confirmed addresses in ${location}
-- Examples: established restaurants with online reviews, hotel restaurants, chain restaurants
-- NEVER suggest unknown or unverified eateries
+🍽️ RESTAURANTS: Only verified restaurants with confirmed addresses in ${location}. Examples: hotel restaurants, documented local establishments with online presence.
 ` : ""}
 
 ${goals.includes("coffee") ? `
-☕ COFFEE GOAL:
-- ONLY suggest VERIFIED coffee shops with confirmed addresses in ${location}
-- Examples: international chains, hotel cafés, well-established local cafés with online presence
-- NEVER suggest unknown coffee shops or made-up café names
+☕ COFFEE: Only verified coffee shops with confirmed addresses in ${location}. Examples: hotel cafés, international chains.
 ` : ""}
 
 ${goals.includes("work") ? `
-💻 WORK GOAL:
-- ONLY suggest VERIFIED work-friendly locations in ${location}
-- Examples: hotel lobbies, established cafés with confirmed wifi, official coworking spaces
-- NEVER suggest unverified work locations
+💻 WORK: Only verified work-friendly locations in ${location}. Examples: hotel lobbies, confirmed cafés with wifi.
 ` : ""}
 
 ${goals.includes("museums") ? `
-🏛️ MUSEUMS GOAL:
-- ONLY suggest VERIFIED museums, galleries, cultural centers in ${location}
-- Examples: official museums, government-recognized cultural institutions
-- NEVER suggest unofficial or unverified cultural attractions
+🏛️ MUSEUMS: Only official museums and cultural institutions in ${location}. Examples: government-recognized museums.
 ` : ""}
 
 ${goals.includes("parks") ? `
-🌳 PARKS GOAL:
-- ONLY suggest VERIFIED parks, gardens, green spaces in ${location}
-- Examples: municipal parks, public gardens, official recreational areas
-- NEVER suggest private or unverified outdoor spaces
+🌳 PARKS: Only official parks and public gardens in ${location}. Examples: municipal parks with official names.
 ` : ""}
 
 ${goals.includes("monuments") ? `
-🏰 MONUMENTS GOAL:
-- ONLY suggest VERIFIED architectural monuments, historical landmarks in ${location}
-- Examples: UNESCO sites, official historical monuments, government-recognized heritage sites
-- NEVER suggest unofficial or unverified monuments
-- Include castles, palaces, churches, significant historical buildings
+🏰 MONUMENTS: Only verified historical monuments in ${location}. Examples: UNESCO sites, official heritage buildings, documented castles and palaces.
 ` : ""}
 
-🚨 FINAL MANDATORY VERIFICATION CHECKLIST:
-Before including ANY place, you MUST verify:
-✓ Does this EXACT business name exist in real life at this EXACT address?
-✓ Can I guarantee someone will find this business at this precise location?
-✓ Is this business actually located in ${location} and nowhere else?
-✓ Have I verified this is not a made-up or fictional establishment?
-✓ Does this match the user's goals exactly?
-✓ Are places in genuinely different areas of ${location}?
+🚨 FINAL CHECK BEFORE SUGGESTING ANY PLACE:
+✓ Is this business name real and verified?
+✓ Is this exact address 100% accurate?
+✓ Can I guarantee someone will find this business here?
+✓ Is this actually in ${location} and not another city?
+✓ Am I certain this isn't a fake or made-up establishment?
 
-If ANY answer is NO, UNCERTAIN, or "PROBABLY", IMMEDIATELY REMOVE that suggestion.
+If ANY answer is uncertain, REMOVE that place immediately.
 
-🚨 BANNED EXAMPLES (NEVER SUGGEST THESE):
-- "Restaurante Histórico, Largo do Toural" (FAKE)
-- "Café Milenário" (FAKE)
-- "Fábrica do Chocolate, Rua de Paio Galvão" (WRONG CITY)
-- Any business you're not 1000% certain exists
+RETURN EXACTLY ${maxPlaces} VERIFIED REAL PLACES or fewer if you cannot find enough verified options.
 
-REMEMBER: It's better to return 0 results than 1 fake address. Quality over quantity.
-
-OUTPUT FORMAT - RETURN ONLY JSON:
+OUTPUT FORMAT - JSON ONLY:
 [
   {
-    "name": "VERIFIED real business name that definitely exists",
-    "address": "100% accurate verified address, ${location}, Portugal",
-    "walkingTime": number_in_minutes,
+    "name": "VERIFIED real business name",
+    "address": "100% accurate address with postal code, ${location}, Portugal", 
+    "walkingTime": minutes,
     "type": "category",
-    "reason": "why it matches user goals"
+    "reason": "why it matches goals"
   }
 ]
 
-NO markdown, NO explanations, ONLY the JSON array with VERIFIED real businesses.
+NO markdown, NO explanations, ONLY JSON with REAL verified businesses.
 `.trim();
 
-    console.log("=== DEBUG: Extreme ultra-strict system prompt ===");
-    console.log("System prompt includes location:", location);
-    console.log("System prompt includes goals:", goals);
-    console.log("System prompt includes regeneration attempt:", regenerationAttempt);
+    console.log("=== DEBUG: Nuclear-level strict system prompt ===");
     
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -198,7 +156,7 @@ NO markdown, NO explanations, ONLY the JSON array with VERIFIED real businesses.
             content: userPrompt,
           },
         ],
-        temperature: 0.0, // Absolutely no creativity - only facts
+        temperature: 0.0, // Zero creativity - facts only
         max_tokens: 440 + (maxPlaces * 50),
       }),
     });
@@ -239,90 +197,117 @@ NO markdown, NO explanations, ONLY the JSON array with VERIFIED real businesses.
     
     if (!Array.isArray(places)) throw new Error("AI did not return a list of places.");
     
-    // Enhanced client-side validation with stricter checks
+    // NUCLEAR-LEVEL CLIENT-SIDE VALIDATION
     const locationName = location.toLowerCase();
     
-    // Check for forbidden fake business names
+    // Expanded list of forbidden fake businesses
     const forbiddenNames = [
+      'pastelaria clarinha',
       'restaurante histórico',
       'café milenário', 
       'fábrica do chocolate',
       'restaurante tradicional',
       'café central',
-      'pastelaria regional'
+      'pastelaria regional',
+      'taberna do trovador',
+      'casa do bacalhau',
+      'adega regional'
     ];
     
-    const invalidPlaces = places.filter(place => {
+    // Forbidden fake addresses/streets
+    const forbiddenAddresses = [
+      'rua de santo antónio 136',
+      'rua de santo antónio 113',
+      'rua de paio galvão 12',
+      'largo do toural' // unless it's a hotel
+    ];
+    
+    // Wrong cities that AI sometimes suggests
+    const wrongCities = [
+      'vila nova de famalicão',
+      'famalicão', 
+      'barcelos', 
+      'braga', 
+      'porto',
+      'viana do castelo'
+    ];
+    
+    const validPlaces = places.filter(place => {
       const placeName = place.name?.toLowerCase() || '';
       const address = place.address?.toLowerCase() || '';
       
       // Check for forbidden fake names
       const hasForbiddenName = forbiddenNames.some(forbidden => placeName.includes(forbidden));
+      if (hasForbiddenName) {
+        console.error("REJECTED: Forbidden fake name detected:", place.name);
+        return false;
+      }
+      
+      // Check for forbidden fake addresses
+      const hasForbiddenAddress = forbiddenAddresses.some(forbidden => {
+        if (forbidden === 'largo do toural') {
+          // Allow Largo do Toural only for hotels
+          return address.includes(forbidden) && !placeName.includes('hotel') && !placeName.includes('pousada');
+        }
+        return address.includes(forbidden);
+      });
+      if (hasForbiddenAddress) {
+        console.error("REJECTED: Forbidden fake address detected:", place.address);
+        return false;
+      }
       
       // Check location requirements
-      const hasLocation = address.includes(locationName);
+      const hasCorrectLocation = address.includes(locationName);
+      if (!hasCorrectLocation) {
+        console.error("REJECTED: Wrong location, expected", locationName, "in address:", place.address);
+        return false;
+      }
       
-      // Additional check for common wrong cities near Guimarães
-      const wrongCities = ['famalicão', 'barcelos', 'braga', 'porto'];
+      // Check for wrong cities
       const hasWrongCity = wrongCities.some(city => address.includes(city));
+      if (hasWrongCity) {
+        console.error("REJECTED: Wrong city detected in address:", place.address);
+        return false;
+      }
       
-      // Check for generic/suspicious addresses
-      const isSuspiciousAddress = address.includes('largo do toural') && !placeName.includes('hotel') && !placeName.includes('pousada');
+      // Additional validation for suspicious patterns
+      if (address.includes('rua de santo antónio') && !address.includes('hotel')) {
+        console.error("REJECTED: Suspicious Santo António street without hotel:", place.address);
+        return false;
+      }
       
-      return hasForbiddenName || !hasLocation || hasWrongCity || isSuspiciousAddress;
+      return true;
     });
     
-    if (invalidPlaces.length > 0) {
-      console.error("=== DEBUG: Invalid places detected ===");
-      console.error("Expected location:", location);
-      console.error("Invalid places:", invalidPlaces);
-      
-      // Filter out ALL invalid places
-      places = places.filter(place => {
-        const placeName = place.name?.toLowerCase() || '';
-        const address = place.address?.toLowerCase() || '';
-        
-        const hasForbiddenName = forbiddenNames.some(forbidden => placeName.includes(forbidden));
-        const hasLocation = address.includes(locationName);
-        const wrongCities = ['famalicão', 'barcelos', 'braga', 'porto'];
-        const hasWrongCity = wrongCities.some(city => address.includes(city));
-        const isSuspiciousAddress = address.includes('largo do toural') && !placeName.includes('hotel') && !placeName.includes('pousada');
-        
-        return !hasForbiddenName && hasLocation && !hasWrongCity && !isSuspiciousAddress;
-      });
-      
-      if (places.length === 0) {
-        throw new Error(`No valid places found in ${location}. The AI suggested invalid or fake businesses. Please try again with different goals or try a regeneration.`);
-      }
+    if (validPlaces.length === 0) {
+      console.error("=== ALL PLACES REJECTED ===");
+      console.error("Original places:", places);
+      throw new Error(`All suggested places were invalid or fake. The AI is still generating incorrect addresses for ${location}. Please try regenerating or selecting different goals.`);
     }
     
-    // Geographic distribution validation
-    if (places.length > 1) {
-      const addresses = places.map(p => p.address);
-      const streets = addresses.map(addr => addr.split(',')[0]); // Get street part
-      const uniqueStreets = new Set(streets);
+    // Geographic distribution validation - ensure places are not too close
+    if (validPlaces.length > 1) {
+      const uniquePlaces = [];
+      const seenStreets = new Set();
       
-      if (uniqueStreets.size < places.length) {
-        console.warn("=== DEBUG: Places too close together ===");
-        console.warn("Addresses:", addresses);
-        console.warn("Streets:", streets);
-        // Keep only unique street locations
-        const uniquePlaces = [];
-        const seenStreets = new Set();
-        for (const place of places) {
-          const street = place.address.split(',')[0];
-          if (!seenStreets.has(street)) {
-            uniquePlaces.push(place);
-            seenStreets.add(street);
-          }
+      for (const place of validPlaces) {
+        const street = place.address.split(',')[0].toLowerCase();
+        if (!seenStreets.has(street)) {
+          uniquePlaces.push(place);
+          seenStreets.add(street);
+        } else {
+          console.warn("FILTERED: Duplicate street detected:", street);
         }
-        places = uniquePlaces;
       }
+      
+      places = uniquePlaces;
+    } else {
+      places = validPlaces;
     }
     
     console.log("=== DEBUG: Final validated places ===");
     console.log("Places:", places);
-    console.log("Places addresses:", places.map(p => p.address));
+    console.log("Places count:", places.length);
     
     return places;
   }
