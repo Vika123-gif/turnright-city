@@ -22,9 +22,9 @@ serve(async (req) => {
 
     console.log(`Searching for "${placeName}" near ${location}`);
 
-    // Use Mapbox Geocoding API to find the place
+    // Use Mapbox Geocoding API to find the place with detailed address information
     const searchQuery = encodeURIComponent(`${placeName}, ${location}, Portugal`);
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${searchQuery}.json?access_token=${mapboxApiKey}&country=pt&limit=5&types=poi,address`;
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${searchQuery}.json?access_token=${mapboxApiKey}&country=pt&limit=10&types=poi,address&language=pt`;
 
     const response = await fetch(url);
     
@@ -36,7 +36,7 @@ serve(async (req) => {
     console.log(`Mapbox returned ${data.features?.length || 0} results for "${placeName}"`);
 
     if (!data.features || data.features.length === 0) {
-      // Fallback: try a broader search without the exact place name
+      // Fallback: try a broader search
       const broadQuery = encodeURIComponent(`${location}, Portugal`);
       const fallbackUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${broadQuery}.json?access_token=${mapboxApiKey}&country=pt&limit=1`;
       
@@ -53,17 +53,89 @@ serve(async (req) => {
       });
     }
 
-    // Find the best match (prefer POI over addresses)
-    const bestMatch = data.features.find(f => 
-      f.properties?.category?.includes('restaurant') || 
-      f.properties?.category?.includes('cafe') ||
-      f.place_type?.includes('poi')
-    ) || data.features[0];
+    // Find the best match with the most detailed address
+    let bestMatch = null;
+    
+    // First priority: exact POI match with detailed address
+    for (const feature of data.features) {
+      if (feature.place_type?.includes('poi') || feature.properties?.category) {
+        // Check if this result has detailed address components
+        const hasStreetAddress = feature.context?.some(ctx => 
+          ctx.id?.startsWith('address') || ctx.id?.startsWith('street')
+        );
+        
+        if (hasStreetAddress) {
+          bestMatch = feature;
+          break;
+        }
+      }
+    }
+    
+    // Second priority: any POI
+    if (!bestMatch) {
+      bestMatch = data.features.find(f => 
+        f.place_type?.includes('poi') || f.properties?.category
+      );
+    }
+    
+    // Third priority: address type
+    if (!bestMatch) {
+      bestMatch = data.features.find(f => f.place_type?.includes('address'));
+    }
+    
+    // Last resort: first result
+    if (!bestMatch) {
+      bestMatch = data.features[0];
+    }
+
+    // Build detailed address from components
+    let detailedAddress = bestMatch.place_name;
+    
+    if (bestMatch.context) {
+      const addressComponents = {
+        street: null,
+        number: null,
+        postcode: null,
+        place: null
+      };
+      
+      // Extract address components
+      for (const component of bestMatch.context) {
+        if (component.id?.startsWith('address')) {
+          addressComponents.street = component.text;
+        } else if (component.id?.startsWith('postcode')) {
+          addressComponents.postcode = component.text;
+        } else if (component.id?.startsWith('place')) {
+          addressComponents.place = component.text;
+        }
+      }
+      
+      // If we have detailed components, construct a better address
+      if (addressComponents.street || addressComponents.postcode) {
+        const parts = [];
+        
+        if (addressComponents.street) {
+          parts.push(addressComponents.street);
+        }
+        
+        if (addressComponents.postcode && addressComponents.place) {
+          parts.push(`${addressComponents.postcode} ${addressComponents.place}`);
+        } else if (addressComponents.place) {
+          parts.push(addressComponents.place);
+        }
+        
+        parts.push('Portugal');
+        
+        if (parts.length > 1) {
+          detailedAddress = parts.join(', ');
+        }
+      }
+    }
 
     return new Response(JSON.stringify({
       found: true,
       placeName,
-      address: bestMatch.place_name,
+      address: detailedAddress,
       coordinates: bestMatch.geometry.coordinates, // [lng, lat]
       category: bestMatch.properties?.category,
       confidence: bestMatch.relevance
