@@ -71,7 +71,7 @@ export function useOpenStreetMap() {
         })
         .map((item: any) => ({
           name: item.display_name.split(',')[0] || item.name || "Unknown Place",
-          address: item.display_name,
+          address: formatAddressForMaps(item),
           lat: parseFloat(item.lat),
           lon: parseFloat(item.lon),
           type: item.type,
@@ -88,6 +88,67 @@ export function useOpenStreetMap() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // Format address in a way that's optimized for map applications
+  function formatAddressForMaps(item: any): string {
+    const addressParts = [];
+    
+    // Get the main business/place name
+    const placeName = item.display_name.split(',')[0] || item.name;
+    if (placeName && placeName !== "Unknown Place") {
+      addressParts.push(placeName);
+    }
+    
+    // Build a clean address from OSM address components
+    if (item.address) {
+      const addr = item.address;
+      
+      // Add street information
+      if (addr.house_number && addr.road) {
+        addressParts.push(`${addr.road} ${addr.house_number}`);
+      } else if (addr.road) {
+        addressParts.push(addr.road);
+      }
+      
+      // Add postal code and city for better accuracy
+      if (addr.postcode && addr.city) {
+        addressParts.push(`${addr.postcode} ${addr.city}`);
+      } else if (addr.city) {
+        addressParts.push(addr.city);
+      } else if (addr.town) {
+        addressParts.push(addr.town);
+      } else if (addr.village) {
+        addressParts.push(addr.village);
+      }
+      
+      // Always add country for international compatibility
+      if (addr.country) {
+        addressParts.push(addr.country);
+      } else {
+        addressParts.push("Portugal");
+      }
+    } else {
+      // Fallback: use display_name but clean it up
+      const displayParts = item.display_name.split(',').map((part: string) => part.trim());
+      
+      // Take first few relevant parts
+      if (displayParts.length > 1) {
+        addressParts.push(...displayParts.slice(1, 4));
+      }
+      
+      // Ensure Portugal is included
+      if (!addressParts.some(part => part.toLowerCase().includes('portugal'))) {
+        addressParts.push("Portugal");
+      }
+    }
+    
+    // Join with commas and clean up
+    return addressParts
+      .filter(part => part && part.trim().length > 0)
+      .join(', ')
+      .replace(/,\s*,/g, ',') // Remove double commas
+      .trim();
   }
 
   async function calculateWalkingTime(
