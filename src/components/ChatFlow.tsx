@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
+import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useDatabase } from "@/hooks/useDatabase";
 import { createClient } from "@supabase/supabase-js";
@@ -45,6 +46,7 @@ export default function ChatFlow() {
   const [regenerationCount, setRegenerationCount] = useState(0);
 
   const { getLLMPlaces } = useOpenAI();
+  const { searchPlacesByName } = useGooglePlaces();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
   const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
 
@@ -196,7 +198,40 @@ export default function ChatFlow() {
       console.log("=== DEBUG: Places Response ===");
       console.log("Places returned:", response);
       
-      setPlaces(response);
+      // Now fetch real photos for each place using Google Places API
+      console.log("=== DEBUG: Fetching photos for places ===");
+      const placesWithPhotos = await Promise.all(
+        response.map(async (place) => {
+          try {
+            console.log(`Searching for photos for: ${place.name}`);
+            const googlePlacesResponse = await searchPlacesByName({
+              placeName: place.name,
+              location: locationForSearch,
+              placeType: place.type
+            });
+            
+            // If we found a matching place with a photo, use it
+            if (googlePlacesResponse.length > 0 && googlePlacesResponse[0].photoUrl) {
+              console.log(`Found photo for ${place.name}:`, googlePlacesResponse[0].photoUrl);
+              return {
+                ...place,
+                photoUrl: googlePlacesResponse[0].photoUrl
+              };
+            } else {
+              console.log(`No photo found for ${place.name}`);
+              return place;
+            }
+          } catch (error) {
+            console.error(`Error fetching photo for ${place.name}:`, error);
+            return place;
+          }
+        })
+      );
+      
+      console.log("=== DEBUG: Places with photos ===");
+      console.log("Places with photos:", placesWithPhotos);
+      
+      setPlaces(placesWithPhotos);
       
       // Update regeneration count if this was a regeneration
       if (isRegeneration) {
