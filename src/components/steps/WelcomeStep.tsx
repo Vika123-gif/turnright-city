@@ -66,7 +66,7 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
     <div className="chat-card text-left">
       <div className="mb-6 flex flex-row items-center gap-3">
         <div className="text-2xl">👋</div>
-        <h2 className="text-xl font-semibold">Hi! I'll help you find the best places nearby<br />for your trip.</h2>
+        <h2 className="text-xl font-semibold">Hi I am TurnRight - your personal city guide<br />I will help you plan a route in just a couple of seconds depending on your preferences</h2>
       </div>
       <div className="chatbot-bubble mb-3">
         Share your location and let's get started!
