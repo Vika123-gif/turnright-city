@@ -59,9 +59,24 @@ const RoutePreviewStep: React.FC<Props> = ({
             {places && places.length > 0 ? (
               places.map((p, i) => (
                 <div key={i} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                  {/* Place Image Placeholder */}
-                  <div className="w-full h-32 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
-                    <div className="text-green-600 text-sm font-medium">📍 {p.name}</div>
+                  {/* Place Image */}
+                  <div className="w-full h-32 overflow-hidden">
+                    {p.photoUrl ? (
+                      <img 
+                        src={p.photoUrl} 
+                        alt={p.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to placeholder if image fails to load
+                          const target = e.target as HTMLElement;
+                          target.style.display = 'none';
+                          target.nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <div className={`w-full h-32 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center ${p.photoUrl ? 'hidden' : ''}`}>
+                      <div className="text-green-600 text-sm font-medium">📍 {p.name}</div>
+                    </div>
                   </div>
                   
                   {/* Place Info */}

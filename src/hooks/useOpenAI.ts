@@ -11,6 +11,7 @@ export type LLMPlace = {
   lat?: number;
   lon?: number;
   coordinates?: [number, number]; // [lng, lat] from Mapbox
+  photoUrl?: string; // Google Places photo URL
 };
 
 // Inserted user-provided OpenAI API key below.

@@ -124,16 +124,24 @@ async function handlePlaceNameSearch(requestBody: any) {
   // Calculate walking times and format results
   const formattedPlaces = await Promise.all(
     bestResults.slice(0, 3).map(async (place: any) => {
-      // Get detailed place information
-      const placeDetailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,geometry,rating,types&key=${GOOGLE_PLACES_API_KEY}`
+      // Get detailed place information including photos
+      const placeDetailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,geometry,rating,types,photos&key=${GOOGLE_PLACES_API_KEY}`
       
       let detailedPlace = place
+      let photoUrl = null
+      
       try {
         const detailsResponse = await fetch(placeDetailsUrl)
         const detailsData = await detailsResponse.json()
         
         if (detailsData.status === 'OK' && detailsData.result) {
           detailedPlace = { ...place, ...detailsData.result }
+          
+          // Get the first photo if available
+          if (detailsData.result.photos && detailsData.result.photos.length > 0) {
+            const photo = detailsData.result.photos[0]
+            photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photo.photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
+          }
         }
       } catch (error) {
         console.error('Error getting place details:', error)
@@ -161,7 +169,8 @@ async function handlePlaceNameSearch(requestBody: any) {
         walkingTime,
         type: placeType || 'place',
         rating: detailedPlace.rating || null,
-        place_id: detailedPlace.place_id
+        place_id: detailedPlace.place_id,
+        photoUrl
       }
     })
   )
@@ -239,9 +248,26 @@ async function handleNearbySearch(requestBody: any) {
     arr.findIndex(p => p.place_id === place.place_id) === index
   )
 
-  // Calculate walking times and format results
+  // Calculate walking times and format results with photos
   const formattedPlaces = await Promise.all(
     uniquePlaces.slice(0, 10).map(async (place: any) => {
+      // Get detailed place information including photos
+      const placeDetailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,geometry,rating,types,photos&key=${GOOGLE_PLACES_API_KEY}`
+      
+      let photoUrl = null
+      
+      try {
+        const detailsResponse = await fetch(placeDetailsUrl)
+        const detailsData = await detailsResponse.json()
+        
+        if (detailsData.status === 'OK' && detailsData.result?.photos && detailsData.result.photos.length > 0) {
+          const photo = detailsData.result.photos[0]
+          photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photo.photo_reference}&key=${GOOGLE_PLACES_API_KEY}`
+        }
+      } catch (error) {
+        console.error('Error getting place photos:', error)
+      }
+      
       // Calculate walking distance/time using Distance Matrix API
       const distanceUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${lat},${lng}&destinations=place_id:${place.place_id}&mode=walking&key=${GOOGLE_PLACES_API_KEY}`
       
@@ -264,7 +290,8 @@ async function handleNearbySearch(requestBody: any) {
         walkingTime,
         type: place.searchType,
         rating: place.rating || null,
-        place_id: place.place_id
+        place_id: place.place_id,
+        photoUrl
       }
     })
   )
