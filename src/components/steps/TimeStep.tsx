@@ -1,54 +1,163 @@
 
 import React, { useState } from "react";
 import Button from "../Button";
-import { Clock } from "lucide-react";
+import { Clock, Shuffle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
 const TIMINGS = [
-  "30 minutes",
-  "1 hour",
-  "1.5 hours",
-  "2+ hours",
+  "1h",
+  "3h", 
+  "5h",
+  "Full day",
 ];
 
-// Simplified place count mapping
-const TIME_TO_PLACES_COUNT = {
-  "30 minutes": 1,
-  "1 hour": 2,
-  "1.5 hours": 2,
-  "2+ hours": 3,
+const TIME_TO_MINUTES = {
+  "1h": 60,
+  "3h": 180,
+  "5h": 300,
+  "Full day": 480,
 };
 
+const CATEGORIES = [
+  "Restaurants",
+  "Cafés", 
+  "Bars",
+  "Viewpoints",
+  "Parks",
+  "Museums",
+  "Architectural landmarks",
+  "Work-friendly"
+];
+
 type Props = {
-  onNext: (choice: string) => void;
-  value?: string | null;
+  onNext: (data: { timeMinutes: number; categories: string[] }) => void;
+  value?: any;
 };
 
 const TimeStep: React.FC<Props> = ({ onNext, value }) => {
-  const [selected, setSelected] = useState<string | null>(value || null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(value?.time || null);
+  const [customMinutes, setCustomMinutes] = useState<string>(value?.customMinutes || "");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(value?.categories || []);
 
   const handleTimeSelect = (time: string) => {
-    setSelected(time);
-    onNext(time);
+    setSelectedTime(time);
   };
+
+  const handleCategoryToggle = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const handleSurpriseMe = () => {
+    const numCategories = Math.floor(Math.random() * 3) + 2; // 2-4 categories
+    const availableCategories = [...CATEGORIES];
+    const selected = [];
+    
+    // 50% chance to include Viewpoints
+    if (Math.random() < 0.5) {
+      selected.push("Viewpoints");
+      availableCategories.splice(availableCategories.indexOf("Viewpoints"), 1);
+    }
+    
+    // Fill remaining slots
+    while (selected.length < numCategories && availableCategories.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableCategories.length);
+      selected.push(availableCategories.splice(randomIndex, 1)[0]);
+    }
+    
+    setSelectedCategories(selected);
+  };
+
+  const handleGenerateRoute = () => {
+    const timeMinutes = selectedTime === "Custom" 
+      ? parseInt(customMinutes) || 0
+      : TIME_TO_MINUTES[selectedTime as keyof typeof TIME_TO_MINUTES] || 0;
+    
+    onNext({ timeMinutes, categories: selectedCategories });
+  };
+
+  const isFormValid = (selectedTime && selectedCategories.length > 0) && 
+    (selectedTime !== "Custom" || customMinutes);
 
   return (
     <div className="chat-card text-left">
-      <div className="flex items-center gap-2 mb-5">
-        <Clock className="w-6 h-6" />
-        <span className="font-semibold text-lg">How much time do you have right now?</span>
-      </div>
-      <div className="flex flex-col gap-4">
-        {TIMINGS.map((t) => (
+      {/* Time Selection */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Clock className="w-6 h-6" />
+          <span className="font-semibold text-lg">How much time do you have?</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {TIMINGS.map((time) => (
+            <Button
+              key={time}
+              variant={selectedTime === time ? "primary" : "outline"}
+              onClick={() => handleTimeSelect(time)}
+              className="h-12"
+            >
+              {time}
+            </Button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
           <Button
-            key={t}
-            variant={selected === t ? "primary" : "outline"}
-            onClick={() => handleTimeSelect(t)}
-            aria-pressed={selected === t}
+            variant={selectedTime === "Custom" ? "primary" : "outline"}
+            onClick={() => handleTimeSelect("Custom")}
+            className="min-w-[120px]"
           >
-            {t}
+            Custom (min)
           </Button>
-        ))}
+          {selectedTime === "Custom" && (
+            <Input
+              type="number"
+              placeholder="Minutes"
+              value={customMinutes}
+              onChange={(e) => setCustomMinutes(e.target.value)}
+              className="flex-1"
+              min="1"
+            />
+          )}
+        </div>
       </div>
+
+      {/* Categories Selection */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <span className="font-semibold text-lg">What interests you?</span>
+          <Button
+            variant="outline"
+            onClick={handleSurpriseMe}
+            className="flex items-center gap-2 text-sm px-3 py-1"
+          >
+            <Shuffle className="w-4 h-4" />
+            Surprise me
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {CATEGORIES.map((category) => (
+            <label key={category} className="flex items-center space-x-2 cursor-pointer">
+              <Checkbox
+                checked={selectedCategories.includes(category)}
+                onCheckedChange={() => handleCategoryToggle(category)}
+              />
+              <span className="text-sm">{category}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Generate Route Button */}
+      <Button
+        onClick={handleGenerateRoute}
+        disabled={!isFormValid}
+        className="w-full h-12 font-semibold"
+      >
+        Generate route
+      </Button>
 
       {/* MVP Link */}
       <div className="border-t pt-4 mt-6 text-center">
@@ -68,5 +177,5 @@ const TimeStep: React.FC<Props> = ({ onNext, value }) => {
   )
 }
 
-export { TIME_TO_PLACES_COUNT };
+export { TIME_TO_MINUTES };
 export default TimeStep;

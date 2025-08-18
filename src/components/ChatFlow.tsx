@@ -5,7 +5,7 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { useDatabase } from "@/hooks/useDatabase";
 import { createClient } from "@supabase/supabase-js";
 import WelcomeStep from "./steps/WelcomeStep";
-import TimeStep, { TIME_TO_PLACES_COUNT } from "./steps/TimeStep";
+import TimeStep, { TIME_TO_MINUTES } from "./steps/TimeStep";
 import GoalsStep from "./steps/GoalsStep";
 import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
@@ -20,7 +20,6 @@ const supabaseAnonKey =
 type Step =
   | "welcome"
   | "time"
-  | "goals"
   | "generating"
   | "results"
   | "purchase";
@@ -29,7 +28,7 @@ export default function ChatFlow() {
   const [step, setStep] = useState<Step>("welcome");
   const [location, setLocation] = useState("");
   const [coordinates, setCoordinates] = useState(""); // Store coordinates separately for map
-  const [timeWindow, setTimeWindow] = useState<string | null>(null);
+  const [timeWindow, setTimeWindow] = useState<number | null>(null);
   const [goals, setGoals] = useState<string[]>([]);
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +144,7 @@ export default function ChatFlow() {
     }
     
     // Track route generation attempt
-    trackRouteGeneration(locationForSearch, timeWindow || "", goalsToUse);
+    trackRouteGeneration(locationForSearch, timeWindow?.toString() || "", goalsToUse);
     
     try {
       // Validation
@@ -171,7 +170,7 @@ export default function ChatFlow() {
       const selectedGoalTexts = goalsToUse.map(goal => goalDescriptions[goal as keyof typeof goalDescriptions]).filter(Boolean);
       const goalsText = selectedGoalTexts.join(" and ");
       
-      let userPrompt = `I am currently at ${locationForSearch} and have ${timeWindow} available. I want to ${goalsText}. Please suggest places that match my goals: ${goalsToUse.join(", ")}.`;
+      let userPrompt = `I am currently at ${locationForSearch} and have ${timeWindow} minutes available. I want to ${goalsText}. Please suggest places that match my goals: ${goalsToUse.join(", ")}.`;
       
       if (isRegeneration) {
         userPrompt += ` This is a regeneration request - please provide different places than before.`;
@@ -184,7 +183,7 @@ export default function ChatFlow() {
       const response: LLMPlace[] = await getLLMPlaces({
         location: locationForSearch,
         goals: goalsToUse,
-        timeWindow: timeWindow || "",
+        timeWindow: timeWindow?.toString() || "",
         userPrompt,
         regenerationAttempt: currentRegenerationCount,
         maxPlaces: 3,
@@ -205,7 +204,7 @@ export default function ChatFlow() {
       // Save route generation to database
       console.log("=== ATTEMPTING TO SAVE ROUTE GENERATION ===");
       console.log("Session ID for save:", userSessionId);
-      const savedGeneration = await saveRouteGeneration(locationForSearch, timeWindow, goalsToUse, response, userSessionId);
+      const savedGeneration = await saveRouteGeneration(locationForSearch, timeWindow?.toString(), goalsToUse, response, userSessionId);
       if (savedGeneration) {
         console.log("Route generation saved with ID:", savedGeneration.id);
         setCurrentRouteGenerationId(savedGeneration.id);
@@ -419,38 +418,16 @@ export default function ChatFlow() {
 
         {step === "time" && (
           <TimeStep
-            onNext={(time) => {
-              setTimeWindow(time);
-              setStep("goals");
+            onNext={(data) => {
+              setTimeWindow(data.timeMinutes);
+              setGoals(data.categories);
+              setStep("generating");
+              fetchPlacesWithGoals(data.categories);
             }}
-            value={timeWindow}
+            value={{ timeMinutes: timeWindow, categories: goals }}
           />
         )}
 
-        {step === "goals" && (
-          <GoalsStep
-            onNext={(selectedGoals) => {
-              console.log("=== DEBUG: GoalsStep onNext called ===");
-              console.log("Selected goals received:", selectedGoals, "Type:", typeof selectedGoals, "Array?", Array.isArray(selectedGoals));
-              
-              // Ensure we have a valid array
-              if (!Array.isArray(selectedGoals)) {
-                console.error("Goals is not an array:", selectedGoals);
-                return;
-              }
-              
-              setGoals(selectedGoals);
-              console.log("Goals state set to:", selectedGoals);
-              
-              setStep("generating");
-              
-              // Call fetchPlacesWithGoals directly with the selectedGoals parameter
-              // instead of relying on the state which may not be updated yet
-              fetchPlacesWithGoals(selectedGoals);
-            }}
-            value={goals}
-          />
-        )}
 
         {step === "generating" && (
           <GPTStep
