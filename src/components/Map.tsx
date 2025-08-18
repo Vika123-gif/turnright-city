@@ -16,13 +16,12 @@ const Map: React.FC<MapProps> = ({ places, className = "" }) => {
     if (!mapContainer.current || !places.length) return;
 
     // Initialize map with Mapbox token
-    // Token is now stored in Supabase secrets
     const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+    console.log('Mapbox token:', mapboxToken?.substring(0, 10) + '...');
     console.log('Mapbox token available:', !!mapboxToken);
     
-    if (!mapboxToken) {
-      console.error('Mapbox token not found');
-      // Show placeholder map
+    if (!mapboxToken || mapboxToken === 'YOUR_MAPBOX_TOKEN_HERE') {
+      console.error('Mapbox token not found or not properly configured');
       return;
     }
     
