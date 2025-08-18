@@ -4,6 +4,7 @@ import Button from "../Button";
 import { Repeat, MapPin, Clock } from "lucide-react";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import { supabase } from "@/integrations/supabase/client";
+import Map from "../Map";
 
 type Props = {
   places: LLMPlace[];
@@ -52,35 +53,45 @@ const RoutePreviewStep: React.FC<Props> = ({
       )}
       
       {!error && (
-        <div className="bg-[#F6FDF9] px-4 py-3 rounded-lg text-base mb-6">
-          {places && places.length > 0 ? (
-            <div className="space-y-4">
-              {places.map((p, i) => (
-                <div key={i} className="mb-3 p-3 rounded-lg">
-                  <div className="font-semibold text-base">
-                    {`${i + 1}. ${p.name}`}
-                  </div>
-                  <div className="text-gray-600 text-sm flex items-center gap-1 mt-1">
-                    <MapPin className="w-3 h-3" />
-                    {p.address}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1 flex items-center gap-3">
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      🚶 {p.walkingTime} min walk
-                    </span>
-                    {p.type && <span>Type: {p.type}</span>}
-                  </div>
-                  {p.reason && (
-                    <div className="text-sm mt-1 text-[#008457]">{p.reason}</div>
-                  )}
-                </div>
-              ))}
+        <>
+          {/* Interactive Map */}
+          {places && places.length > 0 && (
+            <div className="mb-6">
+              <Map places={places} className="h-[300px] w-full" />
             </div>
-          ) : (
-            <div>No results found. Try different time or goals.</div>
           )}
-        </div>
+          
+          {/* Places List */}
+          <div className="bg-[#F6FDF9] px-4 py-3 rounded-lg text-base mb-6">
+            {places && places.length > 0 ? (
+              <div className="space-y-4">
+                {places.map((p, i) => (
+                  <div key={i} className="mb-3 p-3 rounded-lg">
+                    <div className="font-semibold text-base">
+                      {`${i + 1}. ${p.name}`}
+                    </div>
+                    <div className="text-gray-600 text-sm flex items-center gap-1 mt-1">
+                      <MapPin className="w-3 h-3" />
+                      {p.address}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-3">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        🚶 {p.walkingTime} min walk
+                      </span>
+                      {p.type && <span>Type: {p.type}</span>}
+                    </div>
+                    {p.reason && (
+                      <div className="text-sm mt-1 text-[#008457]">{p.reason}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>No results found. Try different time or goals.</div>
+            )}
+          </div>
+        </>
       )}
       
       <div className="flex flex-col gap-4">
