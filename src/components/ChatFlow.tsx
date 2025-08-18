@@ -6,7 +6,7 @@ import { useDatabase } from "@/hooks/useDatabase";
 import { createClient } from "@supabase/supabase-js";
 import WelcomeStep from "./steps/WelcomeStep";
 import TimeStep, { TIME_TO_MINUTES } from "./steps/TimeStep";
-import GoalsStep from "./steps/GoalsStep";
+import CategoriesStep from "./steps/CategoriesStep";
 import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
@@ -20,6 +20,7 @@ const supabaseAnonKey =
 type Step =
   | "welcome"
   | "time"
+  | "categories"
   | "generating"
   | "results"
   | "purchase";
@@ -418,13 +419,22 @@ export default function ChatFlow() {
 
         {step === "time" && (
           <TimeStep
-            onNext={(data) => {
-              setTimeWindow(data.timeMinutes);
-              setGoals(data.categories);
-              setStep("generating");
-              fetchPlacesWithGoals(data.categories);
+            onNext={(timeMinutes) => {
+              setTimeWindow(timeMinutes);
+              setStep("categories");
             }}
-            value={{ timeMinutes: timeWindow, categories: goals }}
+            value={{ timeMinutes: timeWindow }}
+          />
+        )}
+
+        {step === "categories" && (
+          <CategoriesStep
+            onNext={(categories) => {
+              setGoals(categories);
+              setStep("generating");
+              fetchPlacesWithGoals(categories);
+            }}
+            value={goals}
           />
         )}
 

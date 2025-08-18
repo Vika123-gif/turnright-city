@@ -1,8 +1,7 @@
 
 import React, { useState } from "react";
 import Button from "../Button";
-import { Clock, Shuffle } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const TIMINGS = [
@@ -19,73 +18,31 @@ const TIME_TO_MINUTES = {
   "Full day": 480,
 };
 
-const CATEGORIES = [
-  "Restaurants",
-  "Cafés", 
-  "Bars",
-  "Viewpoints",
-  "Parks",
-  "Museums",
-  "Architectural landmarks",
-  "Work-friendly"
-];
-
 type Props = {
-  onNext: (data: { timeMinutes: number; categories: string[] }) => void;
+  onNext: (timeMinutes: number) => void;
   value?: any;
 };
 
 const TimeStep: React.FC<Props> = ({ onNext, value }) => {
   const [selectedTime, setSelectedTime] = useState<string | null>(value?.time || null);
   const [customMinutes, setCustomMinutes] = useState<string>(value?.customMinutes || "");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(value?.categories || []);
 
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
   };
 
-  const handleCategoryToggle = (category: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(category) 
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
-  };
-
-  const handleSurpriseMe = () => {
-    const numCategories = Math.floor(Math.random() * 3) + 2; // 2-4 categories
-    const availableCategories = [...CATEGORIES];
-    const selected = [];
-    
-    // 50% chance to include Viewpoints
-    if (Math.random() < 0.5) {
-      selected.push("Viewpoints");
-      availableCategories.splice(availableCategories.indexOf("Viewpoints"), 1);
-    }
-    
-    // Fill remaining slots
-    while (selected.length < numCategories && availableCategories.length > 0) {
-      const randomIndex = Math.floor(Math.random() * availableCategories.length);
-      selected.push(availableCategories.splice(randomIndex, 1)[0]);
-    }
-    
-    setSelectedCategories(selected);
-  };
-
-  const handleGenerateRoute = () => {
+  const handleNext = () => {
     const timeMinutes = selectedTime === "Custom" 
       ? parseInt(customMinutes) || 0
       : TIME_TO_MINUTES[selectedTime as keyof typeof TIME_TO_MINUTES] || 0;
     
-    onNext({ timeMinutes, categories: selectedCategories });
+    onNext(timeMinutes);
   };
 
-  const isFormValid = (selectedTime && selectedCategories.length > 0) && 
-    (selectedTime !== "Custom" || customMinutes);
+  const isFormValid = selectedTime && (selectedTime !== "Custom" || customMinutes);
 
   return (
     <div className="chat-card text-left">
-      {/* Time Selection */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Clock className="w-6 h-6" />
@@ -124,39 +81,12 @@ const TimeStep: React.FC<Props> = ({ onNext, value }) => {
         </div>
       </div>
 
-      {/* Categories Selection */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <span className="font-semibold text-lg">What interests you?</span>
-          <Button
-            variant="outline"
-            onClick={handleSurpriseMe}
-            className="flex items-center gap-2 text-sm px-3 py-1"
-          >
-            <Shuffle className="w-4 h-4" />
-            Surprise me
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {CATEGORIES.map((category) => (
-            <label key={category} className="flex items-center space-x-2 cursor-pointer">
-              <Checkbox
-                checked={selectedCategories.includes(category)}
-                onCheckedChange={() => handleCategoryToggle(category)}
-              />
-              <span className="text-sm">{category}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Generate Route Button */}
       <Button
-        onClick={handleGenerateRoute}
+        onClick={handleNext}
         disabled={!isFormValid}
         className="w-full h-12 font-semibold"
       >
-        Generate route
+        Next
       </Button>
 
       {/* MVP Link */}
