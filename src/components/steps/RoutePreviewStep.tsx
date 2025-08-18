@@ -66,25 +66,17 @@ const RoutePreviewStep: React.FC<Props> = ({
                         src={p.photoUrl} 
                         alt={p.name}
                         className="w-full h-full object-cover"
-                        onLoad={() => console.log(`Photo loaded for ${p.name}:`, p.photoUrl)}
                         onError={(e) => {
-                          console.log(`Photo failed to load for ${p.name}:`, p.photoUrl);
                           // Fallback to placeholder if image fails to load
                           const target = e.target as HTMLElement;
                           target.style.display = 'none';
                           target.nextElementSibling?.classList.remove('hidden');
                         }}
                       />
-                    ) : (
-                      <div className="w-full h-32 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
-                        <div className="text-green-600 text-sm font-medium">📍 {p.name}</div>
-                      </div>
-                    )}
-                    {p.photoUrl && (
-                      <div className="w-full h-32 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center hidden">
-                        <div className="text-green-600 text-sm font-medium">📍 {p.name}</div>
-                      </div>
-                    )}
+                    ) : null}
+                    <div className={`w-full h-32 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center ${p.photoUrl ? 'hidden' : ''}`}>
+                      <div className="text-green-600 text-sm font-medium">📍 {p.name}</div>
+                    </div>
                   </div>
                   
                   {/* Place Info */}
