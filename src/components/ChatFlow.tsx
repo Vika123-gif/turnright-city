@@ -254,11 +254,11 @@ export default function ChatFlow() {
         console.error("Failed to save route generation to database");
       }
       
-      setStep("results");
+      setStep("detailed-map");
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
-      setStep("results");
+      setStep("detailed-map");
     } finally {
       setGenerating(false);
     }
@@ -303,14 +303,14 @@ export default function ChatFlow() {
       case "generating":
         setStep("categories");
         break;
-      case "results":
+      case "detailed-map":
         setStep("categories");
         break;
       case "purchase":
         setStep("results");
         break;
-      case "detailed-map":
-        setStep("purchase");
+      case "results":
+        setStep("categories");
         break;
       default:
         setStep("welcome");
@@ -565,15 +565,15 @@ export default function ChatFlow() {
           </>
         )}
 
-        {step === "detailed-map" && purchaseRoute && (
+        {step === "detailed-map" && places && (
           <>
             <div className="absolute top-4 left-4">
               <BackButton onClick={goBack} />
             </div>
             <DetailedMapStep
-              places={purchaseRoute.places}
-              origin={purchaseRoute.origin}
-              onBack={() => setStep("purchase")}
+              places={places || []}
+              origin={location}
+              onBack={() => setStep("categories")}
               onReset={reset}
             />
           </>
