@@ -7,7 +7,10 @@ type Place = {
   walkingTime: number; // walking time in minutes
   type?: string;
   photoUrl?: string; // Google Places photo URL
+  coordinates?: [number, number]; // [lng, lat]
 };
+
+export type { Place };
 
 export type GooglePlacesDebug = {
   location: string;

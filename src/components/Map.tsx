@@ -27,15 +27,15 @@ const Map: React.FC<MapProps> = ({ places, className = "" }) => {
     
     mapboxgl.accessToken = mapboxToken;
     
-    // For now, use default Lisbon coordinates since places don't have coordinates yet
-    const lisbonCenter: [number, number] = [-9.1393, 38.7223]; // Lisbon coordinates
+    // Default Lisbon center coordinates
+    const defaultCenter: [number, number] = [-9.1393, 38.7223]; // [lng, lat] for Mapbox
     
     console.log('Initializing map with places:', places);
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: lisbonCenter,
+      center: defaultCenter,
       zoom: 13,
     });
 
@@ -45,15 +45,14 @@ const Map: React.FC<MapProps> = ({ places, className = "" }) => {
       'top-right'
     );
 
-    // Add markers for each place (using approximate Lisbon coordinates for now)
-    const lisbonPlaces = [
-      { lat: 38.7223, lng: -9.1393 }, // Central Lisbon
-      { lat: 38.7139, lng: -9.1394 }, // Slightly south
-    ];
+    // Add markers for each place using real coordinates or fallback to Lisbon center
+    const fallbackCoords = { lat: 38.7223, lng: -9.1393 };
 
     places.forEach((place, index) => {
-      // Use hardcoded coordinates for now since places don't have coordinates yet
-      const coords = lisbonPlaces[index] || lisbonPlaces[0];
+      // Use real coordinates if available, otherwise fallback to Lisbon center
+      const coords = place.coordinates 
+        ? { lat: place.coordinates[1], lng: place.coordinates[0] }
+        : fallbackCoords;
       
       console.log(`Adding marker ${index + 1} for ${place.name} at`, coords);
 
