@@ -8,6 +8,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface LisbonWaitlistModalProps {
   open: boolean;
@@ -18,20 +20,58 @@ const LisbonWaitlistModal: React.FC<LisbonWaitlistModalProps> = ({ open, onClose
   const [desiredCity, setDesiredCity] = useState('');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!desiredCity || !email) return;
 
     setIsSubmitting(true);
-    // TODO: Submit to waitlist API
-    console.log('Waitlist submission:', { desiredCity, email });
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsSubmitting(false);
-    onClose();
+    try {
+      // Get user session info for analytics
+      const userSessionId = sessionStorage.getItem('user_session_id') || 
+                           `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Save to database
+      const { error } = await supabase
+        .from('waitlist')
+        .insert({
+          email: email.trim(),
+          desired_city: desiredCity.trim(),
+          user_session_id: userSessionId,
+          user_agent: navigator.userAgent,
+          // Note: IP address will be null as we can't access it from client-side
+        });
+
+      if (error) {
+        console.error('Error saving to waitlist:', error);
+        toast({
+          title: "Error",
+          description: "Failed to join waitlist. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success!",
+          description: "You've been added to our waitlist. We'll notify you when we launch in your city!",
+        });
+        
+        // Clear form and close modal
+        setDesiredCity('');
+        setEmail('');
+        onClose();
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

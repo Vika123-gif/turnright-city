@@ -236,6 +236,36 @@ export type Database = {
         }
         Relationships: []
       }
+      waitlist: {
+        Row: {
+          desired_city: string
+          email: string
+          id: string
+          ip_address: string | null
+          submitted_at: string | null
+          user_agent: string | null
+          user_session_id: string | null
+        }
+        Insert: {
+          desired_city: string
+          email: string
+          id?: string
+          ip_address?: string | null
+          submitted_at?: string | null
+          user_agent?: string | null
+          user_session_id?: string | null
+        }
+        Update: {
+          desired_city?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+          submitted_at?: string | null
+          user_agent?: string | null
+          user_session_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
