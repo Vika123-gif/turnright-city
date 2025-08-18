@@ -16,13 +16,13 @@ const Map: React.FC<MapProps> = ({ places, className = "" }) => {
     if (!mapContainer.current || !places.length) return;
 
     // Initialize map with Mapbox token
-    // For development, you can get a token from https://mapbox.com/
-    const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'YOUR_MAPBOX_TOKEN_HERE';
+    // Token is now stored in Supabase secrets
+    const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
     console.log('Mapbox token available:', !!mapboxToken);
     
-    if (!mapboxToken || mapboxToken === 'YOUR_MAPBOX_TOKEN_HERE') {
-      console.error('Please set VITE_MAPBOX_ACCESS_TOKEN in your environment variables');
-      // For demo purposes, show a placeholder map
+    if (!mapboxToken) {
+      console.error('Mapbox token not found');
+      // Show placeholder map
       return;
     }
     
