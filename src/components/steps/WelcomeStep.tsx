@@ -1,7 +1,9 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Button from "../Button";
 import { MapPin } from "lucide-react";
+import LocationConsentDialog from "../LocationConsentDialog";
+import LisbonWaitlistModal from "../LisbonWaitlistModal";
 
 type Props = {
   onLocation: (loc: string, exitAction: 'detect_location' | 'manual_input') => void;
@@ -11,14 +13,45 @@ type Props = {
 const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
   const [loc, setLoc] = useState<string>(value || "");
   const [detecting, setDetecting] = useState(false);
+  const [showConsentDialog, setShowConsentDialog] = useState(false);
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
+  const [consentGranted, setConsentGranted] = useState<boolean | null>(null);
+
+  const isInLisbon = (lat: number, lon: number) => {
+    const bounds = {
+      minLat: 38.68,
+      maxLat: 38.82,
+      minLon: -9.28,
+      maxLon: -9.05
+    };
+    return lat >= bounds.minLat && lat <= bounds.maxLat && 
+           lon >= bounds.minLon && lon <= bounds.maxLon;
+  };
 
   const handleDetectLocation = () => {
+    if (consentGranted === null) {
+      setShowConsentDialog(true);
+      return;
+    }
+    
+    if (!consentGranted) {
+      return; // User denied consent
+    }
+
     setDetecting(true);
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const coords =
-            pos.coords.latitude.toFixed(5) + "," + pos.coords.longitude.toFixed(5);
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          
+          if (!isInLisbon(lat, lon)) {
+            setDetecting(false);
+            setShowWaitlistModal(true);
+            return;
+          }
+          
+          const coords = lat.toFixed(5) + "," + lon.toFixed(5);
           setLoc(coords);
           setDetecting(false);
           onLocation(coords, 'detect_location');
@@ -34,6 +67,20 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
     }
   };
 
+  const handleConsentResponse = (granted: boolean) => {
+    setConsentGranted(granted);
+    setShowConsentDialog(false);
+    if (granted) {
+      // Automatically trigger location detection after consent
+      setTimeout(() => handleDetectLocation(), 100);
+    }
+  };
+
+  useEffect(() => {
+    // Show consent dialog on component mount
+    setShowConsentDialog(true);
+  }, []);
+
   return (
     <div className="chat-card text-left">
       <div className="mb-6 flex flex-row items-center gap-3">
@@ -47,10 +94,12 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
         <Button
           variant="primary"
           onClick={handleDetectLocation}
-          disabled={detecting}
+          disabled={detecting || consentGranted === false}
         >
           <MapPin className="w-6 h-6 mr-2 -ml-1" />
-          {detecting ? "Detecting..." : "📍 Share Location"}
+          {detecting ? "Detecting..." : 
+           consentGranted === false ? "Location access denied" : 
+           "📍 Share Location"}
         </Button>
         <div className="mt-4 flex items-center gap-2 text-muted-foreground text-sm">
           <span>or enter location:</span>
@@ -88,6 +137,16 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
           Visit TurnRight.city
         </a>
       </div>
+
+      <LocationConsentDialog 
+        open={showConsentDialog}
+        onConsent={handleConsentResponse}
+      />
+      
+      <LisbonWaitlistModal 
+        open={showWaitlistModal}
+        onClose={() => setShowWaitlistModal(false)}
+      />
     </div>
   );
 };
