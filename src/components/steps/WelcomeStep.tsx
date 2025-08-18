@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Button from "../Button";
 import { MapPin } from "lucide-react";
-import LocationConsentDialog from "../LocationConsentDialog";
 import LisbonWaitlistModal from "../LisbonWaitlistModal";
 
 type Props = {
@@ -13,9 +12,8 @@ type Props = {
 const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
   const [loc, setLoc] = useState<string>(value || "");
   const [detecting, setDetecting] = useState(false);
-  const [showConsentDialog, setShowConsentDialog] = useState(false);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
-  const [consentGranted, setConsentGranted] = useState<boolean | null>(null);
+  const [locationConsent, setLocationConsent] = useState(false);
 
   const isInLisbon = (lat: number, lon: number) => {
     const bounds = {
@@ -29,13 +27,9 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
   };
 
   const handleDetectLocation = () => {
-    if (consentGranted === null) {
-      setShowConsentDialog(true);
+    if (!locationConsent) {
+      alert("Please consent to location access first.");
       return;
-    }
-    
-    if (!consentGranted) {
-      return; // User denied consent
     }
 
     setDetecting(true);
@@ -67,19 +61,6 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
     }
   };
 
-  const handleConsentResponse = (granted: boolean) => {
-    setConsentGranted(granted);
-    setShowConsentDialog(false);
-    if (granted) {
-      // Automatically trigger location detection after consent
-      setTimeout(() => handleDetectLocation(), 100);
-    }
-  };
-
-  useEffect(() => {
-    // Show consent dialog on component mount
-    setShowConsentDialog(true);
-  }, []);
 
   return (
     <div className="chat-card text-left">
@@ -91,15 +72,25 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
         Share your location and let's get started!
       </div>
       <div>
+        <div className="mb-4 flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="locationConsent"
+            checked={locationConsent}
+            onChange={(e) => setLocationConsent(e.target.checked)}
+            className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+          />
+          <label htmlFor="locationConsent" className="text-sm text-gray-600">
+            I consent to sharing my location to get personalized recommendations
+          </label>
+        </div>
         <Button
           variant="primary"
           onClick={handleDetectLocation}
-          disabled={detecting || consentGranted === false}
+          disabled={detecting || !locationConsent}
         >
           <MapPin className="w-6 h-6 mr-2 -ml-1" />
-          {detecting ? "Detecting..." : 
-           consentGranted === false ? "Location access denied" : 
-           "📍 Share Location"}
+          {detecting ? "Detecting..." : "📍 Share Location"}
         </Button>
         <div className="mt-4 flex items-center gap-2 text-muted-foreground text-sm">
           <span>or enter location:</span>
@@ -138,11 +129,6 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
         </a>
       </div>
 
-      <LocationConsentDialog 
-        open={showConsentDialog}
-        onConsent={handleConsentResponse}
-      />
-      
       <LisbonWaitlistModal 
         open={showWaitlistModal}
         onClose={() => setShowWaitlistModal(false)}
