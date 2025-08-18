@@ -54,13 +54,6 @@ const RoutePreviewStep: React.FC<Props> = ({
       
       {!error && (
         <>
-          {/* Interactive Map */}
-          {places && places.length > 0 && (
-            <div className="mb-6">
-              <Map places={places} className="h-[300px] w-full" />
-            </div>
-          )}
-          
           {/* Places List with Pictures */}
           <div className="space-y-3 mb-6">
             {places && places.length > 0 ? (
