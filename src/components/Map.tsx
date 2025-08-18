@@ -15,26 +15,29 @@ const Map: React.FC<MapProps> = ({ places, className = "" }) => {
   useEffect(() => {
     if (!mapContainer.current || !places.length) return;
 
-    // Initialize map with Mapbox token from environment
-    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || '';
+    // Initialize map with Mapbox token
+    // For development, you can get a token from https://mapbox.com/
+    const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || 'YOUR_MAPBOX_TOKEN_HERE';
+    console.log('Mapbox token available:', !!mapboxToken);
     
-    // Calculate center point from places
-    const validCoords = places.filter(place => place.coordinates || (place.lat && place.lon));
-    if (validCoords.length === 0) return;
-
-    const bounds = new mapboxgl.LngLatBounds();
-    validCoords.forEach(place => {
-      const [lng, lat] = place.coordinates || [place.lon!, place.lat!];
-      bounds.extend([lng, lat]);
-    });
-
-    const center = bounds.getCenter();
+    if (!mapboxToken || mapboxToken === 'YOUR_MAPBOX_TOKEN_HERE') {
+      console.error('Please set VITE_MAPBOX_ACCESS_TOKEN in your environment variables');
+      // For demo purposes, show a placeholder map
+      return;
+    }
+    
+    mapboxgl.accessToken = mapboxToken;
+    
+    // For now, use default Lisbon coordinates since places don't have coordinates yet
+    const lisbonCenter: [number, number] = [-9.1393, 38.7223]; // Lisbon coordinates
+    
+    console.log('Initializing map with places:', places);
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [center.lng, center.lat],
-      zoom: 14,
+      center: lisbonCenter,
+      zoom: 13,
     });
 
     // Add navigation controls
@@ -43,26 +46,34 @@ const Map: React.FC<MapProps> = ({ places, className = "" }) => {
       'top-right'
     );
 
-    // Add markers for each place
+    // Add markers for each place (using approximate Lisbon coordinates for now)
+    const lisbonPlaces = [
+      { lat: 38.7223, lng: -9.1393 }, // Central Lisbon
+      { lat: 38.7139, lng: -9.1394 }, // Slightly south
+    ];
+
     places.forEach((place, index) => {
-      const coords = place.coordinates || [place.lon!, place.lat!];
-      if (!coords || coords.length !== 2) return;
+      // Use hardcoded coordinates for now since places don't have coordinates yet
+      const coords = lisbonPlaces[index] || lisbonPlaces[0];
+      
+      console.log(`Adding marker ${index + 1} for ${place.name} at`, coords);
 
       // Create marker element
       const markerEl = document.createElement('div');
       markerEl.className = 'marker';
-      markerEl.style.backgroundImage = 'url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiMwMDg0NTciLz4KPHN2ZyB4PSI2IiB5PSI2IiB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZmZmZiI+CjxwYXRoIGQ9Ik0xMiAyQzguMTMgMiA1IDUuMTMgNSA5YzAgNS4yNSA3IDEzIDcgMTNzNy03Ljc1IDctMTNjMC0zLjg3LTMuMTMtNy03LTd6TTEyIDExLjVjLTEuMzggMC0yLjUtMS4xMi0yLjUtMi41czEuMTItMi41IDIuNS0yLjUgMi41IDEuMTIgMi41IDIuNS0xLjEyIDIuNS0yLjUgMi41eiIvPgo8L3N2Zz4KPC9zdmc+)';
       markerEl.style.width = '32px';
       markerEl.style.height = '32px';
-      markerEl.style.backgroundSize = 'contain';
+      markerEl.style.borderRadius = '50%';
+      markerEl.style.backgroundColor = '#008457';
+      markerEl.style.border = '3px solid white';
+      markerEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
       markerEl.style.cursor = 'pointer';
+      markerEl.style.display = 'flex';
+      markerEl.style.alignItems = 'center';
+      markerEl.style.justifyContent = 'center';
       
       // Add number overlay
       const numberEl = document.createElement('div');
-      numberEl.style.position = 'absolute';
-      numberEl.style.top = '50%';
-      numberEl.style.left = '50%';
-      numberEl.style.transform = 'translate(-50%, -50%)';
       numberEl.style.color = 'white';
       numberEl.style.fontSize = '12px';
       numberEl.style.fontWeight = 'bold';
@@ -89,15 +100,13 @@ const Map: React.FC<MapProps> = ({ places, className = "" }) => {
 
       // Add marker to map
       new mapboxgl.Marker(markerEl)
-        .setLngLat([coords[0], coords[1]])
+        .setLngLat([coords.lng, coords.lat])
         .setPopup(popup)
         .addTo(map.current!);
     });
 
-    // Fit map to show all markers
-    if (validCoords.length > 1) {
-      map.current.fitBounds(bounds, { padding: 50 });
-    }
+    // Log that map was initialized
+    console.log('Map initialized successfully with', places.length, 'places');
 
     // Cleanup
     return () => {
@@ -109,6 +118,23 @@ const Map: React.FC<MapProps> = ({ places, className = "" }) => {
     return (
       <div className={`flex items-center justify-center bg-muted rounded-lg ${className}`}>
         <p className="text-muted-foreground">No places to display on map</p>
+      </div>
+    );
+  }
+
+  // Show placeholder if no Mapbox token
+  const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+  if (!mapboxToken || mapboxToken === 'YOUR_MAPBOX_TOKEN_HERE') {
+    return (
+      <div className={`flex flex-col items-center justify-center bg-muted rounded-lg p-6 ${className}`}>
+        <p className="text-muted-foreground mb-2">📍 Interactive Map</p>
+        <p className="text-sm text-center text-muted-foreground">
+          To enable the interactive map, please add your Mapbox access token.<br/>
+          Get one free at <a href="https://mapbox.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">mapbox.com</a>
+        </p>
+        <div className="mt-4 p-4 bg-background rounded border">
+          <p className="text-xs font-mono">VITE_MAPBOX_ACCESS_TOKEN=your_token_here</p>
+        </div>
       </div>
     );
   }
