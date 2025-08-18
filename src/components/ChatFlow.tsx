@@ -4,6 +4,7 @@ import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useDatabase } from "@/hooks/useDatabase";
 import { createClient } from "@supabase/supabase-js";
+import BackButton from "./BackButton";
 import WelcomeStep from "./steps/WelcomeStep";
 import TimeStep, { TIME_TO_MINUTES } from "./steps/TimeStep";
 import CategoriesStep from "./steps/CategoriesStep";
@@ -250,6 +251,29 @@ export default function ChatFlow() {
     setStep("welcome");
   }
 
+  function goBack() {
+    console.log("=== DEBUG: goBack called from step:", step);
+    switch (step) {
+      case "time":
+        setStep("welcome");
+        break;
+      case "categories":
+        setStep("time");
+        break;
+      case "generating":
+        setStep("categories");
+        break;
+      case "results":
+        setStep("categories");
+        break;
+      case "purchase":
+        setStep("results");
+        break;
+      default:
+        setStep("welcome");
+    }
+  }
+
   function handleBuyButtonClick(location: string, placesCount: number) {
     console.log("=== DEBUG: handleBuyButtonClick called ===");
     console.log("Location:", location);
@@ -418,59 +442,83 @@ export default function ChatFlow() {
         )}
 
         {step === "time" && (
-          <TimeStep
-            onNext={(timeMinutes) => {
-              setTimeWindow(timeMinutes);
-              setStep("categories");
-            }}
-            value={{ timeMinutes: timeWindow }}
-          />
+          <>
+            <div className="absolute top-4 left-4">
+              <BackButton onClick={goBack} />
+            </div>
+            <TimeStep
+              onNext={(timeMinutes) => {
+                setTimeWindow(timeMinutes);
+                setStep("categories");
+              }}
+              value={{ timeMinutes: timeWindow }}
+            />
+          </>
         )}
 
         {step === "categories" && (
-          <CategoriesStep
-            onNext={(categories) => {
-              setGoals(categories);
-              setStep("generating");
-              fetchPlacesWithGoals(categories);
-            }}
-            value={goals}
-          />
+          <>
+            <div className="absolute top-4 left-4">
+              <BackButton onClick={goBack} />
+            </div>
+            <CategoriesStep
+              onNext={(categories) => {
+                setGoals(categories);
+                setStep("generating");
+                fetchPlacesWithGoals(categories);
+              }}
+              value={goals}
+            />
+          </>
         )}
 
-
         {step === "generating" && (
-          <GPTStep
-            places={places || []}
-            loading={generating}
-            onDone={() => setStep("results")}
-            error={error}
-          />
+          <>
+            <div className="absolute top-4 left-4">
+              <BackButton onClick={goBack} />
+            </div>
+            <GPTStep
+              places={places || []}
+              loading={generating}
+              onDone={() => setStep("results")}
+              error={error}
+            />
+          </>
         )}
 
         {step === "results" && (
-          <RoutePreviewStep
-            places={places || []}
-            onRegenerate={regenerate}
-            onBuy={handleBuyRoute}
-            purchasing={paying}
-            error={error}
-            location={location}
-            onTrackBuyClick={handleBuyButtonClick}
-          />
+          <>
+            <div className="absolute top-4 left-4">
+              <BackButton onClick={goBack} />
+            </div>
+            <RoutePreviewStep
+              places={places || []}
+              onRegenerate={regenerate}
+              onBuy={handleBuyRoute}
+              purchasing={paying}
+              error={error}
+              location={location}
+              onTrackBuyClick={handleBuyButtonClick}
+            />
+          </>
         )}
 
         {step === "purchase" && (
-          <PurchaseStep
-            onFeedbackSubmit={handleTextFeedback}
-            onStartNew={reset}
-            purchaseRoute={purchaseRoute}
-            makeGoogleMapsRoute={makeGoogleMapsRoute}
-            makeAppleMapsRoute={makeAppleMapsRoute}
-            routeRating={routeRating}
-            onRatingSubmit={handleRouteRating}
-            RouteRatingComponent={RouteRating}
-          />
+          <>
+            <div className="absolute top-4 left-4">
+              <BackButton onClick={goBack} />
+            </div>
+            <PurchaseStep
+              onFeedbackSubmit={handleTextFeedback}
+              onStartNew={reset}
+              purchaseRoute={purchaseRoute}
+              makeGoogleMapsRoute={makeGoogleMapsRoute}
+              makeAppleMapsRoute={makeAppleMapsRoute}
+              routeRating={routeRating}
+              onRatingSubmit={handleRouteRating}
+              RouteRatingComponent={RouteRating}
+            />
+          </>
         )}
       </div>
     </div>

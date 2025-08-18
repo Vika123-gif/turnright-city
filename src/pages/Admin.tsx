@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star } from 'lucide-react';
+import BackButton from '@/components/BackButton';
 
 interface RouteGeneration {
   id: string;
@@ -58,6 +60,7 @@ interface VisitorSession {
 }
 
 const Admin = () => {
+  const navigate = useNavigate();
   const [routeGenerations, setRouteGenerations] = useState<RouteGeneration[]>([]);
   const [feedback, setFeedback] = useState<UserFeedback[]>([]);
   const [purchases, setPurchases] = useState<RoutePurchase[]>([]);
@@ -259,6 +262,9 @@ const Admin = () => {
 
   return (
     <div className="container mx-auto p-6">
+      <div className="absolute top-4 left-4">
+        <BackButton onClick={() => navigate('/')} label="Back to Home" />
+      </div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <Button onClick={testDatabaseInsert} variant="outline">
