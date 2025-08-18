@@ -63,70 +63,97 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
 
 
   return (
-    <div className="chat-card text-left">
-      <div className="mb-6 flex flex-row items-center gap-3">
-        <div className="text-2xl">👋</div>
-        <h2 className="text-xl font-semibold">Hi I am TurnRight - your personal city guide<br />I will help you plan a route in just a couple of seconds depending on your preferences</h2>
+    <div className="chat-card text-left fade-in">
+      <div className="mb-8 flex flex-row items-start gap-4">
+        <div className="text-3xl animate-pulse">👋</div>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 leading-tight mb-2">
+            I'm TurnRight, your personal city guide. 
+          </h2>
+          <p className="text-lg text-gray-600 font-medium">
+            I'll whip up a best route for you in seconds, tailored to what you want! Ready to explore? Let's go!
+          </p>
+        </div>
       </div>
-      <div className="chatbot-bubble mb-3">
-        Share your location and let's get started!
+      
+      <div className="chatbot-bubble mb-6">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🗺️</span>
+          <span className="font-medium">Share your location and let's get started!</span>
+        </div>
       </div>
-      <div>
-        <div className="mb-4 flex items-center gap-3">
+      
+      <div className="space-y-6">
+        <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
           <input
             type="checkbox"
             id="locationConsent"
             checked={locationConsent}
             onChange={(e) => setLocationConsent(e.target.checked)}
-            className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+            className="consent-checkbox mt-0.5"
           />
-          <label htmlFor="locationConsent" className="text-sm text-gray-600">
+          <label htmlFor="locationConsent" className="text-sm text-gray-700 font-medium leading-relaxed">
             I consent to sharing my location to get personalized recommendations
           </label>
         </div>
+        
         <Button
           variant="primary"
           onClick={handleDetectLocation}
           disabled={detecting || !locationConsent}
+          className="relative overflow-hidden group"
         >
-          <MapPin className="w-6 h-6 mr-2 -ml-1" />
-          {detecting ? "Detecting..." : "📍 Share Location"}
+          <MapPin className="w-6 h-6 mr-3 transition-transform group-hover:scale-110" />
+          <span className="font-semibold">
+            {detecting ? "🔍 Detecting..." : "📍 Share Location"}
+          </span>
         </Button>
-        <div className="mt-4 flex items-center gap-2 text-muted-foreground text-sm">
-          <span>or enter location:</span>
+        
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-4 bg-white text-gray-500 font-medium">or enter location manually</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
           <input
             type="text"
             placeholder="e.g., 123 Main St, Paris"
-            className="border rounded-lg px-3 py-2 w-full max-w-[60%] shadow"
+            className="location-input flex-1"
             value={loc}
             onChange={e => setLoc(e.target.value)}
             disabled={detecting}
           />
           <Button
             variant="outline"
-            className="ml-2"
-            style={{ minWidth: 0, minHeight: "44px", width: "auto" }}
+            className="px-6 py-3 min-w-[80px] font-semibold"
             onClick={() => onLocation(loc, 'manual_input')}
             disabled={!loc || detecting}
           >
-            OK
+            Go
           </Button>
         </div>
       </div>
 
       {/* MVP Link */}
-      <div className="border-t pt-4 mt-6 text-center">
-        <p className="text-sm text-gray-600 mb-2">
-          Save for the next generations!
-        </p>
-        <a
-          href="https://turnright.city/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#008457] underline font-medium text-sm hover:text-[#00BC72] transition-colors"
-        >
-          Visit TurnRight.city
-        </a>
+      <div className="border-t border-gray-100 pt-6 mt-8 text-center">
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+          <p className="text-sm text-gray-600 mb-3 font-medium">
+            🌍 Save for the next generations!
+          </p>
+          <a
+            href="https://turnright.city/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-[#008457] font-semibold text-sm hover:text-[#00BC72] transition-all duration-300 hover:scale-105 group"
+          >
+            <span>Visit TurnRight.city</span>
+            <span className="group-hover:translate-x-1 transition-transform">→</span>
+          </a>
+        </div>
       </div>
 
       <LisbonWaitlistModal 
