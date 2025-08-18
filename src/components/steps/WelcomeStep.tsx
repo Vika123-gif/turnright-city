@@ -118,18 +118,18 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="space-y-4">
           <input
             type="text"
             placeholder="e.g., 123 Main St, Paris"
-            className="location-input flex-1"
+            className="location-input w-full"
             value={loc}
             onChange={e => setLoc(e.target.value)}
             disabled={detecting}
           />
           <Button
             variant="outline"
-            className="px-6 py-3 min-w-[80px] font-semibold"
+            className="w-full font-semibold"
             onClick={() => onLocation(loc, 'manual_input')}
             disabled={!loc || detecting}
           >
