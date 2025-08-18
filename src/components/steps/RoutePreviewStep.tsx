@@ -61,20 +61,26 @@ const RoutePreviewStep: React.FC<Props> = ({
             </div>
           )}
           
-          {/* Places List */}
-          <div className="bg-[#F6FDF9] px-4 py-3 rounded-lg text-base mb-6">
+          {/* Places List with Pictures */}
+          <div className="space-y-3 mb-6">
             {places && places.length > 0 ? (
-              <div className="space-y-4">
-                {places.map((p, i) => (
-                  <div key={i} className="mb-3 p-3 rounded-lg">
-                    <div className="font-semibold text-base">
+              places.map((p, i) => (
+                <div key={i} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  {/* Place Image Placeholder */}
+                  <div className="w-full h-32 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                    <div className="text-green-600 text-sm font-medium">📍 {p.name}</div>
+                  </div>
+                  
+                  {/* Place Info */}
+                  <div className="p-3">
+                    <div className="font-semibold text-base mb-1">
                       {`${i + 1}. ${p.name}`}
                     </div>
-                    <div className="text-gray-600 text-sm flex items-center gap-1 mt-1">
+                    <div className="text-gray-600 text-sm flex items-center gap-1 mb-2">
                       <MapPin className="w-3 h-3" />
                       {p.address}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-3">
+                    <div className="text-xs text-gray-500 flex items-center gap-3">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         🚶 {p.walkingTime} min walk
@@ -82,13 +88,13 @@ const RoutePreviewStep: React.FC<Props> = ({
                       {p.type && <span>Type: {p.type}</span>}
                     </div>
                     {p.reason && (
-                      <div className="text-sm mt-1 text-[#008457]">{p.reason}</div>
+                      <div className="text-sm mt-2 text-[#008457] bg-green-50 p-2 rounded">{p.reason}</div>
                     )}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             ) : (
-              <div>No results found. Try different time or goals.</div>
+              <div className="text-center py-8 text-gray-500">No results found. Try different time or goals.</div>
             )}
           </div>
         </>

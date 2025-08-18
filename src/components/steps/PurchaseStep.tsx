@@ -16,6 +16,7 @@ type Props = {
     disabled: boolean;
     onSubmit: (rating: number) => void;
   }>;
+  onViewDetailed: () => void;
 };
 
 const PurchaseStep: React.FC<Props> = ({
@@ -27,6 +28,7 @@ const PurchaseStep: React.FC<Props> = ({
   routeRating,
   onRatingSubmit,
   RouteRatingComponent,
+  onViewDetailed,
 }) => {
   const [feedback, setFeedback] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
@@ -132,13 +134,22 @@ const PurchaseStep: React.FC<Props> = ({
         )}
       </div>
 
-      <Button
-        variant="primary"
-        onClick={onStartNew}
-        className="w-full mb-6"
-      >
-        Start New Search
-      </Button>
+      <div className="flex flex-col gap-3 mb-6">
+        <Button
+          variant="primary"
+          onClick={onViewDetailed}
+          className="w-full"
+        >
+          View Detailed Map & Info
+        </Button>
+        <Button
+          variant="outline"
+          onClick={onStartNew}
+          className="w-full"
+        >
+          Start New Search
+        </Button>
+      </div>
 
       {/* MVP Link */}
       <div className="border-t pt-4 text-center">

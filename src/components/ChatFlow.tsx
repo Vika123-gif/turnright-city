@@ -11,6 +11,7 @@ import CategoriesStep from "./steps/CategoriesStep";
 import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
+import DetailedMapStep from "./steps/DetailedMapStep";
 import RouteRating from "./RouteRating";
 
 // HARDCODED SUPABASE CREDENTIALS FOR TESTING ONLY
@@ -24,7 +25,8 @@ type Step =
   | "categories"
   | "generating"
   | "results"
-  | "purchase";
+  | "purchase"
+  | "detailed-map";
 
 export default function ChatFlow() {
   const [step, setStep] = useState<Step>("welcome");
@@ -268,6 +270,9 @@ export default function ChatFlow() {
         break;
       case "purchase":
         setStep("results");
+        break;
+      case "detailed-map":
+        setStep("purchase");
         break;
       default:
         setStep("welcome");
@@ -517,6 +522,21 @@ export default function ChatFlow() {
               routeRating={routeRating}
               onRatingSubmit={handleRouteRating}
               RouteRatingComponent={RouteRating}
+              onViewDetailed={() => setStep("detailed-map")}
+            />
+          </>
+        )}
+
+        {step === "detailed-map" && purchaseRoute && (
+          <>
+            <div className="absolute top-4 left-4">
+              <BackButton onClick={goBack} />
+            </div>
+            <DetailedMapStep
+              places={purchaseRoute.places}
+              origin={purchaseRoute.origin}
+              onBack={() => setStep("purchase")}
+              onReset={reset}
             />
           </>
         )}
