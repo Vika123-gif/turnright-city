@@ -170,7 +170,10 @@ async function handlePlaceNameSearch(requestBody: any) {
         type: placeType || 'place',
         rating: detailedPlace.rating || null,
         place_id: detailedPlace.place_id,
-        photoUrl
+        photoUrl,
+        coordinates: detailedPlace.geometry?.location ? 
+          [detailedPlace.geometry.location.lng, detailedPlace.geometry.location.lat] : 
+          undefined
       }
     })
   )

@@ -198,43 +198,44 @@ export default function ChatFlow() {
       console.log("=== DEBUG: Places Response ===");
       console.log("Places returned:", response);
       
-      // Fetch coordinates for each place using Google Places API
-      console.log("=== DEBUG: Fetching coordinates for places ===");
-      const placesWithCoordinates = await Promise.all(
+      // Fetch real photos for each place using Google Places API
+      console.log("=== DEBUG: Fetching photos for places ===");
+      const placesWithPhotos = await Promise.all(
         response.map(async (place) => {
           try {
-            console.log(`Searching for coordinates for: ${place.name}`);
+            console.log(`Searching for photos for: ${place.name}`);
             const googlePlacesResponse = await searchPlacesByName({
               placeName: place.name,
               location: locationForSearch,
               placeType: place.type
             });
             
-            // If we found a matching place with coordinates, use them
+            // If we found a matching place with coordinates and photo, use them
             if (googlePlacesResponse.length > 0) {
               const foundPlace = googlePlacesResponse[0];
-              console.log(`Found coordinates for ${place.name}:`, foundPlace);
+              console.log(`Found place data for ${place.name}:`, foundPlace);
               return {
                 ...place,
                 coordinates: foundPlace.coordinates,
                 lat: foundPlace.coordinates ? foundPlace.coordinates[1] : undefined,
-                lon: foundPlace.coordinates ? foundPlace.coordinates[0] : undefined
+                lon: foundPlace.coordinates ? foundPlace.coordinates[0] : undefined,
+                photoUrl: foundPlace.photoUrl
               };
             } else {
-              console.log(`No coordinates found for ${place.name}`);
+              console.log(`No place data found for ${place.name}`);
               return place;
             }
           } catch (error) {
-            console.error(`Error fetching coordinates for ${place.name}:`, error);
+            console.error(`Error fetching place data for ${place.name}:`, error);
             return place;
           }
         })
       );
       
-      console.log("=== DEBUG: Places with coordinates ===");
-      console.log("Places with coordinates:", placesWithCoordinates);
+      console.log("=== DEBUG: Places with photos and coordinates ===");
+      console.log("Places with photos:", placesWithPhotos);
       
-      setPlaces(placesWithCoordinates);
+      setPlaces(placesWithPhotos);
       
       // Update regeneration count if this was a regeneration
       if (isRegeneration) {
