@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
-import { useRouteGenerator, type RoutePlace } from "@/hooks/useRouteGenerator";
+import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
+import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useDatabase } from "@/hooks/useDatabase";
 import { createClient } from "@supabase/supabase-js";
@@ -34,17 +35,18 @@ export default function ChatFlow() {
   const [coordinates, setCoordinates] = useState(""); // Store coordinates separately for map
   const [timeWindow, setTimeWindow] = useState<number | null>(null);
   const [goals, setGoals] = useState<string[]>([]);
-  const [places, setPlaces] = useState<RoutePlace[] | null>(null);
+  const [places, setPlaces] = useState<LLMPlace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [routeRating, setRouteRating] = useState<number | null>(null);
   const [paying, setPaying] = useState(false);
-  const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string; places: RoutePlace[] } | null>(null);
+  const [purchaseRoute, setPurchaseRoute] = useState<{ origin: string; places: LLMPlace[] } | null>(null);
   const [userSessionId, setUserSessionId] = useState<string>("");
   const [currentRouteGenerationId, setCurrentRouteGenerationId] = useState<string | null>(null);
   const [regenerationCount, setRegenerationCount] = useState(0);
 
-  const { generateRoute } = useRouteGenerator();
+  const { getLLMPlaces } = useOpenAI();
+  const { searchPlacesByName } = useGooglePlaces();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
   const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
 
@@ -123,7 +125,7 @@ export default function ChatFlow() {
   }
 
   async function fetchPlacesWithGoals(goalsToUse: string[], isRegeneration = false) {
-    console.log("=== DEBUG: fetchPlacesWithGoals called with Google Places + TripAdvisor ===");
+    console.log("=== DEBUG: fetchPlacesWithGoals called with OpenAI only ===");
     console.log("Goals parameter:", goalsToUse);
     console.log("Goals length:", goalsToUse?.length);
     console.log("Location:", location);
@@ -161,18 +163,79 @@ export default function ChatFlow() {
         throw new Error("Please select at least one goal before generating places.");
       }
 
-      console.log("=== DEBUG: Calling generateRoute with Google Places + TripAdvisor ===");
+      // Create user prompt for AI
+      const goalDescriptions = {
+        restaurants: "find restaurants, bistros, eateries, dining establishments for meals and food",
+        coffee: "find coffee shops, cafes, specialty roasters, tea houses for beverages and drinks", 
+        work: "find cafes with wifi, coworking spaces, quiet work-friendly locations for working and productivity",
+        museums: "visit museums, art galleries, cultural centers with exhibitions and displays",
+        parks: "enjoy parks, gardens, green outdoor spaces for relaxation and nature",
+        monuments: "explore architectural monuments, historical landmarks, heritage sites, castles, palaces, and significant buildings"
+      };
       
-      const response: RoutePlace[] = await generateRoute({
+      const selectedGoalTexts = goalsToUse.map(goal => goalDescriptions[goal as keyof typeof goalDescriptions]).filter(Boolean);
+      const goalsText = selectedGoalTexts.join(" and ");
+      
+      let userPrompt = `I am currently at ${locationForSearch} and have ${timeWindow} minutes available. I want to ${goalsText}. Please suggest places that match my goals: ${goalsToUse.join(", ")}.`;
+      
+      if (isRegeneration) {
+        userPrompt += ` This is a regeneration request - please provide different places than before.`;
+      }
+      
+      console.log("=== DEBUG: Calling getLLMPlaces with OpenAI only ===");
+      
+      const currentRegenerationCount = isRegeneration ? regenerationCount : 0;
+      
+      const response: LLMPlace[] = await getLLMPlaces({
         location: locationForSearch,
         goals: goalsToUse,
-        timeWindow: timeWindow || 60,
+        timeWindow: timeWindow?.toString() || "",
+        userPrompt,
+        regenerationAttempt: currentRegenerationCount,
+        maxPlaces: 3,
       });
       
-      console.log("=== DEBUG: Route Response ===");
+      console.log("=== DEBUG: Places Response ===");
       console.log("Places returned:", response);
       
-      setPlaces(response);
+      // Fetch real photos for each place using Google Places API
+      console.log("=== DEBUG: Fetching photos for places ===");
+      const placesWithPhotos = await Promise.all(
+        response.map(async (place) => {
+          try {
+            console.log(`Searching for photos for: ${place.name}`);
+            const googlePlacesResponse = await searchPlacesByName({
+              placeName: place.name,
+              location: locationForSearch,
+              placeType: place.type
+            });
+            
+            // If we found a matching place with coordinates and photo, use them
+            if (googlePlacesResponse.length > 0) {
+              const foundPlace = googlePlacesResponse[0];
+              console.log(`Found place data for ${place.name}:`, foundPlace);
+              return {
+                ...place,
+                coordinates: foundPlace.coordinates,
+                lat: foundPlace.coordinates ? foundPlace.coordinates[1] : undefined,
+                lon: foundPlace.coordinates ? foundPlace.coordinates[0] : undefined,
+                photoUrl: foundPlace.photoUrl
+              };
+            } else {
+              console.log(`No place data found for ${place.name}`);
+              return place;
+            }
+          } catch (error) {
+            console.error(`Error fetching place data for ${place.name}:`, error);
+            return place;
+          }
+        })
+      );
+      
+      console.log("=== DEBUG: Places with photos and coordinates ===");
+      console.log("Places with photos:", placesWithPhotos);
+      
+      setPlaces(placesWithPhotos);
       
       // Update regeneration count if this was a regeneration
       if (isRegeneration) {
@@ -377,7 +440,7 @@ export default function ChatFlow() {
     setStep("time");
   }
 
-  function makeGoogleMapsRoute(origin: string, places: RoutePlace[] = []) {
+  function makeGoogleMapsRoute(origin: string, places: LLMPlace[] = []) {
     if (!places.length) return `https://maps.google.com`;
 
     const originEnc = encodeURIComponent(origin.trim());
@@ -396,7 +459,7 @@ export default function ChatFlow() {
     return url;
   }
 
-  function makeAppleMapsRoute(origin: string, places: RoutePlace[] = []) {
+  function makeAppleMapsRoute(origin: string, places: LLMPlace[] = []) {
     if (!places.length) return `https://maps.apple.com`;
 
     const originStr = origin;
