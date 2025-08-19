@@ -12,11 +12,12 @@ serve(async (req) => {
   }
 
   try {
-    const { placeName, location } = await req.json();
+    const { location, goals, timeWindow } = await req.json();
     
-    console.log('=== TripAdvisor Photos Request ===');
-    console.log('Place name:', placeName);
+    console.log('=== TripAdvisor Route Generation Request ===');
     console.log('Location:', location);
+    console.log('Goals:', goals);
+    console.log('Time Window:', timeWindow);
 
     const tripAdvisorApiKey = Deno.env.get('TRIPADVISOR_API_KEY');
     if (!tripAdvisorApiKey) {
@@ -30,81 +31,126 @@ serve(async (req) => {
       );
     }
 
-    // Search for the place using TripAdvisor Content API
-    const searchUrl = 'https://api.content.tripadvisor.com/api/v1/location/search';
-    const searchParams = new URLSearchParams({
-      key: tripAdvisorApiKey,
-      searchQuery: `${placeName} ${location}`,
-      category: 'attractions',
-      language: 'en'
-    });
+    // Map goals to TripAdvisor categories
+    const goalToCategoryMap = {
+      'Parks': 'attractions',
+      'Restaurants': 'restaurants',
+      'Museums': 'attractions',
+      'Shopping': 'attractions',
+      'Nightlife': 'restaurants',
+      'Entertainment': 'attractions',
+      'Sightseeing': 'attractions',
+      'Culture': 'attractions'
+    };
 
-    console.log('Searching TripAdvisor for:', `${placeName} ${location}`);
-    
-    const searchResponse = await fetch(`${searchUrl}?${searchParams}`);
-    
-    if (!searchResponse.ok) {
-      console.error('TripAdvisor search failed:', searchResponse.status, await searchResponse.text());
-      return new Response(
-        JSON.stringify({ success: false, error: 'TripAdvisor search failed' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500 
+    const searchCategories = goals.map(goal => goalToCategoryMap[goal] || 'attractions');
+    const uniqueCategories = [...new Set(searchCategories)];
+
+    // Determine number of places based on time window
+    const timeToPLacesMap = {
+      '30 minutes': 1,
+      '1 hour': 2,
+      '1.5 hours': 2,
+      '2+ hours': 3
+    };
+    const maxPlaces = timeToPLacesMap[timeWindow] || 2;
+
+    const allPlaces = [];
+
+    // Search for places in each category
+    for (const category of uniqueCategories) {
+      const searchUrl = 'https://api.content.tripadvisor.com/api/v1/location/search';
+      const searchParams = new URLSearchParams({
+        key: tripAdvisorApiKey,
+        searchQuery: `${location}, Portugal`,
+        category: category,
+        language: 'en'
+      });
+
+      console.log(`Searching TripAdvisor for ${category} in:`, location);
+      
+      const searchResponse = await fetch(`${searchUrl}?${searchParams}`);
+      
+      if (!searchResponse.ok) {
+        console.error(`TripAdvisor search failed for ${category}:`, searchResponse.status);
+        continue;
+      }
+
+      const searchData = await searchResponse.json();
+      console.log(`TripAdvisor search results for ${category}:`, searchData.data?.length || 0, 'places found');
+
+      if (searchData.data && searchData.data.length > 0) {
+        // Process each location to get detailed info
+        for (const place of searchData.data.slice(0, Math.ceil(maxPlaces / uniqueCategories.length))) {
+          try {
+            const locationId = place.location_id;
+            
+            // Get detailed location info
+            const detailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${locationId}/details`;
+            const detailsParams = new URLSearchParams({
+              key: tripAdvisorApiKey,
+              language: 'en'
+            });
+
+            const detailsResponse = await fetch(`${detailsUrl}?${detailsParams}`);
+            let detailsData = null;
+            if (detailsResponse.ok) {
+              detailsData = await detailsResponse.json();
+            }
+
+            // Get photos
+            const photosUrl = `https://api.content.tripadvisor.com/api/v1/location/${locationId}/photos`;
+            const photosParams = new URLSearchParams({
+              key: tripAdvisorApiKey,
+              language: 'en'
+            });
+
+            const photosResponse = await fetch(`${photosUrl}?${photosParams}`);
+            let photoUrl = null;
+            if (photosResponse.ok) {
+              const photosData = await photosResponse.json();
+              if (photosData.data && photosData.data.length > 0) {
+                const firstPhoto = photosData.data[0];
+                if (firstPhoto.images && firstPhoto.images.medium) {
+                  photoUrl = firstPhoto.images.medium.url;
+                }
+              }
+            }
+
+            // Create place object
+            const placeObj = {
+              name: place.name || 'Unknown Place',
+              address: detailsData?.address?.street1 || place.address_obj?.street1 || `${location}, Portugal`,
+              walkingTime: Math.floor(Math.random() * 10) + 5, // Random 5-15 minutes
+              type: category === 'restaurants' ? 'restaurant' : 'attraction',
+              reason: `Great ${category.slice(0, -1)} in ${location}`,
+              coordinates: detailsData?.latitude && detailsData?.longitude ? 
+                [parseFloat(detailsData.longitude), parseFloat(detailsData.latitude)] : undefined,
+              lat: detailsData?.latitude ? parseFloat(detailsData.latitude) : undefined,
+              lon: detailsData?.longitude ? parseFloat(detailsData.longitude) : undefined,
+              photoUrl: photoUrl,
+              rating: detailsData?.rating ? parseFloat(detailsData.rating) : undefined
+            };
+
+            allPlaces.push(placeObj);
+            console.log(`Added place: ${placeObj.name}`);
+
+          } catch (error) {
+            console.error(`Error processing place ${place.name}:`, error);
+          }
         }
-      );
-    }
-
-    const searchData = await searchResponse.json();
-    console.log('TripAdvisor search results:', JSON.stringify(searchData, null, 2));
-
-    if (!searchData.data || searchData.data.length === 0) {
-      console.log('No TripAdvisor results found for:', placeName);
-      return new Response(
-        JSON.stringify({ success: true, photoUrl: null }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Get the first location result
-    const locationId = searchData.data[0].location_id;
-    console.log('Found TripAdvisor location ID:', locationId);
-
-    // Get photos for this location
-    const photosUrl = `https://api.content.tripadvisor.com/api/v1/location/${locationId}/photos`;
-    const photosParams = new URLSearchParams({
-      key: tripAdvisorApiKey,
-      language: 'en'
-    });
-
-    const photosResponse = await fetch(`${photosUrl}?${photosParams}`);
-    
-    if (!photosResponse.ok) {
-      console.error('TripAdvisor photos request failed:', photosResponse.status);
-      return new Response(
-        JSON.stringify({ success: true, photoUrl: null }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    const photosData = await photosResponse.json();
-    console.log('TripAdvisor photos data:', JSON.stringify(photosData, null, 2));
-
-    let photoUrl = null;
-    if (photosData.data && photosData.data.length > 0) {
-      // Get the first photo's medium-sized image
-      const firstPhoto = photosData.data[0];
-      if (firstPhoto.images && firstPhoto.images.medium) {
-        photoUrl = firstPhoto.images.medium.url;
-        console.log('Found photo URL:', photoUrl);
       }
     }
 
+    // Limit to maxPlaces and shuffle for variety
+    const finalPlaces = allPlaces
+      .sort(() => Math.random() - 0.5)
+      .slice(0, maxPlaces);
+
+    console.log(`Returning ${finalPlaces.length} places:`, finalPlaces.map(p => p.name));
+
     return new Response(
-      JSON.stringify({ success: true, photoUrl }),
+      JSON.stringify({ success: true, places: finalPlaces }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
