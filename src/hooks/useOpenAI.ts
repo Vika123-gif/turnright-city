@@ -142,20 +142,43 @@ CRITICAL REQUIREMENTS:
       
       console.log("=== DEBUG: AI Place Suggestions ===", aiSuggestions);
       
-      // Convert AI suggestions to LLMPlace format without geocoding
-      const places: LLMPlace[] = aiSuggestions.map(place => ({
-        name: place.name,
-        address: place.address || `${place.name}, ${location}, Portugal`,
-        walkingTime: place.walkingTime,
-        type: place.type,
-        reason: place.reason,
-        // No coordinates since Mapbox is disabled
-        coordinates: undefined,
-        lat: undefined,
-        lon: undefined,
+      // Convert AI suggestions to LLMPlace format and fetch photos from TripAdvisor
+      const places: LLMPlace[] = await Promise.all(aiSuggestions.map(async (place) => {
+        let photoUrl = undefined;
+        
+        try {
+          // Fetch photo from TripAdvisor
+          const { supabase } = await import("@/integrations/supabase/client");
+          const { data: photoData } = await supabase.functions.invoke('tripadvisor-photos', {
+            body: { 
+              placeName: place.name,
+              location: location
+            }
+          });
+          
+          if (photoData?.success && photoData.photoUrl) {
+            photoUrl = photoData.photoUrl;
+            console.log(`Found TripAdvisor photo for ${place.name}:`, photoUrl);
+          }
+        } catch (error) {
+          console.error(`Failed to fetch photo for ${place.name}:`, error);
+        }
+
+        return {
+          name: place.name,
+          address: place.address || `${place.name}, ${location}, Portugal`,
+          walkingTime: place.walkingTime,
+          type: place.type,
+          reason: place.reason,
+          // No coordinates since Mapbox is disabled
+          coordinates: undefined,
+          lat: undefined,
+          lon: undefined,
+          photoUrl,
+        };
       }));
       
-      console.log("=== DEBUG: Final Places (no geocoding) ===", places);
+      console.log("=== DEBUG: Final Places with photos ===", places);
       return places;
       
     } catch (err) {
