@@ -67,17 +67,37 @@ serve(async (req) => {
         language: 'en'
       });
 
-      console.log(`Searching TripAdvisor for ${category} in:`, location);
+      console.log(`=== TripAdvisor API Call Debug ===`);
+      console.log(`URL: ${searchUrl}?${searchParams}`);
+      console.log(`Category: ${category}, Location: ${location}`);
+      console.log(`API Key present:`, tripAdvisorApiKey ? 'YES' : 'NO');
+      console.log(`API Key length:`, tripAdvisorApiKey?.length || 0);
       
       const searchResponse = await fetch(`${searchUrl}?${searchParams}`);
       
+      console.log(`Response status: ${searchResponse.status}`);
+      console.log(`Response headers:`, Object.fromEntries(searchResponse.headers.entries()));
+      
       if (!searchResponse.ok) {
-        console.error(`TripAdvisor search failed for ${category}:`, searchResponse.status);
+        const errorText = await searchResponse.text();
+        console.error(`TripAdvisor search failed for ${category}:`);
+        console.error(`Status: ${searchResponse.status}`);
+        console.error(`Status Text: ${searchResponse.statusText}`);
+        console.error(`Error Response:`, errorText);
+        
+        // Try to parse error as JSON for more details
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error(`Parsed error:`, errorJson);
+        } catch (e) {
+          console.error(`Raw error text:`, errorText);
+        }
         continue;
       }
 
       const searchData = await searchResponse.json();
       console.log(`TripAdvisor search results for ${category}:`, searchData.data?.length || 0, 'places found');
+      console.log(`Full search response structure:`, JSON.stringify(searchData, null, 2));
 
       if (searchData.data && searchData.data.length > 0) {
         // Process each location to get detailed info
@@ -149,8 +169,90 @@ serve(async (req) => {
 
     console.log(`Returning ${finalPlaces.length} places:`, finalPlaces.map(p => p.name));
 
+    // If no places found from TripAdvisor, try Google Places as fallback
+    if (finalPlaces.length === 0) {
+      console.log('=== TripAdvisor returned no results, trying Google Places fallback ===');
+      
+      try {
+        const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
+        if (!googleApiKey) {
+          console.error('Google API key not found for fallback');
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'No places found from TripAdvisor and Google API key not configured for fallback',
+              debug: { 
+                tripAdvisorAttempted: true,
+                googleFallbackAttempted: false,
+                location,
+                goals,
+                timeWindow
+              }
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 404
+            }
+          );
+        }
+
+        // Use Google Places as fallback
+        const response = await fetch('https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/google-places', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
+          },
+          body: JSON.stringify({ location, goals, timeWindow })
+        });
+
+        if (response.ok) {
+          const googleData = await response.json();
+          console.log('Google Places fallback successful:', googleData.places?.length || 0, 'places');
+          
+          // Convert Google Places format to our format
+          const googlePlaces = (googleData.places || []).map(place => ({
+            ...place,
+            reason: `Found via Google Places (TripAdvisor fallback)`
+          }));
+
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              places: googlePlaces,
+              source: 'google_places_fallback',
+              debug: {
+                tripAdvisorFailed: true,
+                googleFallbackUsed: true
+              }
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        } else {
+          console.error('Google Places fallback also failed:', response.status);
+        }
+      } catch (fallbackError) {
+        console.error('Google Places fallback error:', fallbackError);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, places: finalPlaces }),
+      JSON.stringify({ 
+        success: finalPlaces.length > 0, 
+        places: finalPlaces,
+        source: 'tripadvisor',
+        debug: {
+          totalCategoriesSearched: uniqueCategories.length,
+          totalPlacesFound: allPlaces.length,
+          finalPlacesReturned: finalPlaces.length,
+          maxPlacesRequested: maxPlaces,
+          location,
+          goals,
+          timeWindow
+        }
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
