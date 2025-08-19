@@ -14,7 +14,8 @@ export type LLMPlace = {
   photoUrl?: string; // Google Places photo URL
 };
 
-// No longer using OpenAI - using Google Places + TripAdvisor instead
+// Inserted user-provided OpenAI API key below.
+const OPENAI_API_KEY = "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";
 
 // Simple place count logic
 const TIME_TO_PLACES = {
@@ -43,60 +44,123 @@ export function useOpenAI() {
     maxPlaces?: number;
   }): Promise<LLMPlace[]> {
     
-    console.log("=== DEBUG: getLLMPlaces using Google Places + TripAdvisor ===");
+    console.log("=== DEBUG: useOpenAI getLLMPlaces called with simple fallback ===");
     console.log("Location received in hook:", location);
     console.log("Goals received in hook:", goals);
     
     // Use simple place count logic
     const placesCount = TIME_TO_PLACES[timeWindow as keyof typeof TIME_TO_PLACES] || 2;
     
+    const systemPrompt = `
+You are a LOCAL EXPERT for ${location}, Portugal with knowledge of businesses and attractions.
+
+Your task: Suggest ${placesCount} specific, real place NAMES with basic addresses.
+
+LOCATION CONTEXT: ${location}, Portugal
+TARGET GOALS: ${goals.join(", ")}
+
+${regenerationAttempt > 0 ? `
+VARIATION ${regenerationAttempt + 1}:
+- Suggest DIFFERENT places than previous attempts
+- Vary the type of establishments
+- Mix popular and local favorites
+` : ""}
+
+RESPONSE FORMAT - Return EXACTLY this JSON structure:
+[
+  {
+    "name": "Specific business name (e.g., 'Café Central', 'Restaurante Dom Pedro')",
+    "address": "Simple street address in ${location}, Portugal format",
+    "walkingTime": estimated_walking_minutes_as_number,
+    "type": "specific_category_matching_goals",
+    "reason": "Brief explanation of why this place is good for the selected goals"
+  }
+]
+
+CRITICAL REQUIREMENTS:
+- Provide exactly ${placesCount} suggestions
+- Use REAL business names that exist in ${location}
+- Include a simple street address for each place
+- NO markdown formatting - ONLY valid JSON
+- Walking times should be realistic estimates (5-15 minutes)
+- Focus on well-known, established places in ${location}
+`.trim();
+
+    console.log("=== DEBUG: AI system prompt created ===");
+    
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: userPrompt,
+          },
+        ],
+        temperature: 0.1,
+        max_tokens: 300 + (placesCount * 100),
+        top_p: 0.8,
+        frequency_penalty: 0.3,
+        presence_penalty: 0.2,
+      }),
+    });
+    
+    if (!res.ok) throw new Error("OpenAI API error: " + (await res.text()).slice(0, 220));
+    const data = await res.json();
+    const text = data.choices[0].message.content;
+    
+    console.log("=== DEBUG: OpenAI Response ===");
+    console.log("Raw response:", text);
+    
     try {
-      // Call the new route-generator edge function
-      const response = await fetch(`https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/route-generator`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          location,
-          goals,
-          timeWindow: timeWindow.toString(),
-          regenerationAttempt,
-          maxPlaces: placesCount,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Route generation failed: ${errorText}`);
+      const match = text.match(/\[.*?\]/s);
+      let aiSuggestions: any[] = [];
+      
+      if (match) {
+        aiSuggestions = JSON.parse(match[0]);
+      } else {
+        const parsed = JSON.parse(
+          text
+            .replace(/^```json|^```|```$/g, "")
+            .trim()
+        );
+        if (Array.isArray(parsed)) {
+          aiSuggestions = parsed;
+        } else {
+          throw new Error("AI did not return a list of places.");
+        }
       }
-
-      const data = await response.json();
-      console.log("=== DEBUG: Route generator response ===", data);
-
-      if (!data.places || !Array.isArray(data.places)) {
-        throw new Error("Invalid response format from route generator");
-      }
-
-      // Convert response to LLMPlace format
-      const places: LLMPlace[] = data.places.map((place: any) => ({
+      
+      console.log("=== DEBUG: AI Place Suggestions ===", aiSuggestions);
+      
+      // Convert AI suggestions to LLMPlace format without geocoding
+      const places: LLMPlace[] = aiSuggestions.map(place => ({
         name: place.name,
-        address: place.address,
-        walkingTime: place.walkingTime || 10,
+        address: place.address || `${place.name}, ${location}, Portugal`,
+        walkingTime: place.walkingTime,
         type: place.type,
-        reason: place.reason || `Great ${place.type} option in ${location}`,
-        coordinates: place.coordinates,
-        lat: place.coordinates ? place.coordinates[1] : undefined,
-        lon: place.coordinates ? place.coordinates[0] : undefined,
-        photoUrl: place.photoUrl,
+        reason: place.reason,
+        // No coordinates since Mapbox is disabled
+        coordinates: undefined,
+        lat: undefined,
+        lon: undefined,
       }));
       
-      console.log("=== DEBUG: Final Places from Google Places + TripAdvisor ===", places);
+      console.log("=== DEBUG: Final Places (no geocoding) ===", places);
       return places;
       
     } catch (err) {
-      console.error("=== DEBUG: Error in route generation ===", err);
-      throw new Error("Could not generate route with Google Places and TripAdvisor data.");
+      console.error("=== DEBUG: JSON Parse Error ===", err);
+      throw new Error("AI could not generate a valid route.\n\n" + text?.slice(0, 120));
     }
   }
   
