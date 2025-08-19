@@ -2,12 +2,12 @@
 import React, { useState } from "react";
 import Button from "../Button";
 import { Repeat, MapPin, Clock } from "lucide-react";
-import type { LLMPlace } from "@/hooks/useOpenAI";
+import type { RoutePlace } from "@/hooks/useRouteGenerator";
 import { supabase } from "@/integrations/supabase/client";
 import Map from "../Map";
 
 type Props = {
-  places: LLMPlace[];
+  places: RoutePlace[];
   onRegenerate: () => void;
   onBuy: () => void;
   purchasing: boolean;

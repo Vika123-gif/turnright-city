@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { MapPin, Clock, Info, ArrowLeft } from "lucide-react";
 import Button from "./Button";
-import type { LLMPlace } from "@/hooks/useOpenAI";
+import type { RoutePlace } from "@/hooks/useRouteGenerator";
 import {
   Dialog,
   DialogContent,
@@ -12,15 +12,15 @@ import {
 } from "@/components/ui/dialog";
 
 type Props = {
-  places: LLMPlace[];
+  places: RoutePlace[];
   onBack: () => void;
   location?: string;
 };
 
 const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
-  const [selectedPlace, setSelectedPlace] = useState<LLMPlace | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<RoutePlace | null>(null);
 
-  const handlePlaceClick = (place: LLMPlace) => {
+  const handlePlaceClick = (place: RoutePlace) => {
     console.log("Place clicked:", place.name);
     setSelectedPlace(place);
   };
