@@ -5,6 +5,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Lisbon bounding box for validation
+const LISBON_BBOX = {
+  north: 38.8,
+  south: 38.6,
+  east: -9.0,
+  west: -9.3
+};
+
+// Visitability configuration
+const MIN_RATINGS = 20;
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -14,16 +25,16 @@ serve(async (req) => {
   try {
     const { location, goals, timeWindow } = await req.json();
     
-    console.log('=== TripAdvisor Route Generation Request ===');
+    console.log('=== Google Places POI Pipeline Request ===');
     console.log('Location:', location);
     console.log('Goals:', goals);
     console.log('Time Window:', timeWindow);
 
-    const tripAdvisorApiKey = Deno.env.get('TRIPADVISOR_API_KEY');
-    if (!tripAdvisorApiKey) {
-      console.error('TripAdvisor API key not found');
+    const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
+    if (!googleApiKey) {
+      console.error('Google API key not found');
       return new Response(
-        JSON.stringify({ success: false, error: 'TripAdvisor API key not configured' }),
+        JSON.stringify({ success: false, error: 'Google API key not configured' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500 
@@ -31,20 +42,24 @@ serve(async (req) => {
       );
     }
 
-    // Map goals to TripAdvisor categories
-    const goalToCategoryMap = {
-      'Parks': 'attractions',
-      'Restaurants': 'restaurants',
-      'Museums': 'attractions',
-      'Shopping': 'attractions',
-      'Nightlife': 'restaurants',
-      'Entertainment': 'attractions',
-      'Sightseeing': 'attractions',
-      'Culture': 'attractions'
+    // Map goals to Google Places types
+    const goalToTypesMap = {
+      'Parks': ['park', 'point_of_interest'],
+      'Restaurants': ['restaurant', 'cafe', 'bar', 'bakery'],
+      'Museums': ['museum', 'art_gallery'],
+      'Shopping': ['shopping_mall', 'store'],
+      'Nightlife': ['bar', 'night_club'],
+      'Entertainment': ['tourist_attraction', 'amusement_park'],
+      'Sightseeing': ['tourist_attraction', 'point_of_interest'],
+      'Culture': ['museum', 'art_gallery', 'tourist_attraction'],
+      'Cafés': ['cafe', 'bakery'],
+      'Bars': ['bar', 'night_club'],
+      'Architectural landmarks': ['tourist_attraction', 'point_of_interest']
     };
 
-    const searchCategories = goals.map(goal => goalToCategoryMap[goal] || 'attractions');
-    const uniqueCategories = [...new Set(searchCategories)];
+    // Get unique types for search
+    const allTypes = goals.flatMap(goal => goalToTypesMap[goal] || ['point_of_interest']);
+    const uniqueTypes = [...new Set(allTypes)];
 
     // Determine number of places based on time window
     const timeToPLacesMap = {
@@ -55,204 +70,230 @@ serve(async (req) => {
     };
     const maxPlaces = timeToPLacesMap[timeWindow] || 2;
 
-    const allPlaces = [];
+    // Geocode location first
+    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${googleApiKey}`;
+    const geocodeResponse = await fetch(geocodeUrl);
+    const geocodeData = await geocodeResponse.json();
+    
+    if (!geocodeData.results || geocodeData.results.length === 0) {
+      throw new Error(`Could not geocode location: ${location}`);
+    }
+    
+    const { lat, lng } = geocodeData.results[0].geometry.location;
+    console.log(`Geocoded ${location} to:`, { lat, lng });
 
-    // Search for places in each category
-    for (const category of uniqueCategories) {
-      const searchUrl = 'https://api.content.tripadvisor.com/api/v1/location/search';
-      const searchParams = new URLSearchParams({
-        key: tripAdvisorApiKey,
-        searchQuery: `${location}, Portugal`,
-        category: category,
-        language: 'en'
-      });
+    // Helper functions
+    const isInLisbon = (lat, lng) => {
+      return lat >= LISBON_BBOX.south && lat <= LISBON_BBOX.north && 
+             lng >= LISBON_BBOX.west && lng <= LISBON_BBOX.east;
+    };
 
-      // Headers required for TripAdvisor API
-      const tripAdvisorHeaders = {
-        'Referer': 'https://turnright-city.lovable.app',
-        'User-Agent': 'TurnRight-MVP/1.0',
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      };
+    const normalizeType = (googleTypes) => {
+      if (googleTypes.includes('restaurant') || googleTypes.includes('cafe') || googleTypes.includes('bakery')) return 'restaurant';
+      if (googleTypes.includes('bar') || googleTypes.includes('night_club')) return 'bar';
+      if (googleTypes.includes('cafe') || googleTypes.includes('bakery')) return 'cafe';
+      if (googleTypes.includes('park')) return 'park';
+      if (googleTypes.includes('museum') || googleTypes.includes('art_gallery')) return 'museum';
+      return 'attraction';
+    };
 
-      console.log(`=== TripAdvisor API Call Debug ===`);
-      console.log(`URL: ${searchUrl}?${searchParams}`);
-      console.log(`Category: ${category}, Location: ${location}`);
-      console.log(`API Key present:`, tripAdvisorApiKey ? 'YES' : 'NO');
-      console.log(`API Key length:`, tripAdvisorApiKey?.length || 0);
-      console.log(`Headers being sent:`, JSON.stringify(tripAdvisorHeaders, null, 2));
+    const isValidPlace = (place) => {
+      // Must have coordinates
+      if (!place.geometry?.location?.lat || !place.geometry?.location?.lng) return false;
       
-      const searchResponse = await fetch(`${searchUrl}?${searchParams}`, {
-        method: 'GET',
-        headers: tripAdvisorHeaders
-      });
+      // Must be in Lisbon
+      if (!isInLisbon(place.geometry.location.lat, place.geometry.location.lng)) return false;
       
-      console.log(`Response status: ${searchResponse.status}`);
-      console.log(`Response headers:`, Object.fromEntries(searchResponse.headers.entries()));
+      // Must have sufficient ratings
+      if ((place.user_ratings_total || 0) < MIN_RATINGS) return false;
       
-      if (!searchResponse.ok) {
-        const errorText = await searchResponse.text();
-        console.error(`TripAdvisor search failed for ${category}:`);
-        console.error(`Status: ${searchResponse.status}`);
-        console.error(`Status Text: ${searchResponse.statusText}`);
-        console.error(`Error Response:`, errorText);
-        
-        // Try to parse error as JSON for more details
+      // Must intersect with our type whitelist
+      const allowedTypes = ['restaurant', 'cafe', 'bar', 'bakery', 'tourist_attraction', 'museum', 
+                           'art_gallery', 'park', 'point_of_interest', 'library', 'university'];
+      if (!place.types?.some(type => allowedTypes.includes(type))) return false;
+      
+      // Exclude agencies/experiences/operators
+      const excludeKeywords = ['agency', 'experience', 'operator', 'tour', 'company'];
+      const nameAndTypes = `${place.name || ''} ${place.types?.join(' ') || ''}`.toLowerCase();
+      if (excludeKeywords.some(keyword => nameAndTypes.includes(keyword))) return false;
+      
+      // Type-specific validation
+      const placeTypes = place.types || [];
+      const hasRestaurantType = placeTypes.some(t => ['restaurant', 'cafe', 'bar', 'bakery'].includes(t));
+      const hasAttractionType = placeTypes.some(t => ['tourist_attraction', 'museum', 'art_gallery', 'park', 'point_of_interest'].includes(t));
+      
+      // For restaurants: must have restaurant type
+      if (goals.some(g => ['Restaurants', 'Cafés', 'Bars', 'Nightlife'].includes(g)) && 
+          normalizeType(placeTypes) === 'restaurant' && !hasRestaurantType) return false;
+      
+      // For attractions: must have attraction type  
+      if (goals.some(g => ['Museums', 'Parks', 'Sightseeing', 'Culture', 'Architectural landmarks'].includes(g)) && 
+          normalizeType(placeTypes) === 'attraction' && !hasAttractionType) return false;
+      
+      return true;
+    };
+
+    const searchGooglePlaces = async (radius = 1500) => {
+      console.log(`=== Google Places Search (radius: ${radius}m) ===`);
+      
+      const allPlaces = [];
+      
+      for (const placeType of uniqueTypes) {
         try {
-          const errorJson = JSON.parse(errorText);
-          console.error(`Parsed error:`, errorJson);
-        } catch (e) {
-          console.error(`Raw error text:`, errorText);
-        }
-        continue;
-      }
-
-      const searchData = await searchResponse.json();
-      console.log(`TripAdvisor search results for ${category}:`, searchData.data?.length || 0, 'places found');
-      console.log(`Full search response structure:`, JSON.stringify(searchData, null, 2));
-
-      if (searchData.data && searchData.data.length > 0) {
-        // Process each location to get detailed info
-        for (const place of searchData.data.slice(0, Math.ceil(maxPlaces / uniqueCategories.length))) {
-          try {
-            const locationId = place.location_id;
-            
-            // Get detailed location info
-            const detailsUrl = `https://api.content.tripadvisor.com/api/v1/location/${locationId}/details`;
-            const detailsParams = new URLSearchParams({
-              key: tripAdvisorApiKey,
-              language: 'en'
-            });
-
-            const detailsResponse = await fetch(`${detailsUrl}?${detailsParams}`, {
-              method: 'GET',
-              headers: tripAdvisorHeaders
-            });
-            let detailsData = null;
-            if (detailsResponse.ok) {
-              detailsData = await detailsResponse.json();
-            }
-
-            // Get photos
-            const photosUrl = `https://api.content.tripadvisor.com/api/v1/location/${locationId}/photos`;
-            const photosParams = new URLSearchParams({
-              key: tripAdvisorApiKey,
-              language: 'en'
-            });
-
-            const photosResponse = await fetch(`${photosUrl}?${photosParams}`, {
-              method: 'GET',
-              headers: tripAdvisorHeaders
-            });
-            let photoUrl = null;
-            if (photosResponse.ok) {
-              const photosData = await photosResponse.json();
-              if (photosData.data && photosData.data.length > 0) {
-                const firstPhoto = photosData.data[0];
-                if (firstPhoto.images && firstPhoto.images.medium) {
-                  photoUrl = firstPhoto.images.medium.url;
-                }
+          console.log(`Searching for type: ${placeType}`);
+          
+          // Nearby Search
+          const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${placeType}&key=${googleApiKey}`;
+          const nearbyResponse = await fetch(nearbyUrl);
+          const nearbyData = await nearbyResponse.json();
+          
+          console.log(`Google Places nearby search for ${placeType}:`, nearbyData.results?.length || 0, 'results');
+          
+          if (nearbyData.results) {
+            for (const place of nearbyData.results.slice(0, 5)) {
+              if (isValidPlace(place)) {
+                allPlaces.push(place);
+                console.log(`Added valid place: ${place.name}`);
+              } else {
+                console.log(`Filtered out: ${place.name} (${place.user_ratings_total || 0} ratings)`);
               }
             }
-
-            // Create place object
-            const placeObj = {
-              name: place.name || 'Unknown Place',
-              address: detailsData?.address?.street1 || place.address_obj?.street1 || `${location}, Portugal`,
-              walkingTime: Math.floor(Math.random() * 10) + 5, // Random 5-15 minutes
-              type: category === 'restaurants' ? 'restaurant' : 'attraction',
-              reason: `Great ${category.slice(0, -1)} in ${location}`,
-              coordinates: detailsData?.latitude && detailsData?.longitude ? 
-                [parseFloat(detailsData.longitude), parseFloat(detailsData.latitude)] : undefined,
-              lat: detailsData?.latitude ? parseFloat(detailsData.latitude) : undefined,
-              lon: detailsData?.longitude ? parseFloat(detailsData.longitude) : undefined,
-              photoUrl: photoUrl,
-              rating: detailsData?.rating ? parseFloat(detailsData.rating) : undefined
-            };
-
-            allPlaces.push(placeObj);
-            console.log(`Added place: ${placeObj.name}`);
-
-          } catch (error) {
-            console.error(`Error processing place ${place.name}:`, error);
           }
+        } catch (error) {
+          console.error(`Error searching for ${placeType}:`, error);
         }
+      }
+      
+      return allPlaces;
+    };
+
+    const enrichPlaceDetails = async (place) => {
+      try {
+        // Get place details
+        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=url,website,opening_hours,rating,user_ratings_total,photos&key=${googleApiKey}`;
+        const detailsResponse = await fetch(detailsUrl);
+        const detailsData = await detailsResponse.json();
+        
+        const details = detailsData.result || {};
+        
+        // Build photo URL if available
+        let photoUrl = null;
+        if (details.photos && details.photos.length > 0) {
+          const photoRef = details.photos[0].photo_reference;
+          photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${googleApiKey}`;
+        }
+        
+        return {
+          name: place.name,
+          address: place.vicinity || place.formatted_address || `${location}, Portugal`,
+          lat: place.geometry.location.lat,
+          lon: place.geometry.location.lng,
+          type: normalizeType(place.types || []),
+          rating: details.rating || place.rating,
+          user_ratings_total: details.user_ratings_total || place.user_ratings_total,
+          webUrl: details.url || details.website,
+          photoUrl: photoUrl,
+          walkingTime: Math.floor(Math.random() * 10) + 5, // Random 5-15 minutes for now
+          reason: `Popular ${normalizeType(place.types || [])} in ${location}`
+        };
+      } catch (error) {
+        console.error(`Error enriching place ${place.name}:`, error);
+        return null;
+      }
+    };
+
+    // Main search with progressive radius expansion
+    let validPlaces = [];
+    let currentRadius = 1500;
+    const maxRadius = 5000;
+    
+    while (validPlaces.length < 2 && currentRadius <= maxRadius) {
+      const foundPlaces = await searchGooglePlaces(currentRadius);
+      
+      // Enrich places with details
+      for (const place of foundPlaces) {
+        const enriched = await enrichPlaceDetails(place);
+        if (enriched) {
+          validPlaces.push(enriched);
+        }
+      }
+      
+      console.log(`Radius ${currentRadius}m: Found ${foundPlaces.length} places, ${validPlaces.length} valid after enrichment`);
+      
+      if (validPlaces.length < 2) {
+        currentRadius += 1500;
+        console.log(`Expanding radius to ${currentRadius}m`);
       }
     }
 
-    // Limit to maxPlaces and shuffle for variety
-    const finalPlaces = allPlaces
-      .sort(() => Math.random() - 0.5)
+    // Remove duplicates and limit results
+    const seenNames = new Set();
+    const finalPlaces = validPlaces
+      .filter(place => {
+        if (seenNames.has(place.name)) return false;
+        seenNames.add(place.name);
+        return true;
+      })
       .slice(0, maxPlaces);
 
-    console.log(`Returning ${finalPlaces.length} places:`, finalPlaces.map(p => p.name));
+    console.log(`Returning ${finalPlaces.length} places from Google Places:`, finalPlaces.map(p => p.name));
 
-    // If no places found from TripAdvisor, try Google Places as fallback
-    if (finalPlaces.length === 0) {
-      console.log('=== TripAdvisor returned no results, trying Google Places fallback ===');
+    // TripAdvisor fallback/enrichment (only if Google Places returns insufficient results)
+    if (finalPlaces.length < maxPlaces) {
+      console.log('=== Google Places returned insufficient results, trying TripAdvisor enrichment ===');
       
-      try {
-        const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
-        if (!googleApiKey) {
-          console.error('Google API key not found for fallback');
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: 'No places found from TripAdvisor and Google API key not configured for fallback',
-              debug: { 
-                tripAdvisorAttempted: true,
-                googleFallbackAttempted: false,
-                location,
-                goals,
-                timeWindow
+      const tripAdvisorApiKey = Deno.env.get('TRIPADVISOR_API_KEY');
+      if (tripAdvisorApiKey) {
+        try {
+          // Simple TripAdvisor search for enrichment
+          const searchUrl = 'https://api.content.tripadvisor.com/api/v1/location/search';
+          const searchParams = new URLSearchParams({
+            key: tripAdvisorApiKey,
+            searchQuery: `${location}, Portugal`,
+            category: 'attractions',
+            language: 'en'
+          });
+
+          const tripAdvisorHeaders = {
+            'Referer': 'https://turnright-city.lovable.app',
+            'User-Agent': 'TurnRight-MVP/1.0',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          };
+
+          const searchResponse = await fetch(`${searchUrl}?${searchParams}`, {
+            method: 'GET',
+            headers: tripAdvisorHeaders
+          });
+
+          if (searchResponse.ok) {
+            const searchData = await searchResponse.json();
+            console.log(`TripAdvisor enrichment: ${searchData.data?.length || 0} additional places found`);
+            
+            if (searchData.data && searchData.data.length > 0) {
+              const remainingSlots = maxPlaces - finalPlaces.length;
+              for (const place of searchData.data.slice(0, remainingSlots)) {
+                const enrichedPlace = {
+                  name: place.name || 'Unknown Place',
+                  address: place.address_obj?.street1 || `${location}, Portugal`,
+                  lat: undefined, // TripAdvisor doesn't provide coordinates in search
+                  lon: undefined,
+                  type: 'attraction',
+                  rating: undefined,
+                  user_ratings_total: undefined,
+                  webUrl: undefined,
+                  photoUrl: undefined,
+                  walkingTime: Math.floor(Math.random() * 10) + 5,
+                  reason: `TripAdvisor recommendation in ${location}`
+                };
+                finalPlaces.push(enrichedPlace);
+                console.log(`Added TripAdvisor place: ${enrichedPlace.name}`);
               }
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-              status: 404
             }
-          );
+          }
+        } catch (error) {
+          console.error('TripAdvisor enrichment error:', error);
         }
-
-        // Use Google Places as fallback
-        const response = await fetch('https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/google-places', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
-          },
-          body: JSON.stringify({ location, goals, timeWindow })
-        });
-
-        if (response.ok) {
-          const googleData = await response.json();
-          console.log('Google Places fallback successful:', googleData.places?.length || 0, 'places');
-          
-          // Convert Google Places format to our format
-          const googlePlaces = (googleData.places || []).map(place => ({
-            ...place,
-            reason: `Found via Google Places (TripAdvisor fallback)`
-          }));
-
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              places: googlePlaces,
-              source: 'google_places_fallback',
-              debug: {
-                tripAdvisorFailed: true,
-                googleFallbackUsed: true
-              }
-            }),
-            { 
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
-        } else {
-          console.error('Google Places fallback also failed:', response.status);
-        }
-      } catch (fallbackError) {
-        console.error('Google Places fallback error:', fallbackError);
       }
     }
 
@@ -260,15 +301,17 @@ serve(async (req) => {
       JSON.stringify({ 
         success: finalPlaces.length > 0, 
         places: finalPlaces,
-        source: 'tripadvisor',
+        source: finalPlaces.length > validPlaces.length ? 'google_places_with_tripadvisor_enrichment' : 'google_places',
         debug: {
-          totalCategoriesSearched: uniqueCategories.length,
-          totalPlacesFound: allPlaces.length,
+          googlePlacesFound: validPlaces.length,
+          tripAdvisorEnrichment: finalPlaces.length - validPlaces.length,
           finalPlacesReturned: finalPlaces.length,
           maxPlacesRequested: maxPlaces,
           location,
           goals,
-          timeWindow
+          timeWindow,
+          radiusExpansion: currentRadius > 1500,
+          maxRadiusReached: currentRadius > maxRadius
         }
       }),
       { 
