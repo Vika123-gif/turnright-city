@@ -67,13 +67,25 @@ serve(async (req) => {
         language: 'en'
       });
 
+      // Headers required for TripAdvisor API
+      const tripAdvisorHeaders = {
+        'Referer': 'https://turnright-city.lovable.app',
+        'User-Agent': 'TurnRight-MVP/1.0',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
+
       console.log(`=== TripAdvisor API Call Debug ===`);
       console.log(`URL: ${searchUrl}?${searchParams}`);
       console.log(`Category: ${category}, Location: ${location}`);
       console.log(`API Key present:`, tripAdvisorApiKey ? 'YES' : 'NO');
       console.log(`API Key length:`, tripAdvisorApiKey?.length || 0);
+      console.log(`Headers being sent:`, JSON.stringify(tripAdvisorHeaders, null, 2));
       
-      const searchResponse = await fetch(`${searchUrl}?${searchParams}`);
+      const searchResponse = await fetch(`${searchUrl}?${searchParams}`, {
+        method: 'GET',
+        headers: tripAdvisorHeaders
+      });
       
       console.log(`Response status: ${searchResponse.status}`);
       console.log(`Response headers:`, Object.fromEntries(searchResponse.headers.entries()));
@@ -112,7 +124,10 @@ serve(async (req) => {
               language: 'en'
             });
 
-            const detailsResponse = await fetch(`${detailsUrl}?${detailsParams}`);
+            const detailsResponse = await fetch(`${detailsUrl}?${detailsParams}`, {
+              method: 'GET',
+              headers: tripAdvisorHeaders
+            });
             let detailsData = null;
             if (detailsResponse.ok) {
               detailsData = await detailsResponse.json();
@@ -125,7 +140,10 @@ serve(async (req) => {
               language: 'en'
             });
 
-            const photosResponse = await fetch(`${photosUrl}?${photosParams}`);
+            const photosResponse = await fetch(`${photosUrl}?${photosParams}`, {
+              method: 'GET',
+              headers: tripAdvisorHeaders
+            });
             let photoUrl = null;
             if (photosResponse.ok) {
               const photosData = await photosResponse.json();
