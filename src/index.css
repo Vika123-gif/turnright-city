@@ -25,14 +25,13 @@
 
 @layer components {
   .primary-btn {
-    @apply w-full bg-gradient-to-r from-[#00BC72] to-[#00965c] text-white font-semibold rounded-xl text-lg flex items-center justify-center min-h-[56px] px-6 py-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+    @apply w-full bg-gradient-to-r from-[#00BC72] to-[#00965c] text-white font-semibold rounded-xl text-lg flex items-center justify-center min-h-[56px] px-6 py-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
   }
   .outline-btn {
-    @apply w-full bg-white border-2 border-[#00BC72] text-[#00BC72] font-semibold rounded-xl text-lg flex items-center justify-center min-h-[56px] px-6 py-3 shadow-md hover:shadow-lg transition-all duration-300 hover:bg-gradient-to-r hover:from-[#f6fffb] hover:to-[#eafff2] hover:scale-[1.02] active:scale-[0.98] focus:outline-none disabled:opacity-50;
+    @apply w-full bg-white border-2 border-[#00BC72] text-[#00BC72] font-semibold rounded-xl text-lg flex items-center justify-center min-h-[56px] px-6 py-3 transition-all duration-300 hover:bg-gradient-to-r hover:from-[#f6fffb] hover:to-[#eafff2] hover:scale-[1.02] active:scale-[0.98] focus:outline-none disabled:opacity-50;
   }
   .chat-card {
     background: var(--gradient-card);
-    box-shadow: var(--shadow-card);
     @apply rounded-3xl px-6 py-8 max-w-lg mx-auto my-4 border border-gray-100/50 backdrop-blur-sm;
   }
   .chatbot-bubble {
@@ -45,7 +44,7 @@
   
   /* Enhanced input styles */
   .location-input {
-    @apply border-2 border-gray-200 rounded-xl px-8 py-6 w-full text-xl shadow-sm focus:border-[#00BC72] focus:ring-2 focus:ring-[#00BC72]/20 transition-all duration-300 bg-white/80 backdrop-blur-sm min-h-[64px] font-medium;
+    @apply border-2 border-gray-200 rounded-xl px-8 py-6 w-full text-xl focus:border-[#00BC72] focus:ring-2 focus:ring-[#00BC72]/20 transition-all duration-300 bg-white/80 backdrop-blur-sm min-h-[64px] font-medium;
   }
   
   /* Checkbox enhancement */
