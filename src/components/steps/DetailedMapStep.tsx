@@ -17,12 +17,45 @@ const DetailedMapStep: React.FC<Props> = ({
   onReset,
   origin,
 }) => {
+  // Log the complete places data structure to debug missing fields
+  console.log("=== DetailedMapStep Places Data Check ===");
+  console.log("Origin:", origin);
+  console.log("Places array length:", places?.length || 0);
+  places?.forEach((place, i) => {
+    console.log(`Place ${i}:`, {
+      name: place.name,
+      address: place.address,
+      lat: place.lat,
+      lon: place.lon,
+      coordinates: place.coordinates,
+      photoUrl: place.photoUrl ? 'HAS_PHOTO' : 'NO_PHOTO',
+      walkingTime: place.walkingTime,
+      type: place.type,
+      reason: place.reason
+    });
+  });
+  console.log("========================================");
+
   const makeGoogleMapsLink = (place: LLMPlace) => {
-    const address = place.address || place.name;
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
     console.log(`=== DEBUG: Individual place link ===`);
     console.log(`Place: ${place.name}`);
-    console.log(`Address: ${address}`);
+    console.log(`Address: ${place.address}`);
+    console.log(`Coordinates: lat=${place.lat}, lon=${place.lon}`);
+    
+    let url;
+    // Use coordinates if available for better accuracy
+    if (place.lat && place.lon) {
+      url = `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lon}`;
+      console.log(`Using coordinates for link`);
+    } else if (place.address) {
+      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.address)}`;
+      console.log(`Using address for link`);
+    } else {
+      // Fallback to place name
+      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}`;
+      console.log(`Using place name as fallback for link`);
+    }
+    
     console.log(`Generated URL: ${url}`);
     return url;
   };
@@ -31,29 +64,65 @@ const DetailedMapStep: React.FC<Props> = ({
     console.log(`=== DEBUG: Route link generation ===`);
     console.log(`Origin: "${origin}"`);
     console.log(`Places count: ${places.length}`);
-    console.log(`Places data:`, places.map(p => ({ name: p.name, address: p.address })));
+    console.log(`Places full data:`, places.map(p => ({ 
+      name: p.name, 
+      address: p.address, 
+      lat: p.lat, 
+      lon: p.lon,
+      coordinates: p.coordinates 
+    })));
     
     if (!places.length) {
       console.log(`No places, returning default maps URL`);
       return `https://maps.google.com`;
     }
 
-    const originEnc = encodeURIComponent(origin.trim());
-    const waypointAddresses = places
-      .slice(0, -1)
-      .map(p => {
-        const addr = p.address ? p.address : p.name;
-        console.log(`Waypoint: ${p.name} -> ${addr}`);
-        return encodeURIComponent(addr);
-      });
-    const lastPlace = places[places.length - 1];
-    const destination = encodeURIComponent(lastPlace?.address || lastPlace?.name || "");
+    // Use coordinates for origin if it looks like coordinates, otherwise encode as string
+    const originParam = origin.includes(',') || /^[-]?\d+\.?\d*,[-]?\d+\.?\d*$/.test(origin) 
+      ? origin 
+      : encodeURIComponent(origin.trim());
     
-    console.log(`Destination: ${lastPlace?.name} -> ${lastPlace?.address || lastPlace?.name}`);
+    console.log(`Origin param: ${originParam}`);
 
-    let url = `https://www.google.com/maps/dir/?api=1&origin=${originEnc}&destination=${destination}&travelmode=walking`;
-    if (waypointAddresses.length > 0) {
-      url += `&waypoints=${waypointAddresses.join("|")}`;
+    // Build waypoints using coordinates when available
+    const waypoints = places.slice(0, -1).map(p => {
+      let waypoint;
+      if (p.lat && p.lon) {
+        waypoint = `${p.lat},${p.lon}`;
+        console.log(`Waypoint (coords): ${p.name} -> ${waypoint}`);
+      } else if (p.coordinates && p.coordinates.length === 2) {
+        waypoint = `${p.coordinates[1]},${p.coordinates[0]}`; // coordinates are [lng, lat]
+        console.log(`Waypoint (coordinates array): ${p.name} -> ${waypoint}`);
+      } else if (p.address) {
+        waypoint = encodeURIComponent(p.address);
+        console.log(`Waypoint (address): ${p.name} -> ${waypoint}`);
+      } else {
+        waypoint = encodeURIComponent(p.name);
+        console.log(`Waypoint (name fallback): ${p.name} -> ${waypoint}`);
+      }
+      return waypoint;
+    });
+    
+    // Build destination using coordinates when available
+    const lastPlace = places[places.length - 1];
+    let destination;
+    if (lastPlace?.lat && lastPlace?.lon) {
+      destination = `${lastPlace.lat},${lastPlace.lon}`;
+      console.log(`Destination (coords): ${lastPlace.name} -> ${destination}`);
+    } else if (lastPlace?.coordinates && lastPlace.coordinates.length === 2) {
+      destination = `${lastPlace.coordinates[1]},${lastPlace.coordinates[0]}`; // coordinates are [lng, lat]
+      console.log(`Destination (coordinates array): ${lastPlace.name} -> ${destination}`);
+    } else if (lastPlace?.address) {
+      destination = encodeURIComponent(lastPlace.address);
+      console.log(`Destination (address): ${lastPlace.name} -> ${destination}`);
+    } else {
+      destination = encodeURIComponent(lastPlace?.name || "");
+      console.log(`Destination (name fallback): ${lastPlace?.name} -> ${destination}`);
+    }
+
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destination}&travelmode=walking`;
+    if (waypoints.length > 0) {
+      url += `&waypoints=${waypoints.join("|")}`;
     }
     
     console.log(`Generated route URL: ${url}`);
