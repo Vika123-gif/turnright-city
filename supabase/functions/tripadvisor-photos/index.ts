@@ -304,13 +304,43 @@ serve(async (req) => {
           photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${googleApiKey}`;
         }
         
+        // Validate place matches user's goals before including
+        const placeTypes = place.types || [];
+        const normalizedType = normalizeType(placeTypes);
+        
+        // Check if this place actually matches the user's selected goals
+        const matchesGoals = goals.some(goal => {
+          const expectedTypes = goalToTypesMap[goal] || [];
+          return expectedTypes.some(expectedType => {
+            // Direct type match
+            if (placeTypes.includes(expectedType)) return true;
+            
+            // Normalized type match for broader categories
+            if (goal === 'Parks' && (placeTypes.includes('park') || normalizedType === 'park')) return true;
+            if (goal === 'Museums' && (placeTypes.includes('museum') || placeTypes.includes('art_gallery') || normalizedType === 'museum')) return true;
+            if (goal === 'Restaurants' && (placeTypes.includes('restaurant') || placeTypes.includes('cafe') || placeTypes.includes('bakery') || normalizedType === 'restaurant')) return true;
+            if (goal === 'Bars' && (placeTypes.includes('bar') || placeTypes.includes('night_club') || normalizedType === 'bar')) return true;
+            if (goal === 'Culture' && (placeTypes.includes('tourist_attraction') || placeTypes.includes('museum') || placeTypes.includes('art_gallery'))) return true;
+            if (goal === 'Viewpoints' && placeTypes.includes('tourist_attraction')) return true;
+            if (goal === 'Architectural landmarks' && (placeTypes.includes('tourist_attraction') || placeTypes.includes('point_of_interest'))) return true;
+            
+            return false;
+          });
+        });
+        
+        // Skip places that don't match user's goals
+        if (!matchesGoals) {
+          console.log(`Skipping ${place.name} - types [${placeTypes.join(', ')}] don't match goals [${goals.join(', ')}]`);
+          continue;
+        }
+        
         const enrichedPlace = {
           name: place.name,
           address: place.vicinity || place.formatted_address || 'Address not available',
           lat: place.geometry.location.lat,
           lon: place.geometry.location.lng,
           types: place.types || [],
-          typeNormalized: normalizeType(place.types || []),
+          typeNormalized: normalizedType,
           webUrl: details.url || details.website,
           photoUrl: photoUrl,
           rating: details.rating || place.rating,
