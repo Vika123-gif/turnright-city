@@ -53,13 +53,73 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
     );
 
     // Create route line and add markers
-    const createRouteAndMarkers = () => {
+    const createRouteAndMarkers = async () => {
       const fallbackCoords = { lat: 38.7223, lng: -9.1393 };
       const routeCoordinates: [number, number][] = [];
 
-      // Add user's current location as start point if available
-      if (userLocation) {
-        routeCoordinates.push([userLocation.lng, userLocation.lat]);
+      // Add origin location as start point
+      let originCoords = null;
+      if (origin) {
+        console.log('Processing origin:', origin);
+        
+        // Check if origin is coordinates (lat,lng format)
+        const coordMatch = origin.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+        if (coordMatch) {
+          const lat = parseFloat(coordMatch[1]);
+          const lng = parseFloat(coordMatch[2]);
+          originCoords = { lat, lng };
+          console.log('Origin is coordinates:', originCoords);
+        } else {
+          // Origin is a location name, try to geocode it
+          try {
+            console.log('Geocoding origin location:', origin);
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(origin)}&format=json&limit=1&accept-language=en`
+            );
+            const data = await response.json();
+            if (data.length > 0) {
+              originCoords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+              console.log('Geocoded origin to:', originCoords);
+            }
+          } catch (error) {
+            console.error('Error geocoding origin:', error);
+          }
+        }
+      }
+
+      // Use origin coordinates or user location as start point
+      const startCoords = originCoords || (userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null);
+      if (startCoords) {
+        routeCoordinates.push([startCoords.lng, startCoords.lat]);
+        console.log('Added start point to route:', startCoords);
+        
+        // Add origin marker
+        const originMarkerEl = document.createElement('div');
+        originMarkerEl.style.width = '24px';
+        originMarkerEl.style.height = '24px';
+        originMarkerEl.style.borderRadius = '50%';
+        originMarkerEl.style.backgroundColor = '#3B82F6';
+        originMarkerEl.style.border = '3px solid white';
+        originMarkerEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        originMarkerEl.style.display = 'flex';
+        originMarkerEl.style.alignItems = 'center';
+        originMarkerEl.style.justifyContent = 'center';
+        
+        const startIcon = document.createElement('div');
+        startIcon.style.color = 'white';
+        startIcon.style.fontSize = '10px';
+        startIcon.style.fontWeight = 'bold';
+        startIcon.textContent = '●';
+        originMarkerEl.appendChild(startIcon);
+
+        const originPopup = new mapboxgl.Popup({ offset: 15 }).setHTML(
+          `<div style="padding: 8px;"><strong>Start: ${origin || 'Your Location'}</strong></div>`
+        );
+
+        new mapboxgl.Marker(originMarkerEl)
+          .setLngLat([startCoords.lng, startCoords.lat])
+          .setPopup(originPopup)
+          .addTo(map.current!);
       }
 
       // Add markers for each place and collect coordinates for route
@@ -164,7 +224,8 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
       }
     };
 
-    createRouteAndMarkers();
+    // Initialize the route and markers
+    createRouteAndMarkers().catch(console.error);
 
     // Log that map was initialized
     console.log('Map initialized successfully with', places.length, 'places');
@@ -174,7 +235,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
       map.current?.remove();
       userMarker.current?.remove();
     };
-  }, [places, routeCreated]);
+  }, [places, routeCreated, origin]);
 
   // Update user location marker when position changes
   useEffect(() => {
