@@ -58,6 +58,8 @@ function getPlaceVisitDuration(placeTypes) {
 function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng) {
   if (!candidatePlaces || candidatePlaces.length === 0) return [];
   
+  console.log(`=== Time Budget Analysis for ${timeMinutes} minutes ===`);
+  
   // Sort candidates by distance from start for initial ordering
   const sortedCandidates = candidatePlaces.sort((a, b) => {
     const distA = calculateDistance(startLat, startLng, a.lat, a.lon);
@@ -67,6 +69,8 @@ function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng)
   
   const selectedStops = [];
   let remainingTime = timeMinutes;
+  let totalWalkingTime = 0;
+  let totalVisitTime = 0;
   
   // Always include walking time from start to first location
   if (sortedCandidates.length > 0) {
@@ -76,9 +80,16 @@ function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng)
     );
     const visitDuration = getPlaceVisitDuration(firstStop.types || []);
     
+    console.log(`First stop: ${firstStop.name} - Walk: ${walkingTimeToFirst}min, Visit: ${visitDuration}min, Total: ${walkingTimeToFirst + visitDuration}min`);
+    
     if (walkingTimeToFirst + visitDuration <= remainingTime) {
       selectedStops.push(firstStop);
       remainingTime -= (walkingTimeToFirst + visitDuration);
+      totalWalkingTime += walkingTimeToFirst;
+      totalVisitTime += visitDuration;
+      console.log(`✓ Added first stop. Remaining time: ${remainingTime}min`);
+    } else {
+      console.log(`✗ First stop doesn't fit in time budget`);
     }
   }
   
@@ -96,11 +107,26 @@ function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng)
     // Check if we have enough time for walking + visit + buffer
     const totalTimeNeeded = walkingTime + visitDuration + 5; // 5 min buffer
     
+    console.log(`Candidate: ${candidate.name} - Walk: ${walkingTime}min, Visit: ${visitDuration}min, Total needed: ${totalTimeNeeded}min, Remaining: ${remainingTime}min`);
+    
     if (totalTimeNeeded <= remainingTime) {
       selectedStops.push(candidate);
       remainingTime -= totalTimeNeeded;
+      totalWalkingTime += walkingTime;
+      totalVisitTime += visitDuration;
+      console.log(`✓ Added stop ${selectedStops.length}. Remaining time: ${remainingTime}min`);
+    } else {
+      console.log(`✗ Stop doesn't fit in remaining time budget`);
     }
   }
+  
+  console.log(`=== Final Route Summary ===`);
+  console.log(`Total stops: ${selectedStops.length}`);
+  console.log(`Total walking time: ${totalWalkingTime}min`);
+  console.log(`Total visit time: ${totalVisitTime}min`);
+  console.log(`Total used time: ${totalWalkingTime + totalVisitTime}min`);
+  console.log(`Time remaining: ${remainingTime}min`);
+  console.log(`Original budget: ${timeMinutes}min`);
   
   return selectedStops;
 }
