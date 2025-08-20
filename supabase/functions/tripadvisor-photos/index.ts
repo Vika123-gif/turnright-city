@@ -361,8 +361,19 @@ serve(async (req) => {
           photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${googleApiKey}`;
         }
         
-        // Validate place matches user's goals before including
+        // Skip hotels and lodging completely
         const placeTypes = place.types || [];
+        if (placeTypes.includes('lodging') || placeTypes.includes('hotel') || 
+            place.name.toLowerCase().includes('hotel') || 
+            place.name.toLowerCase().includes('hostel') ||
+            place.name.toLowerCase().includes('inn') ||
+            place.name.toLowerCase().includes('resort') ||
+            place.name.toLowerCase().includes('motel')) {
+          console.log(`Skipping hotel/lodging: ${place.name} - types [${placeTypes.join(', ')}]`);
+          continue;
+        }
+        
+        // Validate place matches user's goals before including
         const normalizedType = normalizeType(placeTypes);
         
         // Check if this place actually matches the user's selected goals
