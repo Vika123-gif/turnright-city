@@ -1,19 +1,22 @@
 
 import React from "react";
-
-export type Place = {
-  name: string;
-  address: string;
-  walkingTime: number;
-  type?: string;
-  photoUrl?: string;
-};
+import type { LLMPlace } from "@/hooks/useOpenAI";
 
 type Props = {
-  places: Place[];
+  places: LLMPlace[];
 };
 
 const PlacesList: React.FC<Props> = ({ places }) => {
+  console.log("=== PlacesList Debug ===");
+  console.log("Places received:", places);
+  places.forEach((place, i) => {
+    console.log(`Place ${i}:`, {
+      name: place.name,
+      hasPhotoUrl: !!place.photoUrl,
+      photoUrl: place.photoUrl
+    });
+  });
+
   if (!places.length) {
     return <div className="text-red-500 text-base p-4 mb-2 rounded bg-red-50">No places found. Try changing your search goals or move your location a bit!</div>;
   }
@@ -27,7 +30,9 @@ const PlacesList: React.FC<Props> = ({ places }) => {
                 src={place.photoUrl} 
                 alt={place.name}
                 className="w-full h-full object-cover"
+                onLoad={() => console.log(`Photo loaded for ${place.name}`)}
                 onError={(e) => {
+                  console.error(`Photo failed to load for ${place.name}:`, place.photoUrl);
                   e.currentTarget.style.display = 'none';
                 }}
               />
