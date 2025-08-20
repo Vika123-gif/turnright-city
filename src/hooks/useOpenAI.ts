@@ -6,6 +6,7 @@ export type LLMPlace = {
   name: string;
   address: string;
   walkingTime: number;
+  visitDuration?: number; // Time to spend at this location (in minutes)
   type?: string;
   reason?: string;
   lat?: number;
@@ -84,6 +85,7 @@ export function useOpenAI() {
           name: place.name || 'Unknown Place',
           address: place.address || place.vicinity || 'Address not available',
           walkingTime: place.walkingTime || place.walkingTimeFromPrevious || 5,
+          visitDuration: place.visitDuration || 0, // Time to spend at this location
           type: place.type || place.typeNormalized || 'attraction',
           reason: place.reason || `Recommended ${place.type || 'place'}`,
           lat: lat,
