@@ -22,6 +22,9 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
   useEffect(() => {
     if (!mapContainer.current || !places.length) return;
 
+    // Reset route creation state when map is recreated
+    setRouteCreated(false);
+
     // Initialize map with Mapbox token
     const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
     console.log('Mapbox token:', mapboxToken?.substring(0, 10) + '...');
@@ -180,7 +183,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
       });
 
       // Add route line if we have coordinates
-      if (routeCoordinates.length > 1 && !routeCreated) {
+      if (routeCoordinates.length > 1) {
         console.log('=== ROUTE DEBUG ===');
         console.log('Route coordinates to render:', routeCoordinates);
         console.log('Route coordinates count:', routeCoordinates.length);
@@ -259,64 +262,112 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
           }
         };
 
-        map.current!.on('load', async () => {
-          console.log('Map loaded, creating route...');
-          if (!map.current!.getSource('route')) {
-            // Try Directions API first
-            const directionsSuccess = await getWalkingRoute();
+        // Wait for map to be fully loaded
+        if (map.current!.isStyleLoaded()) {
+          console.log('Map style already loaded, creating route immediately...');
+          const directionsSuccess = await getWalkingRoute();
+          
+          if (!directionsSuccess) {
+            console.log('Using fallback: simple LineString route');
+            console.log('Fallback route coordinates:', routeCoordinates);
             
-            // Fallback: simple LineString if Directions API fails
-            if (!directionsSuccess) {
-              console.log('Using fallback: simple LineString route');
-              console.log('Fallback route coordinates:', routeCoordinates);
-              
-              // Add simple route source (fallback)
-              map.current!.addSource('route', {
-                type: 'geojson',
-                data: {
-                  type: 'Feature',
-                  properties: {},
-                  geometry: {
-                    type: 'LineString',
-                    coordinates: routeCoordinates
-                  }
+            // Add simple route source (fallback)
+            map.current!.addSource('route', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: routeCoordinates
                 }
-              });
-              console.log('Added fallback route source');
+              }
+            });
+            console.log('Added fallback route source');
 
-              // Add simple route layer (fallback)
-              map.current!.addLayer({
-                id: 'route-line',
-                type: 'line',
-                source: 'route',
-                layout: {
-                  'line-join': 'round',
-                  'line-cap': 'round'
-                },
-                paint: {
-                  'line-color': '#FF6B6B',
-                  'line-width': 5,
-                  'line-opacity': 0.9
-                }
-              });
-              console.log('Added fallback route layer');
-              
-              // Fit map to show all points (fallback)
-              const bounds = new mapboxgl.LngLatBounds();
-              routeCoordinates.forEach(coord => bounds.extend(coord));
-              map.current!.fitBounds(bounds, { padding: 50 });
-              console.log('Fitted map to fallback route bounds');
-            }
-          } else {
-            console.log('Route source already exists, skipping creation');
+            // Add simple route layer (fallback)
+            map.current!.addLayer({
+              id: 'route-line',
+              type: 'line',
+              source: 'route',
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round'
+              },
+              paint: {
+                'line-color': '#FF6B6B',
+                'line-width': 5,
+                'line-opacity': 0.9
+              }
+            });
+            console.log('Added fallback route layer');
+            
+            // Fit map to show all points (fallback)
+            const bounds = new mapboxgl.LngLatBounds();
+            routeCoordinates.forEach(coord => bounds.extend(coord));
+            map.current!.fitBounds(bounds, { padding: 50 });
+            console.log('Fitted map to fallback route bounds');
           }
-        });
+        } else {
+          map.current!.on('load', async () => {
+            console.log('Map loaded, creating route...');
+            if (!map.current!.getSource('route')) {
+              // Try Directions API first
+              const directionsSuccess = await getWalkingRoute();
+              
+              // Fallback: simple LineString if Directions API fails
+              if (!directionsSuccess) {
+                console.log('Using fallback: simple LineString route');
+                console.log('Fallback route coordinates:', routeCoordinates);
+                
+                // Add simple route source (fallback)
+                map.current!.addSource('route', {
+                  type: 'geojson',
+                  data: {
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                      type: 'LineString',
+                      coordinates: routeCoordinates
+                    }
+                  }
+                });
+                console.log('Added fallback route source');
+
+                // Add simple route layer (fallback)
+                map.current!.addLayer({
+                  id: 'route-line',
+                  type: 'line',
+                  source: 'route',
+                  layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                  },
+                  paint: {
+                    'line-color': '#FF6B6B',
+                    'line-width': 5,
+                    'line-opacity': 0.9
+                  }
+                });
+                console.log('Added fallback route layer');
+                
+                // Fit map to show all points (fallback)
+                const bounds = new mapboxgl.LngLatBounds();
+                routeCoordinates.forEach(coord => bounds.extend(coord));
+                map.current!.fitBounds(bounds, { padding: 50 });
+                console.log('Fitted map to fallback route bounds');
+              }
+            } else {
+              console.log('Route source already exists, skipping creation');
+            }
+          });
+        }
+        
         setRouteCreated(true);
         console.log('=== END ROUTE DEBUG ===');
       } else {
-        console.log('Route creation skipped:', {
-          coordinatesLength: routeCoordinates.length,
-          routeCreated: routeCreated
+        console.log('Route creation skipped - not enough coordinates:', {
+          coordinatesLength: routeCoordinates.length
         });
       }
     };
@@ -332,7 +383,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
       map.current?.remove();
       userMarker.current?.remove();
     };
-  }, [places, routeCreated, origin]);
+  }, [places, origin]);
 
   // Update user location marker when position changes
   useEffect(() => {
