@@ -28,7 +28,12 @@ const SPECIFIC_TYPE_DURATION = {
 
 // Function to get visit duration for a place type
 function getPlaceVisitDuration(placeTypes) {
-  // Check specific types first
+  // Check museums first (priority over generic tourist attractions)
+  if (placeTypes.includes('museum') || placeTypes.includes('art_gallery')) {
+    return PLACE_TYPE_DURATION.museum; // 60 minutes
+  }
+  
+  // Check specific types
   for (const type of placeTypes) {
     if (SPECIFIC_TYPE_DURATION[type]) {
       return SPECIFIC_TYPE_DURATION[type];
@@ -43,7 +48,6 @@ function getPlaceVisitDuration(placeTypes) {
   }
   if (placeTypes.includes('bar') || placeTypes.includes('night_club')) return PLACE_TYPE_DURATION.bar;
   if (placeTypes.includes('park')) return PLACE_TYPE_DURATION.park;
-  if (placeTypes.includes('museum') || placeTypes.includes('art_gallery')) return PLACE_TYPE_DURATION.museum;
   if (placeTypes.includes('library')) return PLACE_TYPE_DURATION.coworking;
   
   // Default for attractions/viewpoints
