@@ -181,6 +181,10 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
 
       // Add route line if we have coordinates
       if (routeCoordinates.length > 1 && !routeCreated) {
+        console.log('=== ROUTE DEBUG ===');
+        console.log('Route coordinates to render:', routeCoordinates);
+        console.log('Route coordinates count:', routeCoordinates.length);
+        
         // Try to get walking route from Mapbox Directions API
         const getWalkingRoute = async () => {
           try {
@@ -188,18 +192,25 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
             const coordinates = routeCoordinates.map(coord => `${coord[0]},${coord[1]}`).join(';');
             const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?geometries=geojson&overview=full&steps=true&access_token=${mapboxToken}`;
             
+            console.log('Mapbox Directions API URL:', directionsUrl);
             console.log('Fetching walking route from Mapbox Directions API...');
+            
             const response = await fetch(directionsUrl);
+            console.log('Directions API Response status:', response.status);
             
             if (!response.ok) {
-              throw new Error(`Directions API failed: ${response.status}`);
+              const errorText = await response.text();
+              console.error('Directions API error response:', errorText);
+              throw new Error(`Directions API failed: ${response.status} - ${errorText}`);
             }
             
             const data = await response.json();
+            console.log('Directions API Response data:', data);
             
             if (data.routes && data.routes.length > 0) {
               const route = data.routes[0];
               console.log('Successfully fetched walking route from Directions API');
+              console.log('Route geometry:', route.geometry);
               
               // Add route source with Directions API geometry
               map.current!.addSource('route', {
@@ -210,6 +221,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
                   geometry: route.geometry
                 }
               });
+              console.log('Added route source to map');
 
               // Add route layer with enhanced styling
               map.current!.addLayer({
@@ -221,30 +233,34 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
                   'line-cap': 'round'
                 },
                 paint: {
-                  'line-color': '#008457',
-                  'line-width': 5,
+                  'line-color': '#FF6B6B',
+                  'line-width': 6,
                   'line-opacity': 0.9
                 }
               });
+              console.log('Added route layer to map');
 
               // Fit map to route bounds with padding
               if (route.geometry && route.geometry.coordinates) {
                 const bounds = new mapboxgl.LngLatBounds();
                 route.geometry.coordinates.forEach((coord: [number, number]) => bounds.extend(coord));
                 map.current!.fitBounds(bounds, { padding: 80 });
+                console.log('Fitted map to route bounds');
               }
               
               return true; // Success
             } else {
+              console.error('No routes found in API response:', data);
               throw new Error('No routes found in API response');
             }
           } catch (error) {
-            console.warn('Mapbox Directions API failed, falling back to simple route:', error);
+            console.error('Mapbox Directions API failed, falling back to simple route:', error);
             return false; // Failed
           }
         };
 
         map.current!.on('load', async () => {
+          console.log('Map loaded, creating route...');
           if (!map.current!.getSource('route')) {
             // Try Directions API first
             const directionsSuccess = await getWalkingRoute();
@@ -252,6 +268,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
             // Fallback: simple LineString if Directions API fails
             if (!directionsSuccess) {
               console.log('Using fallback: simple LineString route');
+              console.log('Fallback route coordinates:', routeCoordinates);
               
               // Add simple route source (fallback)
               map.current!.addSource('route', {
@@ -265,6 +282,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
                   }
                 }
               });
+              console.log('Added fallback route source');
 
               // Add simple route layer (fallback)
               map.current!.addLayer({
@@ -276,20 +294,30 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
                   'line-cap': 'round'
                 },
                 paint: {
-                  'line-color': '#008457',
-                  'line-width': 4,
-                  'line-opacity': 0.8
+                  'line-color': '#FF6B6B',
+                  'line-width': 5,
+                  'line-opacity': 0.9
                 }
               });
+              console.log('Added fallback route layer');
               
               // Fit map to show all points (fallback)
               const bounds = new mapboxgl.LngLatBounds();
               routeCoordinates.forEach(coord => bounds.extend(coord));
               map.current!.fitBounds(bounds, { padding: 50 });
+              console.log('Fitted map to fallback route bounds');
             }
+          } else {
+            console.log('Route source already exists, skipping creation');
           }
         });
         setRouteCreated(true);
+        console.log('=== END ROUTE DEBUG ===');
+      } else {
+        console.log('Route creation skipped:', {
+          coordinatesLength: routeCoordinates.length,
+          routeCreated: routeCreated
+        });
       }
     };
 
