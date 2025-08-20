@@ -199,38 +199,27 @@ export default function ChatFlow() {
       console.log("Places returned:", response);
       
       // Fetch real photos for each place using Google Places API
-      console.log("=== DEBUG: Fetching photos for places ===");
-      const placesWithPhotos = await Promise.all(
-        response.map(async (place) => {
-          try {
-            console.log(`Searching for photos for: ${place.name}`);
-            const googlePlacesResponse = await searchPlacesByName({
-              placeName: place.name,
-              location: locationForSearch,
-              placeType: place.type
-            });
-            
-            // If we found a matching place with coordinates and photo, use them
-            if (googlePlacesResponse.length > 0) {
-              const foundPlace = googlePlacesResponse[0];
-              console.log(`Found place data for ${place.name}:`, foundPlace);
-              return {
-                ...place,
-                coordinates: foundPlace.coordinates,
-                lat: foundPlace.coordinates ? foundPlace.coordinates[1] : undefined,
-                lon: foundPlace.coordinates ? foundPlace.coordinates[0] : undefined,
-                photoUrl: foundPlace.photoUrl
-              };
-            } else {
-              console.log(`No place data found for ${place.name}`);
-              return place;
-            }
-          } catch (error) {
-            console.error(`Error fetching place data for ${place.name}:`, error);
-            return place;
-          }
-        })
-      );
+      console.log("=== DEBUG: Processing places with photos ===");
+      const placesWithPhotos: LLMPlace[] = response.map((place) => {
+        console.log(`Processing place: ${place.name}`, {
+          hasPhotoUrl: !!place.photoUrl,
+          photoUrl: place.photoUrl,
+          hasCoordinates: !!place.coordinates,
+          lat: place.lat,
+          lon: place.lon
+        });
+        
+        // If the place already has coordinates and photo from the main API, use them
+        if (place.photoUrl || (place.lat && place.lon)) {
+          return {
+            ...place,
+            coordinates: place.lat && place.lon ? [place.lon, place.lat] as [number, number] : place.coordinates
+          };
+        }
+        
+        // Otherwise, return the place as-is
+        return place;
+      });
       
       console.log("=== DEBUG: Places with photos and coordinates ===");
       console.log("Places with photos:", placesWithPhotos);
