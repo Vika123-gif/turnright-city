@@ -60,15 +60,46 @@ const DetailedMapStep: React.FC<Props> = ({
           <div key={i} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             {/* Place Image with Overlay */}
             <div className="relative">
-              <div className="w-full h-40 bg-gradient-to-br from-blue-100 via-green-100 to-blue-200 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/20"></div>
-                <div className="relative text-white text-lg font-bold text-center px-4">
-                  {place.name}
+              {place.photoUrl ? (
+                <div className="w-full h-40 overflow-hidden">
+                  <img 
+                    src={place.photoUrl} 
+                    alt={place.name}
+                    className="w-full h-full object-cover"
+                    onLoad={() => console.log(`DetailedMapStep: Photo loaded for ${place.name}`)}
+                    onError={(e) => {
+                      console.error(`DetailedMapStep: Photo failed to load for ${place.name}:`, place.photoUrl);
+                      // Hide image and show fallback
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                  <div className="w-full h-40 bg-gradient-to-br from-blue-100 via-green-100 to-blue-200 items-center justify-center hidden">
+                    <div className="absolute inset-0 bg-black/20"></div>
+                    <div className="relative text-white text-lg font-bold text-center px-4">
+                      {place.name}
+                    </div>
+                  </div>
                 </div>
-                <div className="absolute top-3 left-3 bg-white/90 text-gray-800 px-2 py-1 rounded-full text-sm font-medium">
-                  #{i + 1}
+              ) : (
+                <div className="w-full h-40 bg-gradient-to-br from-blue-100 via-green-100 to-blue-200 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/20"></div>
+                  <div className="relative text-white text-lg font-bold text-center px-4">
+                    {place.name}
+                  </div>
                 </div>
+              )}
+              <div className="absolute top-3 left-3 bg-white/90 text-gray-800 px-2 py-1 rounded-full text-sm font-medium">
+                #{i + 1}
               </div>
+              {place.photoUrl && (
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                  <div className="text-white text-lg font-bold text-center px-4">
+                    {place.name}
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* Detailed Info */}

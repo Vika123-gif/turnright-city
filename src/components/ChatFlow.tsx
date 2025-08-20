@@ -198,28 +198,69 @@ export default function ChatFlow() {
       console.log("=== DEBUG: Places Response ===");
       console.log("Places returned:", response);
       
-      // Fetch real photos for each place using Google Places API
-      console.log("=== DEBUG: Processing places with photos ===");
-      const placesWithPhotos: LLMPlace[] = response.map((place) => {
-        console.log(`Processing place: ${place.name}`, {
-          hasPhotoUrl: !!place.photoUrl,
-          photoUrl: place.photoUrl,
-          hasCoordinates: !!place.coordinates,
-          lat: place.lat,
-          lon: place.lon
-        });
-        
-        // If the place already has coordinates and photo from the main API, use them
-        if (place.photoUrl || (place.lat && place.lon)) {
-          return {
-            ...place,
-            coordinates: place.lat && place.lon ? [place.lon, place.lat] as [number, number] : place.coordinates
-          };
-        }
-        
-        // Otherwise, return the place as-is
-        return place;
-      });
+      // Enrich places with real photos and coordinates using Google Places API
+      console.log("=== DEBUG: Enriching places with Google Places data ===");
+      const placesWithPhotos: LLMPlace[] = await Promise.all(
+        response.map(async (place, index) => {
+          console.log(`\n--- Processing place ${index + 1}: ${place.name} ---`);
+          console.log("Original place data:", {
+            name: place.name,
+            address: place.address,
+            hasPhotoUrl: !!place.photoUrl,
+            photoUrl: place.photoUrl,
+            type: place.type
+          });
+          
+          try {
+            // Use Google Places API to get real photos and coordinates
+            const googlePlacesResponse = await searchPlacesByName({
+              placeName: place.name,
+              location: locationForSearch,
+              placeType: place.type
+            });
+            
+            console.log(`Google Places found ${googlePlacesResponse.length} results for ${place.name}`);
+            
+            if (googlePlacesResponse.length > 0) {
+              const foundPlace = googlePlacesResponse[0];
+              console.log("Google Places data:", {
+                name: foundPlace.name,
+                address: foundPlace.address,
+                hasPhotoUrl: !!foundPlace.photoUrl,
+                photoUrl: foundPlace.photoUrl,
+                coordinates: foundPlace.coordinates,
+                walkingTime: foundPlace.walkingTime
+              });
+              
+              // Merge the data, prioritizing Google Places photos and coordinates
+              const enrichedPlace: LLMPlace = {
+                ...place,
+                photoUrl: foundPlace.photoUrl || place.photoUrl,
+                coordinates: foundPlace.coordinates || place.coordinates,
+                lat: foundPlace.coordinates ? foundPlace.coordinates[1] : place.lat,
+                lon: foundPlace.coordinates ? foundPlace.coordinates[0] : place.lon,
+                walkingTime: foundPlace.walkingTime || place.walkingTime,
+                address: foundPlace.address || place.address
+              };
+              
+              console.log("Final enriched place:", {
+                name: enrichedPlace.name,
+                hasPhotoUrl: !!enrichedPlace.photoUrl,
+                photoUrl: enrichedPlace.photoUrl,
+                coordinates: enrichedPlace.coordinates
+              });
+              
+              return enrichedPlace;
+            } else {
+              console.log(`No Google Places match found for ${place.name}, using original data`);
+              return place;
+            }
+          } catch (error) {
+            console.error(`Error enriching place data for ${place.name}:`, error);
+            return place;
+          }
+        })
+      );
       
       console.log("=== DEBUG: Places with photos and coordinates ===");
       console.log("Places with photos:", placesWithPhotos);
