@@ -15,7 +15,15 @@ const PlacesList: React.FC<Props> = ({ places }) => {
       hasPhotoUrl: !!place.photoUrl,
       photoUrl: place.photoUrl,
       walkingTime: place.walkingTime,
-      visitDuration: place.visitDuration
+      visitDuration: place.visitDuration,
+      hasDescription: !!place.description,
+      description: place.description,
+      hasOpeningHours: !!(place.openingHours && place.openingHours.length > 0),
+      openingHours: place.openingHours,
+      hasTicketPrice: !!place.ticketPrice,
+      ticketPrice: place.ticketPrice,
+      hasWebsite: !!place.website,
+      website: place.website
     });
   });
 
