@@ -72,18 +72,36 @@ export function useOpenAI() {
       
       console.log("=== DEBUG: TripAdvisor Places ===", tripAdvisorData.places);
       
-      // Convert TripAdvisor response to LLMPlace format
-      const places: LLMPlace[] = tripAdvisorData.places.map((place: any) => ({
-        name: place.name,
-        address: place.address,
-        walkingTime: place.walkingTime,
-        type: place.type,
-        reason: place.reason,
-        coordinates: place.coordinates,
-        lat: place.lat,
-        lon: place.lon,
-        photoUrl: place.photoUrl,
-      }));
+      // Convert TripAdvisor response to LLMPlace format with complete field validation
+      const places: LLMPlace[] = tripAdvisorData.places.map((place: any) => {
+        // Ensure we have coordinates in both formats
+        const lat = place.lat || place.latitude;
+        const lon = place.lon || place.longitude;
+        const coordinates: [number, number] | undefined = 
+          (lat && lon) ? [lon, lat] : undefined; // [lng, lat] format for Mapbox
+        
+        const mappedPlace: LLMPlace = {
+          name: place.name || 'Unknown Place',
+          address: place.address || place.vicinity || 'Address not available',
+          walkingTime: place.walkingTime || place.walkingTimeFromPrevious || 5,
+          type: place.type || place.typeNormalized || 'attraction',
+          reason: place.reason || `Recommended ${place.type || 'place'}`,
+          lat: lat,
+          lon: lon,
+          coordinates: coordinates,
+          photoUrl: place.photoUrl || place.photo_url,
+        };
+        
+        console.log("Mapped place data:", {
+          name: mappedPlace.name,
+          hasAddress: !!mappedPlace.address,
+          hasCoordinates: !!(mappedPlace.lat && mappedPlace.lon),
+          hasPhotoUrl: !!mappedPlace.photoUrl,
+          coordinates: mappedPlace.coordinates
+        });
+        
+        return mappedPlace;
+      }).filter(place => place.name && (place.address || (place.lat && place.lon))); // Ensure minimum viable data
       
       console.log("=== DEBUG: Final Places from TripAdvisor ===", places);
       return places;

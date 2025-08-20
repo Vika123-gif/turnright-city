@@ -627,8 +627,16 @@ export default function ChatFlow() {
               onReset={reset}
             />
             {console.log("=== DEBUG: DetailedMapStep rendered ===")}
-            {console.log("Location/Origin:", location)}
-            {console.log("Places:", places?.map(p => ({ name: p.name, address: p.address })))}
+            {console.log("Enhanced Origin Data - Location String:", location)}
+            {console.log("Enhanced Origin Data - Coordinates:", coordinates)}
+            {console.log("Places with all data:", places?.map(p => ({ 
+              name: p.name, 
+              address: p.address, 
+              lat: p.lat, 
+              lon: p.lon, 
+              hasCoordinates: !!(p.lat && p.lon),
+              photoUrl: p.photoUrl ? 'present' : 'missing'
+            })))}
           </>
         )}
       </div>
