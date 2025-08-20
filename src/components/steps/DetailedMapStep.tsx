@@ -31,7 +31,17 @@ const DetailedMapStep: React.FC<Props> = ({
 
   // Create full route Google Maps link
   const createRouteLink = (startLocation: string, destinations: LLMPlace[]): string => {
-    if (!destinations.length) return 'https://maps.google.com';
+    console.log('Creating route link with:', { startLocation, destinations });
+    
+    if (!destinations.length) {
+      console.log('No destinations found, returning default maps URL');
+      return 'https://maps.google.com';
+    }
+
+    if (!startLocation) {
+      console.log('No start location provided');
+      return 'https://maps.google.com';
+    }
 
     const originParam = encodeURIComponent(startLocation);
     
@@ -41,6 +51,8 @@ const DetailedMapStep: React.FC<Props> = ({
       ? `${lastPlace.lat},${lastPlace.lon}`
       : encodeURIComponent(lastPlace.address || lastPlace.name);
 
+    console.log('Origin:', originParam, 'Destination:', destinationParam);
+
     // Get waypoints (all places except the last one)
     const waypoints = destinations.slice(0, -1).map(place => {
       if (place.lat && place.lon) {
@@ -49,12 +61,15 @@ const DetailedMapStep: React.FC<Props> = ({
       return encodeURIComponent(place.address || place.name);
     });
 
+    console.log('Waypoints:', waypoints);
+
     let routeUrl = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destinationParam}&travelmode=walking`;
     
     if (waypoints.length > 0) {
       routeUrl += `&waypoints=${waypoints.join('|')}`;
     }
 
+    console.log('Generated route URL:', routeUrl);
     return routeUrl;
   };
 
