@@ -21,6 +21,23 @@ const TIME_TO_MAX_STOPS = {
   '2+ hours': 4
 };
 
+// Haversine distance formula for walking time
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c * 1000; // Distance in meters
+}
+
+function estimateWalkingTime(distance) {
+  const walkingSpeed = 80; // Meters per minute (4.8 km/h average)
+  return Math.round(distance / walkingSpeed);
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -231,13 +248,13 @@ Candidates:
 ${enrichedCandidates.map(p => `- ${p.name} (${p.typeNormalized}) at ${p.lat}, ${p.lon} - Rating: ${p.rating || 'N/A'} (${p.user_ratings_total || 0} reviews)`).join('\n')}
 
 Requirements:
-1. Select exactly ${maxStops} diverse stops that best match the user goals
-2. Order them in a logical walking sequence starting near the user's location
-3. Ensure variety and interesting experiences
-4. Provide a brief reason (1-2 lines) for each selection
-5. Estimate walking time between stops (rough haversine distance is fine)
+1. Select exactly ${maxStops} diverse stops that best match the user goals: ${goals.join(', ')}
+2. Order them in a logical walking sequence, starting with the closest stop to the user location (${lat}, ${lng})
+3. Consider walking distance between stops - minimize total walking time while maintaining variety
+4. Provide a brief reason (1-2 sentences) explaining why each place fits the user goals
+5. Ensure variety and interesting experiences
 
-Return ONLY a JSON object in this exact format:
+Return ONLY a valid JSON object with no additional text:
 {
   "stops": [
     {
@@ -280,9 +297,17 @@ Return ONLY a JSON object in this exact format:
           console.log('GPT Response:', gptContent);
           
           try {
-            const gptResult = JSON.parse(gptContent);
+            // Clean the GPT response (remove any markdown formatting)
+            let cleanContent = gptContent.trim();
+            if (cleanContent.startsWith('```json')) {
+              cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+            } else if (cleanContent.startsWith('```')) {
+              cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+            }
             
-            if (gptResult.stops && Array.isArray(gptResult.stops)) {
+            const gptResult = JSON.parse(cleanContent);
+            
+            if (gptResult.stops && Array.isArray(gptResult.stops) && gptResult.stops.length > 0) {
               // Enrich GPT selections with full data from candidates
               finalStops = gptResult.stops.map(stop => {
                 const candidate = enrichedCandidates.find(c => 
@@ -297,19 +322,21 @@ Return ONLY a JSON object in this exact format:
                   type: stop.type,
                   webUrl: candidate?.webUrl || '',
                   photoUrl: candidate?.photoUrl || '',
-                  reason: stop.reason,
+                  reason: stop.reason || `${stop.type} stop`,
                   address: candidate?.address || 'Address not available',
-                  walkingTime: 5 // Will be calculated properly later if needed
+                  walkingTime: 5 // Will be calculated properly in next step
                 };
-              });
+              }).filter(stop => stop.name && stop.lat && stop.lon); // Filter out invalid stops
               
-              console.log(`GPT selected ${finalStops.length} stops`);
+              console.log(`GPT selected ${finalStops.length} valid stops`);
             } else {
-              throw new Error('Invalid GPT response structure');
+              console.log('GPT response missing stops array or empty, using fallback');
+              throw new Error('Invalid GPT response structure - no valid stops found');
             }
           } catch (parseError) {
             console.error('Error parsing GPT response:', parseError);
-            throw new Error('Failed to parse GPT response');
+            console.log('Raw GPT content:', gptContent);
+            throw new Error(`Failed to parse GPT response: ${parseError.message}`);
           }
         } else {
           throw new Error(`GPT API request failed: ${gptResponse.status}`);
@@ -335,12 +362,67 @@ Return ONLY a JSON object in this exact format:
       }
     }
 
+    // STEP 4: Calculate walking times and generate map route
+    console.log('=== Calculating walking times and generating map route ===');
+    
+    let mapUrl = null;
+    let totalWalkingTime = 0;
+    
+    if (finalStops.length > 0) {
+      try {
+        // Calculate walking times between stops
+        if (finalStops.length > 1) {
+          // Add walking time from start to first stop
+          const distToFirst = calculateDistance(lat, lng, finalStops[0].lat, finalStops[0].lon);
+          finalStops[0].walkingTimeFromPrevious = estimateWalkingTime(distToFirst);
+          totalWalkingTime += finalStops[0].walkingTimeFromPrevious;
+
+          // Calculate walking times between consecutive stops
+          for (let i = 1; i < finalStops.length; i++) {
+            const dist = calculateDistance(
+              finalStops[i-1].lat, 
+              finalStops[i-1].lon, 
+              finalStops[i].lat, 
+              finalStops[i].lon
+            );
+            finalStops[i].walkingTimeFromPrevious = estimateWalkingTime(dist);
+            totalWalkingTime += finalStops[i].walkingTimeFromPrevious;
+          }
+        } else {
+          // Single stop - just calculate time from start
+          const distToFirst = calculateDistance(lat, lng, finalStops[0].lat, finalStops[0].lon);
+          finalStops[0].walkingTimeFromPrevious = estimateWalkingTime(distToFirst);
+          totalWalkingTime += finalStops[0].walkingTimeFromPrevious;
+        }
+
+        // Generate Google Maps URL for walking directions
+        if (finalStops.length > 1) {
+          const origin = `${lat},${lng}`;
+          const destination = `${finalStops[finalStops.length - 1].lat},${finalStops[finalStops.length - 1].lon}`;
+          const waypoints = finalStops.slice(0, -1).map(s => `${s.lat},${s.lon}`).join('|');
+          
+          mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=walking`;
+        } else if (finalStops.length === 1) {
+          // Single destination
+          mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${finalStops[0].lat},${finalStops[0].lon}&travelmode=walking`;
+        }
+        
+        console.log(`Total walking time: ${totalWalkingTime} minutes`);
+        console.log(`Map URL generated: ${mapUrl}`);
+        
+      } catch (error) {
+        console.error('Error calculating walking times or generating map route:', error);
+      }
+    }
+
     console.log(`Returning ${finalStops.length} final stops:`, finalStops.map(s => s.name));
 
     return new Response(
       JSON.stringify({ 
         success: finalStops.length > 0, 
         places: finalStops,
+        mapUrl,
+        totalWalkingTime,
         source: 'google_places_with_gpt_selection',
         debug: {
           candidatesCollected: allCandidates.length,
@@ -348,6 +430,7 @@ Return ONLY a JSON object in this exact format:
           finalStopsReturned: finalStops.length,
           maxStopsRequested: maxStops,
           searchRadius: radius,
+          totalWalkingTime,
           location: { lat, lng },
           goals,
           timeWindow
