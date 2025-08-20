@@ -13,6 +13,10 @@ export type LLMPlace = {
   lon?: number;
   coordinates?: [number, number]; // [lng, lat] from Mapbox
   photoUrl?: string; // Google Places photo URL
+  description?: string; // Interesting facts and useful information
+  openingHours?: string[]; // Opening hours for each day
+  ticketPrice?: string; // Ticket price information
+  website?: string; // Official website
 };
 
 // Inserted user-provided OpenAI API key below.
@@ -92,6 +96,10 @@ export function useOpenAI() {
           lon: lon,
           coordinates: coordinates,
           photoUrl: place.photoUrl || place.photo_url,
+          description: place.description,
+          openingHours: place.openingHours,
+          ticketPrice: place.ticketPrice,
+          website: place.website,
         };
         
         console.log("Mapped place data:", {

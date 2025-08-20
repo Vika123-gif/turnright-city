@@ -26,6 +26,85 @@ const SPECIFIC_TYPE_DURATION = {
   'night_club': 45          // Bars/Nightlife
 };
 
+// Function to generate interesting descriptions for places
+function generatePlaceDescription(place, details, normalizedType) {
+  let description = '';
+  
+  // Use editorial summary if available
+  if (details.editorial_summary?.overview) {
+    description = details.editorial_summary.overview;
+  } else {
+    // Generate description based on type
+    switch (normalizedType) {
+      case 'museum':
+        description = `A cultural institution featuring exhibitions and collections. Perfect for exploring art, history, and culture.`;
+        break;
+      case 'park':
+        description = `A green space ideal for relaxation, walking, and enjoying nature in the city.`;
+        break;
+      case 'restaurant':
+        description = `Local dining experience offering authentic flavors and cuisine.`;
+        break;
+      case 'bar':
+        description = `Popular spot for drinks and socializing with locals and visitors.`;
+        break;
+      case 'attraction':
+        description = `Notable landmark and point of interest worth visiting for its unique character.`;
+        break;
+      default:
+        description = `Interesting location that offers a unique local experience.`;
+    }
+  }
+  
+  // Add rating information if available
+  if (details.rating && details.user_ratings_total) {
+    description += ` Rated ${details.rating}/5 by ${details.user_ratings_total.toLocaleString()} visitors.`;
+  }
+  
+  return description;
+}
+
+// Function to generate ticket price information
+function generateTicketPriceInfo(details, normalizedType) {
+  const priceLevel = details.price_level;
+  
+  // Generate price info based on type and price level
+  if (normalizedType === 'museum') {
+    switch (priceLevel) {
+      case 0: return 'Free admission';
+      case 1: return 'Budget-friendly admission (under €10)';
+      case 2: return 'Moderate admission (€10-20)';
+      case 3: return 'Higher admission (€20-35)';
+      case 4: return 'Premium admission (€35+)';
+      default: return 'Check website for current ticket prices';
+    }
+  }
+  
+  if (normalizedType === 'restaurant') {
+    switch (priceLevel) {
+      case 0: return 'Very affordable dining';
+      case 1: return 'Budget dining (€5-15 per meal)';
+      case 2: return 'Mid-range dining (€15-35 per meal)';
+      case 3: return 'Upscale dining (€35-60 per meal)';
+      case 4: return 'Fine dining (€60+ per meal)';
+      default: return 'Price range varies';
+    }
+  }
+  
+  if (normalizedType === 'attraction') {
+    switch (priceLevel) {
+      case 0: return 'Free to visit';
+      case 1: return 'Low cost attraction';
+      case 2: return 'Moderate entrance fee';
+      case 3: return 'Higher entrance fee';
+      case 4: return 'Premium attraction pricing';
+      default: return 'Check for entrance fees';
+    }
+  }
+  
+  return null; // No price info for parks, bars, etc.
+}
+
 // Function to get visit duration for a place type
 function getPlaceVisitDuration(placeTypes) {
   // Check museums first (priority over generic tourist attractions)
@@ -347,8 +426,8 @@ serve(async (req) => {
     
     for (const place of allCandidates.slice(0, 40)) { // Limit to 40 for performance
       try {
-        // Get place details
-        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=url,website,opening_hours,rating,user_ratings_total,photos&key=${googleApiKey}`;
+        // Get place details with more comprehensive information
+        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=url,website,opening_hours,rating,user_ratings_total,photos,editorial_summary,price_level,formatted_phone_number&key=${googleApiKey}`;
         const detailsResponse = await fetch(detailsUrl);
         const detailsData = await detailsResponse.json();
         
@@ -402,6 +481,15 @@ serve(async (req) => {
           continue;
         }
         
+        // Generate description with interesting facts
+        const description = generatePlaceDescription(place, details, normalizedType);
+        
+        // Format opening hours
+        const openingHours = details.opening_hours?.weekday_text || [];
+        
+        // Generate ticket price info
+        const ticketPrice = generateTicketPriceInfo(details, normalizedType);
+        
         const enrichedPlace = {
           name: place.name,
           address: place.vicinity || place.formatted_address || 'Address not available',
@@ -410,9 +498,13 @@ serve(async (req) => {
           types: place.types || [],
           typeNormalized: normalizedType,
           webUrl: details.url || details.website,
+          website: details.website,
           photoUrl: photoUrl,
           rating: details.rating || place.rating,
-          user_ratings_total: details.user_ratings_total || place.user_ratings_total
+          user_ratings_total: details.user_ratings_total || place.user_ratings_total,
+          description: description,
+          openingHours: openingHours,
+          ticketPrice: ticketPrice
         };
         
         enrichedCandidates.push(enrichedPlace);
@@ -454,7 +546,11 @@ serve(async (req) => {
       reason: `${place.typeNormalized} - ${getPlaceVisitDuration(place.types || [])} min visit`,
       address: place.address,
       walkingTime: 5, // Will be calculated properly in next step
-      visitDuration: getPlaceVisitDuration(place.types || [])
+      visitDuration: getPlaceVisitDuration(place.types || []),
+      description: place.description,
+      openingHours: place.openingHours,
+      ticketPrice: place.ticketPrice,
+      website: place.website
     }));
 
     // STEP 4: Calculate walking times and generate map route

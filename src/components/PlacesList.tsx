@@ -76,6 +76,56 @@ const PlacesList: React.FC<Props> = ({ places }) => {
                 <div className="text-lg font-semibold">{place.name}</div>
                 <div className="text-sm text-gray-600 mb-2">{place.address}</div>
                 
+                {/* Description */}
+                {place.description && (
+                  <div className="text-sm text-gray-700 mb-3 leading-relaxed">
+                    {place.description}
+                  </div>
+                )}
+                
+                {/* Practical Information */}
+                <div className="space-y-2 mb-3">
+                  {place.ticketPrice && (
+                    <div className="text-sm text-gray-600 flex items-center gap-2">
+                      <span className="text-primary">💰</span>
+                      <span className="font-medium">Price:</span> {place.ticketPrice}
+                    </div>
+                  )}
+                  
+                  {place.openingHours && place.openingHours.length > 0 && (
+                    <div className="text-sm text-gray-600">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-primary">🕒</span>
+                        <span className="font-medium">Opening Hours:</span>
+                      </div>
+                      <div className="ml-6 space-y-1">
+                        {place.openingHours.slice(0, 2).map((hours, idx) => (
+                          <div key={idx} className="text-xs">{hours}</div>
+                        ))}
+                        {place.openingHours.length > 2 && (
+                          <div className="text-xs text-gray-500">
+                            +{place.openingHours.length - 2} more days
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {place.website && (
+                    <div className="text-sm">
+                      <a 
+                        href={place.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-primary/80 font-medium flex items-center gap-2"
+                      >
+                        <span>🌐</span>
+                        Visit Website
+                      </a>
+                    </div>
+                  )}
+                </div>
+                
                 {/* Time Information */}
                 <div className="flex flex-wrap gap-2 text-xs">
                   <div className="bg-blue-50 text-blue-600 px-2 py-1 rounded-full">
