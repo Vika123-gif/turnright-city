@@ -181,46 +181,115 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
 
       // Add route line if we have coordinates
       if (routeCoordinates.length > 1 && !routeCreated) {
-        map.current!.on('load', () => {
-          if (!map.current!.getSource('route')) {
-            // Add route source
-            map.current!.addSource('route', {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                  type: 'LineString',
-                  coordinates: routeCoordinates
+        // Try to get walking route from Mapbox Directions API
+        const getWalkingRoute = async () => {
+          try {
+            // Build Directions API request URL
+            const coordinates = routeCoordinates.map(coord => `${coord[0]},${coord[1]}`).join(';');
+            const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?geometries=geojson&overview=full&steps=true&access_token=${mapboxToken}`;
+            
+            console.log('Fetching walking route from Mapbox Directions API...');
+            const response = await fetch(directionsUrl);
+            
+            if (!response.ok) {
+              throw new Error(`Directions API failed: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.routes && data.routes.length > 0) {
+              const route = data.routes[0];
+              console.log('Successfully fetched walking route from Directions API');
+              
+              // Add route source with Directions API geometry
+              map.current!.addSource('route', {
+                type: 'geojson',
+                data: {
+                  type: 'Feature',
+                  properties: {},
+                  geometry: route.geometry
                 }
-              }
-            });
+              });
 
-            // Add route layer
-            map.current!.addLayer({
-              id: 'route',
-              type: 'line',
-              source: 'route',
-              layout: {
-                'line-join': 'round',
-                'line-cap': 'round'
-              },
-              paint: {
-                'line-color': '#008457',
-                'line-width': 4,
-                'line-opacity': 0.8
+              // Add route layer with enhanced styling
+              map.current!.addLayer({
+                id: 'route-line',
+                type: 'line',
+                source: 'route',
+                layout: {
+                  'line-join': 'round',
+                  'line-cap': 'round'
+                },
+                paint: {
+                  'line-color': '#008457',
+                  'line-width': 5,
+                  'line-opacity': 0.9
+                }
+              });
+
+              // Fit map to route bounds with padding
+              if (route.geometry && route.geometry.coordinates) {
+                const bounds = new mapboxgl.LngLatBounds();
+                route.geometry.coordinates.forEach((coord: [number, number]) => bounds.extend(coord));
+                map.current!.fitBounds(bounds, { padding: 80 });
               }
-            });
+              
+              return true; // Success
+            } else {
+              throw new Error('No routes found in API response');
+            }
+          } catch (error) {
+            console.warn('Mapbox Directions API failed, falling back to simple route:', error);
+            return false; // Failed
+          }
+        };
+
+        map.current!.on('load', async () => {
+          if (!map.current!.getSource('route')) {
+            // Try Directions API first
+            const directionsSuccess = await getWalkingRoute();
+            
+            // Fallback: simple LineString if Directions API fails
+            if (!directionsSuccess) {
+              console.log('Using fallback: simple LineString route');
+              
+              // Add simple route source (fallback)
+              map.current!.addSource('route', {
+                type: 'geojson',
+                data: {
+                  type: 'Feature',
+                  properties: {},
+                  geometry: {
+                    type: 'LineString',
+                    coordinates: routeCoordinates
+                  }
+                }
+              });
+
+              // Add simple route layer (fallback)
+              map.current!.addLayer({
+                id: 'route-line',
+                type: 'line',
+                source: 'route',
+                layout: {
+                  'line-join': 'round',
+                  'line-cap': 'round'
+                },
+                paint: {
+                  'line-color': '#008457',
+                  'line-width': 4,
+                  'line-opacity': 0.8
+                }
+              });
+              
+              // Fit map to show all points (fallback)
+              const bounds = new mapboxgl.LngLatBounds();
+              routeCoordinates.forEach(coord => bounds.extend(coord));
+              map.current!.fitBounds(bounds, { padding: 50 });
+            }
           }
         });
         setRouteCreated(true);
-      }
-
-      // Fit map to show all points
-      if (routeCoordinates.length > 0) {
-        const bounds = new mapboxgl.LngLatBounds();
-        routeCoordinates.forEach(coord => bounds.extend(coord));
-        map.current!.fitBounds(bounds, { padding: 50 });
       }
     };
 
