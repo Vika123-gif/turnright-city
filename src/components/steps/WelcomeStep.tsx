@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Button from "../Button";
 import { MapPin } from "lucide-react";
-import LisbonWaitlistModal from "../LisbonWaitlistModal";
+
 
 type Props = {
   onLocation: (loc: string, exitAction: 'detect_location' | 'manual_input') => void;
@@ -12,19 +12,8 @@ type Props = {
 const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
   const [loc, setLoc] = useState<string>(value || "");
   const [detecting, setDetecting] = useState(false);
-  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
+  
   const [locationConsent, setLocationConsent] = useState(false);
-
-  const isInLisbon = (lat: number, lon: number) => {
-    const bounds = {
-      minLat: 38.68,
-      maxLat: 38.82,
-      minLon: -9.28,
-      maxLon: -9.05
-    };
-    return lat >= bounds.minLat && lat <= bounds.maxLat && 
-           lon >= bounds.minLon && lon <= bounds.maxLon;
-  };
 
   const handleDetectLocation = () => {
     if (!locationConsent) {
@@ -38,12 +27,6 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
         (pos) => {
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
-          
-          if (!isInLisbon(lat, lon)) {
-            setDetecting(false);
-            setShowWaitlistModal(true);
-            return;
-          }
           
           const coords = lat.toFixed(5) + "," + lon.toFixed(5);
           setLoc(coords);
@@ -156,10 +139,6 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
         </div>
       </div>
 
-      <LisbonWaitlistModal 
-        open={showWaitlistModal}
-        onClose={() => setShowWaitlistModal(false)}
-      />
     </div>
   );
 };
