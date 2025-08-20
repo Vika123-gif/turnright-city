@@ -57,6 +57,9 @@ serve(async (req) => {
     const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     
+    console.log('Google API key length:', googleApiKey ? googleApiKey.length : 'null');
+    console.log('OpenAI API key length:', openaiApiKey ? openaiApiKey.length : 'null');
+    
     if (!googleApiKey) {
       console.error('Google API key not found');
       return new Response(
