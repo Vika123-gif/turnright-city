@@ -84,15 +84,29 @@ const PlacesList: React.FC<Props> = ({ places }) => {
                 <div className="text-lg font-semibold">{place.name}</div>
                 <div className="text-sm text-gray-600 mb-2">{place.address}</div>
                 
+                {/* Time Information - moved up for prominence */}
+                <div className="flex flex-wrap gap-2 text-xs mb-3">
+                  <div className="bg-blue-50 text-blue-600 px-2 py-1 rounded-full">
+                    🚶 {place.walkingTime || 0} min walk
+                  </div>
+                  <div className="bg-green-50 text-green-600 px-2 py-1 rounded-full">
+                    ⏱️ {place.visitDuration || 0} min visit
+                  </div>
+                  <div className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full font-medium">
+                    Total: {totalTimeAtPlace} min
+                  </div>
+                </div>
+                
                 {/* Description */}
                 {place.description && (
-                  <div className="text-sm text-gray-700 mb-3 leading-relaxed">
+                  <div className="text-sm text-gray-700 mb-3 leading-relaxed bg-blue-50 p-3 rounded-lg border-l-4 border-blue-200">
+                    <div className="font-medium text-blue-800 mb-1">ℹ️ Interesting Facts</div>
                     {place.description}
                   </div>
                 )}
                 
                 {/* Practical Information */}
-                <div className="space-y-2 mb-3">
+                <div className="space-y-2 mb-2">
                   {place.ticketPrice && (
                     <div className="text-sm text-gray-600 flex items-center gap-2">
                       <span className="text-primary">💰</span>
@@ -132,19 +146,6 @@ const PlacesList: React.FC<Props> = ({ places }) => {
                       </a>
                     </div>
                   )}
-                </div>
-                
-                {/* Time Information */}
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <div className="bg-blue-50 text-blue-600 px-2 py-1 rounded-full">
-                    🚶 {place.walkingTime || 0} min walk
-                  </div>
-                  <div className="bg-green-50 text-green-600 px-2 py-1 rounded-full">
-                    ⏱️ {place.visitDuration || 0} min visit
-                  </div>
-                  <div className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full font-medium">
-                    Total: {totalTimeAtPlace} min
-                  </div>
                 </div>
                 
                 {place.type && (
