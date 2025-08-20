@@ -240,20 +240,39 @@ export default function ChatFlow() {
                 lat: foundPlace.coordinates ? foundPlace.coordinates[1] : place.lat,
                 lon: foundPlace.coordinates ? foundPlace.coordinates[0] : place.lon,
                 walkingTime: foundPlace.walkingTime || place.walkingTime,
-                address: foundPlace.address || place.address
+                // Ensure we always have a usable address - prioritize Google Places
+                address: foundPlace.address || place.address || place.name
               };
               
               console.log("Final enriched place:", {
                 name: enrichedPlace.name,
                 hasPhotoUrl: !!enrichedPlace.photoUrl,
                 photoUrl: enrichedPlace.photoUrl,
-                coordinates: enrichedPlace.coordinates
+                coordinates: enrichedPlace.coordinates,
+                lat: enrichedPlace.lat,
+                lon: enrichedPlace.lon,
+                address: enrichedPlace.address
               });
               
               return enrichedPlace;
             } else {
-              console.log(`No Google Places match found for ${place.name}, using original data`);
-              return place;
+              console.log(`No Google Places match found for ${place.name}, using original data with fallbacks`);
+              // Ensure we have usable data even without Google Places match
+              const fallbackPlace: LLMPlace = {
+                ...place,
+                address: place.address || place.name,
+                // If no coordinates available, we'll rely on address-based Google Maps links
+              };
+              
+              console.log("Fallback place data:", {
+                name: fallbackPlace.name,
+                address: fallbackPlace.address,
+                lat: fallbackPlace.lat,
+                lon: fallbackPlace.lon,
+                hasCoordinates: !!(fallbackPlace.lat && fallbackPlace.lon)
+              });
+              
+              return fallbackPlace;
             }
           } catch (error) {
             console.error(`Error enriching place data for ${place.name}:`, error);
