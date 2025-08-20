@@ -60,11 +60,42 @@ function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng)
   
   console.log(`=== Time Budget Analysis for ${timeMinutes} minutes ===`);
   
-  // Sort candidates by distance from start for initial ordering
-  const sortedCandidates = candidatePlaces.sort((a, b) => {
+  // Calculate popularity score for each place (rating * log(reviews) + bonus for high ratings)
+  const placesWithScores = candidatePlaces.map(place => {
+    const rating = place.rating || 0;
+    const reviewCount = place.user_ratings_total || 0;
+    
+    // Popularity formula: rating weight + review count weight + high rating bonus
+    let popularityScore = 0;
+    if (rating > 0) {
+      popularityScore += rating * 2; // Rating counts as 2x multiplier
+      if (reviewCount > 0) {
+        popularityScore += Math.log(reviewCount + 1) * 0.5; // Logarithmic review count bonus
+      }
+      if (rating >= 4.5) popularityScore += 2; // Bonus for excellent rating
+      if (rating >= 4.0) popularityScore += 1; // Bonus for good rating
+    }
+    
+    return {
+      ...place,
+      popularityScore
+    };
+  });
+  
+  // Sort by popularity score (highest first), then by distance as secondary
+  const sortedCandidates = placesWithScores.sort((a, b) => {
+    const scoresDiff = b.popularityScore - a.popularityScore;
+    if (Math.abs(scoresDiff) > 0.5) return scoresDiff; // Significant popularity difference
+    
+    // If popularity is similar, prefer closer places
     const distA = calculateDistance(startLat, startLng, a.lat, a.lon);
     const distB = calculateDistance(startLat, startLng, b.lat, b.lon);
     return distA - distB;
+  });
+  
+  console.log('Top candidates by popularity:');
+  sortedCandidates.slice(0, 5).forEach((place, i) => {
+    console.log(`${i+1}. ${place.name} - Score: ${place.popularityScore.toFixed(1)} (Rating: ${place.rating}, Reviews: ${place.user_ratings_total})`);
   });
   
   const selectedStops = [];
@@ -80,7 +111,7 @@ function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng)
     );
     const visitDuration = getPlaceVisitDuration(firstStop.types || []);
     
-    console.log(`First stop: ${firstStop.name} - Walk: ${walkingTimeToFirst}min, Visit: ${visitDuration}min, Total: ${walkingTimeToFirst + visitDuration}min`);
+    console.log(`First stop: ${firstStop.name} - Walk: ${walkingTimeToFirst}min, Visit: ${visitDuration}min, Total: ${walkingTimeToFirst + visitDuration}min, Popularity: ${firstStop.popularityScore.toFixed(1)}`);
     
     if (walkingTimeToFirst + visitDuration <= remainingTime) {
       selectedStops.push(firstStop);
@@ -107,7 +138,7 @@ function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng)
     // Check if we have enough time for walking + visit + buffer
     const totalTimeNeeded = walkingTime + visitDuration + 5; // 5 min buffer
     
-    console.log(`Candidate: ${candidate.name} - Walk: ${walkingTime}min, Visit: ${visitDuration}min, Total needed: ${totalTimeNeeded}min, Remaining: ${remainingTime}min`);
+    console.log(`Candidate: ${candidate.name} - Walk: ${walkingTime}min, Visit: ${visitDuration}min, Total needed: ${totalTimeNeeded}min, Remaining: ${remainingTime}min, Popularity: ${candidate.popularityScore.toFixed(1)}`);
     
     if (totalTimeNeeded <= remainingTime) {
       selectedStops.push(candidate);
@@ -257,10 +288,10 @@ serve(async (req) => {
 
     console.log(`Time available: ${timeMinutes} minutes`);
 
-    // Calculate dynamic search radius based on available time (more time = wider search)
-    const radius = Math.min(3000, Math.max(800, timeMinutes * 6)); // 6m per minute of available time
+    // Use a larger search radius (10km+) to find more popular/famous places
+    const radius = Math.min(15000, Math.max(10000, timeMinutes * 15)); // 10-15km range
     
-    console.log(`Search parameters: radius=${radius}m, timeAvailable=${timeMinutes}min`);
+    console.log(`Search parameters: radius=${radius}m (${(radius/1000).toFixed(1)}km), timeAvailable=${timeMinutes}min`);
 
     // Get unique types for search
     const allTypes = goals.flatMap(goal => goalToTypesMap[goal] || ['point_of_interest']);
