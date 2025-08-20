@@ -607,6 +607,9 @@ export default function ChatFlow() {
               onBack={() => setStep("categories")}
               onReset={reset}
             />
+            {console.log("=== DEBUG: DetailedMapStep rendered ===")}
+            {console.log("Location/Origin:", location)}
+            {console.log("Places:", places?.map(p => ({ name: p.name, address: p.address })))}
           </>
         )}
       </div>
