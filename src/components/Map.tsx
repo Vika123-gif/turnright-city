@@ -95,7 +95,8 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
 
         // Create popup content
         const popupContent = `
-          <div style="padding: 8px; min-width: 200px;">
+          <div style="padding: 8px; min-width: 200px; max-width: 300px;">
+            ${place.photoUrl ? `<img src="${place.photoUrl}" alt="${place.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" onerror="this.style.display='none'">` : ''}
             <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #008457;">${place.name}</h3>
             <p style="margin: 0 0 4px 0; font-size: 14px; color: #666;">${place.address}</p>
             <p style="margin: 0; font-size: 12px; color: #888;">🚶 ${place.walkingTime} min walk</p>
