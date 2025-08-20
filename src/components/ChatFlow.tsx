@@ -189,7 +189,7 @@ export default function ChatFlow() {
       const response: LLMPlace[] = await getLLMPlaces({
         location: locationForSearch,
         goals: goalsToUse,
-        timeWindow: timeWindow?.toString() || "",
+        timeWindow: timeWindow || 60, // Pass as number (minutes), default to 1 hour
         userPrompt,
         regenerationAttempt: currentRegenerationCount,
         maxPlaces: 3,

@@ -5,21 +5,101 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Radius mapping by time window
-const TIME_TO_RADIUS = {
-  '30 minutes': 800,
-  '1 hour': 1500,
-  '1.5 hours': 2200,
-  '2+ hours': 3500
+// Average time spent at different place types (in minutes)
+const PLACE_TYPE_DURATION = {
+  'restaurant': 60,  // Restaurants
+  'cafe': 30,        // Cafés  
+  'bar': 45,         // Bars
+  'attraction': 20,  // Viewpoints/Architectural landmarks (average)
+  'park': 30,        // Parks
+  'museum': 60,      // Museums
+  'coworking': 60,   // Coworking
+  'bakery': 5,       // Bakery
+  'specialty_coffee': 20 // Specialty coffee
 };
 
-// Max stops by time window
-const TIME_TO_MAX_STOPS = {
-  '30 minutes': 1,
-  '1 hour': 2,
-  '1.5 hours': 3,
-  '2+ hours': 4
+// More specific type duration mapping
+const SPECIFIC_TYPE_DURATION = {
+  'tourist_attraction': 20,  // Viewpoints
+  'point_of_interest': 15,   // Architectural landmarks
+  'library': 60,             // Coworking spaces
+  'night_club': 45          // Bars/Nightlife
 };
+
+// Function to get visit duration for a place type
+function getPlaceVisitDuration(placeTypes) {
+  // Check specific types first
+  for (const type of placeTypes) {
+    if (SPECIFIC_TYPE_DURATION[type]) {
+      return SPECIFIC_TYPE_DURATION[type];
+    }
+  }
+  
+  // Check general types
+  if (placeTypes.includes('restaurant') || placeTypes.includes('cafe') || placeTypes.includes('bakery')) {
+    if (placeTypes.includes('bakery')) return PLACE_TYPE_DURATION.bakery;
+    if (placeTypes.includes('restaurant')) return PLACE_TYPE_DURATION.restaurant;
+    return PLACE_TYPE_DURATION.cafe;
+  }
+  if (placeTypes.includes('bar') || placeTypes.includes('night_club')) return PLACE_TYPE_DURATION.bar;
+  if (placeTypes.includes('park')) return PLACE_TYPE_DURATION.park;
+  if (placeTypes.includes('museum') || placeTypes.includes('art_gallery')) return PLACE_TYPE_DURATION.museum;
+  if (placeTypes.includes('library')) return PLACE_TYPE_DURATION.coworking;
+  
+  // Default for attractions/viewpoints
+  return PLACE_TYPE_DURATION.attraction;
+}
+
+// Function to calculate optimal number of stops based on total available time
+function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng) {
+  if (!candidatePlaces || candidatePlaces.length === 0) return [];
+  
+  // Sort candidates by distance from start for initial ordering
+  const sortedCandidates = candidatePlaces.sort((a, b) => {
+    const distA = calculateDistance(startLat, startLng, a.lat, a.lon);
+    const distB = calculateDistance(startLat, startLng, b.lat, b.lon);
+    return distA - distB;
+  });
+  
+  const selectedStops = [];
+  let remainingTime = timeMinutes;
+  
+  // Always include walking time from start to first location
+  if (sortedCandidates.length > 0) {
+    const firstStop = sortedCandidates[0];
+    const walkingTimeToFirst = estimateWalkingTime(
+      calculateDistance(startLat, startLng, firstStop.lat, firstStop.lon)
+    );
+    const visitDuration = getPlaceVisitDuration(firstStop.types || []);
+    
+    if (walkingTimeToFirst + visitDuration <= remainingTime) {
+      selectedStops.push(firstStop);
+      remainingTime -= (walkingTimeToFirst + visitDuration);
+    }
+  }
+  
+  // Add additional stops while time permits
+  for (let i = 1; i < sortedCandidates.length && selectedStops.length < 8; i++) {
+    const candidate = sortedCandidates[i];
+    const lastStop = selectedStops[selectedStops.length - 1];
+    
+    // Calculate walking time from last stop to this candidate
+    const walkingTime = estimateWalkingTime(
+      calculateDistance(lastStop.lat, lastStop.lon, candidate.lat, candidate.lon)
+    );
+    const visitDuration = getPlaceVisitDuration(candidate.types || []);
+    
+    // Check if we have enough time for walking + visit + buffer
+    const totalTimeNeeded = walkingTime + visitDuration + 5; // 5 min buffer
+    
+    if (totalTimeNeeded <= remainingTime) {
+      selectedStops.push(candidate);
+      remainingTime -= totalTimeNeeded;
+    }
+  }
+  
+  return selectedStops;
+}
 
 // Haversine distance formula for walking time
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -124,11 +204,33 @@ serve(async (req) => {
       'Viewpoints': ['tourist_attraction', 'point_of_interest']
     };
 
-    // Get radius and max stops based on time window
-    const radius = TIME_TO_RADIUS[timeWindow] || 1500;
-    const maxStops = TIME_TO_MAX_STOPS[timeWindow] || 2;
+    // Parse time window to get minutes
+    let timeMinutes;
+    if (typeof timeWindow === 'number') {
+      timeMinutes = timeWindow;
+    } else if (typeof timeWindow === 'string') {
+      // Legacy support for string time windows
+      const timeMap = {
+        '1h': 60,
+        '3h': 180,
+        '5h': 300,
+        'Full day': 480,
+        '30 minutes': 30,
+        '1 hour': 60,
+        '1.5 hours': 90,
+        '2+ hours': 120
+      };
+      timeMinutes = timeMap[timeWindow] || 60;
+    } else {
+      timeMinutes = 60; // Default to 1 hour
+    }
+
+    console.log(`Time available: ${timeMinutes} minutes`);
+
+    // Calculate dynamic search radius based on available time (more time = wider search)
+    const radius = Math.min(3000, Math.max(800, timeMinutes * 6)); // 6m per minute of available time
     
-    console.log(`Search parameters: radius=${radius}m, maxStops=${maxStops}`);
+    console.log(`Search parameters: radius=${radius}m, timeAvailable=${timeMinutes}min`);
 
     // Get unique types for search
     const allTypes = goals.flatMap(goal => goalToTypesMap[goal] || ['point_of_interest']);
@@ -220,8 +322,8 @@ serve(async (req) => {
 
     console.log(`Enriched ${enrichedCandidates.length} candidates`);
 
-    // STEP 3: GPT Selection and Ordering
-    console.log('=== Using GPT to select and order best stops ===');
+    // STEP 3: Calculate optimal stops based on time constraints
+    console.log('=== Calculating optimal stops based on time constraints ===');
     
     if (enrichedCandidates.length === 0) {
       return new Response(
@@ -234,145 +336,24 @@ serve(async (req) => {
       );
     }
 
-    let finalStops = [];
+    // Use the new time-based calculation
+    const optimalStops = calculateOptimalStops(timeMinutes, enrichedCandidates, lat, lng);
+    
+    console.log(`Selected ${optimalStops.length} optimal stops that fit within ${timeMinutes} minutes`);
 
-    // If we have fewer candidates than maxStops, just return them all
-    if (enrichedCandidates.length <= maxStops) {
-      finalStops = enrichedCandidates.map(place => ({
-        name: place.name,
-        lat: place.lat,
-        lon: place.lon,
-        type: place.typeNormalized,
-        webUrl: place.webUrl || '',
-        photoUrl: place.photoUrl || '',
-        reason: `${place.typeNormalized} in your area`,
-        address: place.address,
-        walkingTime: 5
-      }));
-    } else {
-      // Use GPT to select and order the best stops
-      try {
-        const prompt = `You are a local tour guide AI. Select the best ${maxStops} stops from the following candidates for a ${timeWindow} route based on these user goals: ${goals.join(', ')}.
-
-Starting location: ${lat}, ${lng}
-
-Candidates:
-${enrichedCandidates.map(p => `- ${p.name} (${p.typeNormalized}) at ${p.lat}, ${p.lon} - Rating: ${p.rating || 'N/A'} (${p.user_ratings_total || 0} reviews)`).join('\n')}
-
-Requirements:
-1. Select exactly ${maxStops} diverse stops that best match the user goals: ${goals.join(', ')}
-2. Order them in a logical walking sequence, starting with the closest stop to the user location (${lat}, ${lng})
-3. Consider walking distance between stops - minimize total walking time while maintaining variety
-4. Provide a brief reason (1-2 sentences) explaining why each place fits the user goals
-5. Ensure variety and interesting experiences
-
-Return ONLY a valid JSON object with no additional text:
-{
-  "stops": [
-    {
-      "name": "Place Name",
-      "lat": latitude,
-      "lon": longitude, 
-      "type": "restaurant|bar|park|museum|attraction",
-      "reason": "Brief explanation why this place fits the goals"
-    }
-  ]
-}`;
-
-        const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o',
-            messages: [
-              { 
-                role: 'system', 
-                content: 'You are a helpful local tour guide. Always respond with valid JSON only.' 
-              },
-              { 
-                role: 'user', 
-                content: prompt 
-              }
-            ],
-            max_tokens: 1000,
-            temperature: 0.7
-          }),
-        });
-
-        if (gptResponse.ok) {
-          const gptData = await gptResponse.json();
-          const gptContent = gptData.choices[0].message.content;
-          
-          console.log('GPT Response:', gptContent);
-          
-          try {
-            // Clean the GPT response (remove any markdown formatting)
-            let cleanContent = gptContent.trim();
-            if (cleanContent.startsWith('```json')) {
-              cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-            } else if (cleanContent.startsWith('```')) {
-              cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-            }
-            
-            const gptResult = JSON.parse(cleanContent);
-            
-            if (gptResult.stops && Array.isArray(gptResult.stops) && gptResult.stops.length > 0) {
-              // Enrich GPT selections with full data from candidates
-              finalStops = gptResult.stops.map(stop => {
-                const candidate = enrichedCandidates.find(c => 
-                  c.name === stop.name || 
-                  (Math.abs(c.lat - stop.lat) < 0.001 && Math.abs(c.lon - stop.lon) < 0.001)
-                );
-                
-                return {
-                  name: stop.name,
-                  lat: stop.lat,
-                  lon: stop.lon,
-                  type: stop.type,
-                  webUrl: candidate?.webUrl || '',
-                  photoUrl: candidate?.photoUrl || '',
-                  reason: stop.reason || `${stop.type} stop`,
-                  address: candidate?.address || 'Address not available',
-                  walkingTime: 5 // Will be calculated properly in next step
-                };
-              }).filter(stop => stop.name && stop.lat && stop.lon); // Filter out invalid stops
-              
-              console.log(`GPT selected ${finalStops.length} valid stops`);
-            } else {
-              console.log('GPT response missing stops array or empty, using fallback');
-              throw new Error('Invalid GPT response structure - no valid stops found');
-            }
-          } catch (parseError) {
-            console.error('Error parsing GPT response:', parseError);
-            console.log('Raw GPT content:', gptContent);
-            throw new Error(`Failed to parse GPT response: ${parseError.message}`);
-          }
-        } else {
-          throw new Error(`GPT API request failed: ${gptResponse.status}`);
-        }
-      } catch (gptError) {
-        console.error('GPT selection failed:', gptError);
-        
-        // Fallback: Take top N nearest candidates by goal-matching
-        console.log('Using fallback selection method');
-        finalStops = enrichedCandidates
-          .slice(0, maxStops)
-          .map(place => ({
-            name: place.name,
-            lat: place.lat,
-            lon: place.lon,
-            type: place.typeNormalized,
-            webUrl: place.webUrl || '',
-            photoUrl: place.photoUrl || '',
-            reason: `${place.typeNormalized} near your location`,
-            address: place.address,
-            walkingTime: 5
-          }));
-      }
-    }
+    // Convert to final format with enriched data
+    const finalStops = optimalStops.map(place => ({
+      name: place.name,
+      lat: place.lat,
+      lon: place.lon,
+      type: place.typeNormalized,
+      webUrl: place.webUrl || '',
+      photoUrl: place.photoUrl || '',
+      reason: `${place.typeNormalized} - ${getPlaceVisitDuration(place.types || [])} min visit`,
+      address: place.address,
+      walkingTime: 5, // Will be calculated properly in next step
+      visitDuration: getPlaceVisitDuration(place.types || [])
+    }));
 
     // STEP 4: Calculate walking times and generate map route
     console.log('=== Calculating walking times and generating map route ===');
@@ -435,14 +416,15 @@ Return ONLY a valid JSON object with no additional text:
         places: finalStops,
         mapUrl,
         totalWalkingTime,
-        source: 'google_places_with_gpt_selection',
+        source: 'google_places_with_time_optimization',
         debug: {
           candidatesCollected: allCandidates.length,
           candidatesEnriched: enrichedCandidates.length,
           finalStopsReturned: finalStops.length,
-          maxStopsRequested: maxStops,
+          timeAvailableMinutes: timeMinutes,
           searchRadius: radius,
           totalWalkingTime,
+          totalVisitTime: finalStops.reduce((sum, stop) => sum + (stop.visitDuration || 0), 0),
           location: { lat, lng },
           goals,
           timeWindow

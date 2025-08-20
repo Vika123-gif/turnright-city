@@ -38,7 +38,7 @@ export function useOpenAI() {
   }: {
     location: string;
     goals: string[];
-    timeWindow: string;
+    timeWindow: number; // Changed from string to number (minutes)
     userPrompt: string;
     regenerationAttempt?: number;
     maxPlaces?: number;
@@ -47,7 +47,7 @@ export function useOpenAI() {
     console.log("=== DEBUG: TripAdvisor-only route generation ===");
     console.log("Location received in hook:", location);
     console.log("Goals received in hook:", goals);
-    console.log("Time window:", timeWindow);
+    console.log("Time window (minutes):", timeWindow);
     
     try {
       // Call TripAdvisor function directly for route generation
@@ -56,7 +56,7 @@ export function useOpenAI() {
         body: { 
           location: location,
           goals: goals,
-          timeWindow: timeWindow
+          timeWindow: timeWindow // Pass as number directly
         }
       });
       
