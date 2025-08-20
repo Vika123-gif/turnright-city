@@ -74,7 +74,7 @@ const TimeStep: React.FC<Props> = ({ onNext, value }) => {
               placeholder="Minutes"
               value={customMinutes}
               onChange={(e) => setCustomMinutes(e.target.value)}
-              className="flex-1"
+              className="w-40"
               min="1"
             />
           )}
