@@ -118,7 +118,10 @@ serve(async (req) => {
       'Cafés': ['cafe', 'bakery'],
       'Bars': ['bar', 'night_club'],
       'Nightlife': ['bar', 'night_club'],
-      'Work spots': ['library']
+      'Coworking': ['library', 'cafe'],
+      'Bakery': ['bakery'],
+      'Specialty coffee': ['cafe'],
+      'Viewpoints': ['tourist_attraction', 'point_of_interest']
     };
 
     // Get radius and max stops based on time window

@@ -11,7 +11,9 @@ const CATEGORIES = [
   "Parks",
   "Museums",
   "Architectural landmarks",
-  "Work-friendly"
+  "Coworking",
+  "Bakery",
+  "Specialty coffee"
 ];
 
 type Props = {
