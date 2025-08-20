@@ -87,11 +87,15 @@ serve(async (req) => {
     } else {
       // Geocode string location
       const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${googleApiKey}`;
+      console.log('Geocoding URL:', geocodeUrl);
       const geocodeResponse = await fetch(geocodeUrl);
       const geocodeData = await geocodeResponse.json();
       
+      console.log('Geocode response:', JSON.stringify(geocodeData, null, 2));
+      
       if (!geocodeData.results || geocodeData.results.length === 0) {
-        throw new Error(`Could not geocode location: ${location}`);
+        console.error('Geocoding failed:', geocodeData);
+        throw new Error(`Could not geocode location: ${location}. Status: ${geocodeData.status}`);
       }
       
       lat = geocodeData.results[0].geometry.location.lat;
