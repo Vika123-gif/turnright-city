@@ -51,6 +51,7 @@ serve(async (req) => {
     console.log('Location:', location);
     console.log('Goals:', goals);
     console.log('Time Window:', timeWindow);
+    console.log('Environment check - OpenAI key available:', !!Deno.env.get('OPENAI_API_KEY'));
 
     const googleApiKey = Deno.env.get('GOOGLE_API_KEY');
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
