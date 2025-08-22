@@ -140,8 +140,8 @@ export default function ChatFlow() {
     console.log("Current regeneration count:", regenerationCount);
     
     // Check generation limit before proceeding
-    if (!canGenerate()) {
-      console.log("Generation limit exceeded");
+    if (!incrementGeneration()) {
+      console.log("Generation limit exceeded, showing donation modal");
       return;
     }
     
@@ -294,9 +294,6 @@ export default function ChatFlow() {
       console.log("Places with photos:", placesWithPhotos);
       
       setPlaces(placesWithPhotos);
-      
-      // Increment generation count
-      incrementGeneration();
       
       // Update regeneration count if this was a regeneration
       if (isRegeneration) {
