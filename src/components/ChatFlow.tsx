@@ -4,6 +4,7 @@ import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useDatabase } from "@/hooks/useDatabase";
+import { useGenerationLimit } from "@/hooks/useGenerationLimit";
 import { createClient } from "@supabase/supabase-js";
 import BackButton from "./BackButton";
 import WelcomeStep from "./steps/WelcomeStep";
@@ -14,6 +15,7 @@ import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
 import DetailedMapStep from "./steps/DetailedMapStep";
 import RouteRating from "./RouteRating";
+import { DonationModal } from "./DonationModal";
 
 // HARDCODED SUPABASE CREDENTIALS FOR TESTING ONLY
 const supabaseUrl = "https://gwwqfoplhhtyjkrhazbt.supabase.co";
@@ -49,6 +51,7 @@ export default function ChatFlow() {
   const { searchPlacesByName } = useGooglePlaces();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
   const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
+  const { canGenerate, incrementGeneration, getRemainingGenerations, showDonationModal, closeDonationModal } = useGenerationLimit();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -135,6 +138,12 @@ export default function ChatFlow() {
     console.log("User Session ID:", userSessionId);
     console.log("Is regeneration:", isRegeneration);
     console.log("Current regeneration count:", regenerationCount);
+    
+    // Check generation limit before proceeding
+    if (!canGenerate()) {
+      console.log("Generation limit exceeded");
+      return;
+    }
     
     setError(null);
     setGenerating(true);
@@ -285,6 +294,9 @@ export default function ChatFlow() {
       console.log("Places with photos:", placesWithPhotos);
       
       setPlaces(placesWithPhotos);
+      
+      // Increment generation count
+      incrementGeneration();
       
       // Update regeneration count if this was a regeneration
       if (isRegeneration) {
@@ -561,6 +573,7 @@ export default function ChatFlow() {
                 fetchPlacesWithGoals(categories);
               }}
               value={goals}
+              remainingGenerations={getRemainingGenerations()}
             />
           </>
         )}
@@ -640,6 +653,11 @@ export default function ChatFlow() {
           </>
         )}
       </div>
+      
+      <DonationModal 
+        isOpen={showDonationModal} 
+        onClose={closeDonationModal} 
+      />
     </div>
   );
 }
