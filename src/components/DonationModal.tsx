@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { ExternalLink } from 'lucide-react';
 
 interface DonationModalProps {
@@ -21,32 +20,31 @@ export function DonationModal({ isOpen, onClose }: DonationModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-center">
+      <DialogContent className="chat-card sm:max-w-lg border-0 shadow-elegant">
+        <DialogHeader className="text-center space-y-4">
+          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
             Thank You for Using TurnRight!
           </DialogTitle>
-          <DialogDescription className="text-center text-base leading-relaxed mt-4">
+          <DialogDescription className="text-lg leading-relaxed text-muted-foreground">
             Your support helps us maintain and improve this service with new features and better maps. 
             Consider donating to unlock more generations!
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex flex-col sm:flex-row gap-3 mt-6">
-          <Button 
+        <div className="flex flex-col sm:flex-row gap-4 mt-8">
+          <button 
             onClick={handleDonateClick}
-            className="flex-1 bg-[#FFDD00] hover:bg-[#FFDD00]/90 text-black font-medium"
+            className="primary-btn flex-1"
           >
-            <ExternalLink className="w-4 h-4 mr-2" />
+            <ExternalLink className="w-5 h-5 mr-2" />
             Donate Now
-          </Button>
-          <Button 
-            variant="outline" 
+          </button>
+          <button 
             onClick={onClose}
-            className="flex-1"
+            className="outline-btn flex-1"
           >
             Close
-          </Button>
+          </button>
         </div>
       </DialogContent>
     </Dialog>
