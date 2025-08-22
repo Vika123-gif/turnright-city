@@ -483,6 +483,7 @@ serve(async (req) => {
         
         // Generate description with interesting facts
         const description = generatePlaceDescription(place, details, normalizedType);
+        console.log(`Description generated for ${place.name}:`, description);
         
         // Format opening hours
         const openingHours = details.opening_hours?.weekday_text || [];

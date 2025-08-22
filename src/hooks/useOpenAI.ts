@@ -107,6 +107,8 @@ export function useOpenAI() {
           hasAddress: !!mappedPlace.address,
           hasCoordinates: !!(mappedPlace.lat && mappedPlace.lon),
           hasPhotoUrl: !!mappedPlace.photoUrl,
+          hasDescription: !!mappedPlace.description,
+          description: mappedPlace.description,
           coordinates: mappedPlace.coordinates
         });
         
