@@ -51,7 +51,7 @@ export default function ChatFlow() {
   const { searchPlacesByName } = useGooglePlaces();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
   const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
-  const { canGenerate, incrementGeneration, getRemainingGenerations, showDonationModal, closeDonationModal } = useGenerationLimit();
+  const { canGenerate, incrementGeneration, getRemainingGenerations, showDonationModal, closeDonationModal, resetGenerationCount } = useGenerationLimit();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -652,8 +652,9 @@ export default function ChatFlow() {
       </div>
       
       <DonationModal 
-        isOpen={showDonationModal} 
-        onClose={closeDonationModal} 
+        isOpen={showDonationModal}
+        onClose={closeDonationModal}
+        onReset={resetGenerationCount}
       />
     </div>
   );

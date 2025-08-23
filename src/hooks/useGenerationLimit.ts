@@ -40,6 +40,12 @@ export function useGenerationLimit() {
     setShowDonationModal(false);
   };
 
+  const resetGenerationCount = () => {
+    setGenerationCount(0);
+    localStorage.setItem(STORAGE_KEY, '0');
+    setShowDonationModal(false);
+  };
+
   return {
     generationCount,
     canGenerate,
@@ -47,6 +53,7 @@ export function useGenerationLimit() {
     getRemainingGenerations,
     showDonationModal,
     closeDonationModal,
+    resetGenerationCount,
     GENERATION_LIMIT
   };
 }
