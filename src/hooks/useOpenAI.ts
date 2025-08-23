@@ -78,7 +78,10 @@ export function useOpenAI() {
       console.log("=== DEBUG: TripAdvisor Places ===", tripAdvisorData.places);
       
       // Convert TripAdvisor response to LLMPlace format with complete field validation
-      const places: LLMPlace[] = tripAdvisorData.places.map((place: any) => {
+      const places: LLMPlace[] = tripAdvisorData.places.map((place: any, index: number) => {
+        console.log(`=== PROCESSING PLACE ${index + 1} ===`);
+        console.log("Raw place data:", JSON.stringify(place, null, 2));
+        
         // Ensure we have coordinates in both formats
         const lat = place.lat || place.latitude;
         const lon = place.lon || place.longitude;
@@ -115,10 +118,24 @@ export function useOpenAI() {
           coordinates: mappedPlace.coordinates
         });
         
+        // Log specific description debugging
+        console.log("=== DESCRIPTION DEBUG ===");
+        console.log("Raw place.description:", place.description);
+        console.log("Mapped description:", mappedPlace.description);
+        console.log("Description exists:", !!mappedPlace.description);
+        console.log("Description length:", mappedPlace.description?.length || 0);
+        
         return mappedPlace;
       }).filter(place => place.name && (place.address || (place.lat && place.lon))); // Ensure minimum viable data
       
       console.log("=== DEBUG: Final Places from TripAdvisor ===", places);
+      console.log("=== FINAL DESCRIPTION CHECK ===");
+      places.forEach((place, i) => {
+        console.log(`Place ${i + 1} - ${place.name}:`);
+        console.log("  Has description:", !!place.description);
+        console.log("  Description:", place.description);
+      });
+      
       return places;
       
     } catch (err) {

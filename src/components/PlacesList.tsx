@@ -97,11 +97,16 @@ const PlacesList: React.FC<Props> = ({ places }) => {
                   </div>
                 </div>
                 
-                {/* Description */}
-                {place.description && (
+                {/* Description - Enhanced with fallback */}
+                {place.description ? (
                   <div className="text-sm text-gray-700 mb-3 leading-relaxed bg-blue-50 p-3 rounded-lg border-l-4 border-blue-200">
                     <div className="font-medium text-blue-800 mb-1">ℹ️ Interesting Facts</div>
                     {place.description}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-600 mb-3 leading-relaxed bg-gray-50 p-3 rounded-lg border-l-4 border-gray-200">
+                    <div className="font-medium text-gray-700 mb-1">📍 About this place</div>
+                    {`A popular ${place.type || 'destination'} that offers a unique local experience. Perfect for exploring what the area has to offer.`}
                   </div>
                 )}
                 
