@@ -77,8 +77,8 @@ export function useOpenAI() {
       
       console.log("=== DEBUG: TripAdvisor Places ===", tripAdvisorData.places);
       
-      // Convert TripAdvisor response to LLMPlace format with complete field validation
-      const places: LLMPlace[] = tripAdvisorData.places.map((place: any, index: number) => {
+      // Convert TripAdvisor response to LLMPlace format and generate OpenAI descriptions
+      const allPlaces = await Promise.all(tripAdvisorData.places.map(async (place: any, index: number) => {
         console.log(`=== PROCESSING PLACE ${index + 1} ===`);
         console.log("Raw place data:", JSON.stringify(place, null, 2));
         
@@ -87,6 +87,43 @@ export function useOpenAI() {
         const lon = place.lon || place.longitude;
         const coordinates: [number, number] | undefined = 
           (lat && lon) ? [lon, lat] : undefined; // [lng, lat] format for Mapbox
+        
+        // Generate description using OpenAI
+        let generatedDescription = '';
+        try {
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are a travel guide. Generate a concise, informative description (2-3 sentences) about a tourist attraction. Focus on what makes it special, interesting facts, and what visitors can expect. Be engaging but factual.'
+                },
+                {
+                  role: 'user',
+                  content: `Generate a description for "${place.name}" in ${location}. Type: ${place.type || 'attraction'}. Address: ${place.address || 'Unknown address'}.`
+                }
+              ],
+              max_tokens: 150,
+              temperature: 0.7
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            generatedDescription = data.choices[0]?.message?.content || '';
+            console.log(`Generated description for ${place.name}:`, generatedDescription);
+          } else {
+            console.error(`Failed to generate description for ${place.name}`);
+          }
+        } catch (error) {
+          console.error(`Error generating description for ${place.name}:`, error);
+        }
         
         const mappedPlace: LLMPlace = {
           name: place.name || 'Unknown Place',
@@ -99,7 +136,7 @@ export function useOpenAI() {
           lon: lon,
           coordinates: coordinates,
           photoUrl: place.photoUrl || place.photo_url,
-          description: place.description,
+          description: generatedDescription || `A popular ${place.type || 'destination'} that offers a unique local experience.`,
           openingHours: place.openingHours,
           ticketPrice: place.ticketPrice,
           website: place.website,
@@ -126,7 +163,10 @@ export function useOpenAI() {
         console.log("Description length:", mappedPlace.description?.length || 0);
         
         return mappedPlace;
-      }).filter(place => place.name && (place.address || (place.lat && place.lon))); // Ensure minimum viable data
+      }));
+      
+      // Filter places to ensure minimum viable data
+      const places = allPlaces.filter(place => place.name && (place.address || (place.lat && place.lon)));
       
       console.log("=== DEBUG: Final Places from TripAdvisor ===", places);
       console.log("=== FINAL DESCRIPTION CHECK ===");
