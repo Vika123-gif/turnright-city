@@ -102,6 +102,8 @@ export function useOpenAI() {
           website: place.website,
         };
         
+        console.log("=== PLACE MAPPING DEBUG ===");
+        console.log("Raw place from API:", place);
         console.log("Mapped place data:", {
           name: mappedPlace.name,
           hasAddress: !!mappedPlace.address,
@@ -109,6 +111,7 @@ export function useOpenAI() {
           hasPhotoUrl: !!mappedPlace.photoUrl,
           hasDescription: !!mappedPlace.description,
           description: mappedPlace.description,
+          rawDescription: place.description,
           coordinates: mappedPlace.coordinates
         });
         
