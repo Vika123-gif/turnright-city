@@ -4,7 +4,7 @@ import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useDatabase } from "@/hooks/useDatabase";
-import { useGenerationLimit } from "@/hooks/useGenerationLimit";
+import { getQuota, consumeOne, initializeQuota } from "@/lib/limit";
 import { createClient } from "@supabase/supabase-js";
 import BackButton from "./BackButton";
 import WelcomeStep from "./steps/WelcomeStep";
@@ -15,7 +15,7 @@ import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
 import DetailedMapStep from "./steps/DetailedMapStep";
 import RouteRating from "./RouteRating";
-import { DonationModal } from "./DonationModal";
+import { PaywallModal } from "./PaywallModal";
 
 // HARDCODED SUPABASE CREDENTIALS FOR TESTING ONLY
 const supabaseUrl = "https://gwwqfoplhhtyjkrhazbt.supabase.co";
@@ -51,7 +51,7 @@ export default function ChatFlow() {
   const { searchPlacesByName } = useGooglePlaces();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
   const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
-  const { canGenerate, incrementGeneration, getRemainingGenerations, showDonationModal, closeDonationModal, resetGenerationCount } = useGenerationLimit();
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -59,6 +59,9 @@ export default function ChatFlow() {
   // Generate session ID and track visitor on component mount
   useEffect(() => {
     const initializeSession = async () => {
+      // Initialize quota system
+      initializeQuota();
+      
       if (!userSessionId) {
         const sessionId = generateSessionId(); // This will now get from localStorage or create new
         setUserSessionId(sessionId);
@@ -139,10 +142,21 @@ export default function ChatFlow() {
     console.log("Is regeneration:", isRegeneration);
     console.log("Current regeneration count:", regenerationCount);
     
-    // Check generation limit before proceeding
-    if (!incrementGeneration()) {
-      console.log("Generation limit exceeded, showing donation modal");
+    // Check quota before proceeding
+    const { unlocked, left } = getQuota();
+    if (!unlocked && left <= 0) {
+      console.log("Quota exceeded, showing paywall modal");
+      setShowPaywallModal(true);
       return;
+    }
+    
+    // Consume quota if not unlocked
+    if (!unlocked) {
+      if (!consumeOne()) {
+        console.log("Failed to consume quota");
+        setShowPaywallModal(true);
+        return;
+      }
     }
     
     setError(null);
@@ -570,7 +584,7 @@ export default function ChatFlow() {
                 fetchPlacesWithGoals(categories);
               }}
               value={goals}
-              remainingGenerations={getRemainingGenerations()}
+              remainingGenerations={getQuota().left}
             />
           </>
         )}
@@ -651,10 +665,9 @@ export default function ChatFlow() {
         )}
       </div>
       
-      <DonationModal 
-        isOpen={showDonationModal}
-        onClose={closeDonationModal}
-        onReset={resetGenerationCount}
+      <PaywallModal 
+        isOpen={showPaywallModal}
+        onClose={() => setShowPaywallModal(false)}
       />
     </div>
   );
