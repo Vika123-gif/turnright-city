@@ -102,14 +102,14 @@ export function useOpenAI() {
               messages: [
                 {
                   role: 'system',
-                  content: 'You are a travel guide. Generate a concise, informative description (2-3 sentences) about a tourist attraction. Focus on what makes it special, interesting facts, and what visitors can expect. Be engaging but factual.'
+                  content: 'You are a travel guide. Generate a comprehensive, informative description about a tourist attraction. Include what makes it special, interesting facts, what visitors can expect, and practical information. Always mention "Recommended visit: 20 minutes" for attractions. Be engaging but factual.'
                 },
                 {
                   role: 'user',
-                  content: `Generate a description for "${place.name}" in ${location}. Type: ${place.type || 'attraction'}. Address: ${place.address || 'Unknown address'}.`
+                  content: `Generate a detailed description for "${place.name}" in ${location}. Type: ${place.type || 'attraction'}. Address: ${place.address || 'Unknown address'}. Include interesting facts, visitor experience, and practical tips. End with "Recommended visit: 20 minutes."`
                 }
               ],
-              max_tokens: 150,
+              max_tokens: 250,
               temperature: 0.7
             }),
           });
