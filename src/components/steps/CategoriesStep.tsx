@@ -19,10 +19,9 @@ const CATEGORIES = [
 type Props = {
   onNext: (categories: string[]) => void;
   value?: string[];
-  remainingGenerations?: number;
 };
 
-const CategoriesStep: React.FC<Props> = ({ onNext, value, remainingGenerations = 5 }) => {
+const CategoriesStep: React.FC<Props> = ({ onNext, value }) => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(value || []);
 
   const handleCategoryToggle = (category: string) => {
@@ -93,34 +92,6 @@ const CategoriesStep: React.FC<Props> = ({ onNext, value, remainingGenerations =
       >
         Generate route
       </Button>
-
-      {/* Generation Counter */}
-      <div className="text-center text-sm text-gray-600 mt-4">
-        {remainingGenerations > 0 ? (
-          <span>
-            {remainingGenerations} free generation{remainingGenerations === 1 ? '' : 's'} remaining
-          </span>
-        ) : (
-          <span className="text-orange-600 font-medium">
-            Free generations used. Support us to continue!
-          </span>
-        )}
-      </div>
-
-      {/* MVP Link */}
-      <div className="border-t pt-4 mt-6 text-center">
-        <p className="text-sm text-gray-600 mb-2">
-          Save for the next generations!
-        </p>
-        <a
-          href="https://turnright.city/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#008457] underline font-medium text-sm hover:text-[#00BC72] transition-colors"
-        >
-          Visit TurnRight.city
-        </a>
-      </div>
     </div>
   );
 };
