@@ -385,12 +385,17 @@ export default function ChatFlow() {
   function handleTextFeedback(feedback: string) {
     console.log("=== DEBUG: handleTextFeedback called ===");
     console.log("Feedback:", feedback);
-    console.log("Purchase route:", purchaseRoute);
+    console.log("Places:", places);
+    console.log("Location:", location);
     console.log("Current route generation ID:", currentRouteGenerationId);
     console.log("User session ID:", userSessionId);
     
-    if (purchaseRoute) {
-      trackTextFeedback(feedback, purchaseRoute.origin, purchaseRoute.places.length);
+    // Use current places and location if available, otherwise fall back to purchaseRoute
+    const routeLocation = location || purchaseRoute?.origin;
+    const routePlaces = places || purchaseRoute?.places;
+    
+    if (routeLocation && routePlaces) {
+      trackTextFeedback(feedback, routeLocation, routePlaces.length);
       
       // Save feedback to database
       console.log("Attempting to save text feedback to database...");
@@ -398,12 +403,12 @@ export default function ChatFlow() {
         currentRouteGenerationId,
         routeRating,
         feedback,
-        purchaseRoute.origin,
-        purchaseRoute.places.length,
+        routeLocation,
+        routePlaces.length,
         userSessionId
       );
     } else {
-      console.warn("No purchase route available for feedback");
+      console.warn("No route data available for feedback", { location, places, purchaseRoute });
     }
   }
 
@@ -625,6 +630,7 @@ export default function ChatFlow() {
               origin={location}
               onBack={() => setStep("categories")}
               onReset={reset}
+              onFeedbackSubmit={handleTextFeedback}
             />
             {console.log("=== DEBUG: DetailedMapStep rendered ===")}
             {console.log("Enhanced Origin Data - Location String:", location)}

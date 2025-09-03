@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import Button from "../Button";
 import Map from "../Map";
+import RouteFeedback from "../RouteFeedback";
 import { MapPin, Clock, ExternalLink, Star } from "lucide-react";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 
@@ -9,6 +10,7 @@ type Props = {
   onBack: () => void;
   onReset: () => void;
   origin: string;
+  onFeedbackSubmit?: (feedback: string) => void;
 };
 
 const DetailedMapStep: React.FC<Props> = ({
@@ -16,7 +18,20 @@ const DetailedMapStep: React.FC<Props> = ({
   onBack,
   onReset,
   origin,
+  onFeedbackSubmit,
 }) => {
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+  const handleFeedbackSubmit = async (feedback: string) => {
+    if (!onFeedbackSubmit) return;
+    
+    setIsSubmittingFeedback(true);
+    try {
+      await onFeedbackSubmit(feedback);
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
   // Create individual place Google Maps link
   const createPlaceLink = (place: LLMPlace): string => {
     // Priority: coordinates > address > name
@@ -199,6 +214,16 @@ const DetailedMapStep: React.FC<Props> = ({
         </a>
       </div>
       
+      {/* Feedback Section */}
+      {onFeedbackSubmit && (
+        <div className="mb-6">
+          <RouteFeedback 
+            onSubmitFeedback={handleFeedbackSubmit}
+            isSubmitting={isSubmittingFeedback}
+          />
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex flex-col gap-3">
         <Button variant="outline" onClick={onBack}>
