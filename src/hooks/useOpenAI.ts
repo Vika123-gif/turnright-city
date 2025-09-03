@@ -88,41 +88,84 @@ export function useOpenAI() {
         const coordinates: [number, number] | undefined = 
           (lat && lon) ? [lon, lat] : undefined; // [lng, lat] format for Mapbox
         
-        // Generate description using OpenAI
+        // Validate input data before calling OpenAI
+        const placeName = place.name?.trim();
+        const placeAddress = place.address?.trim();
+        
+        console.log(`=== OpenAI Input Validation for Place ${index + 1} ===`);
+        console.log("Place name:", placeName);
+        console.log("Place address:", placeAddress);
+        console.log("Has valid name:", !!placeName);
+        console.log("Has valid address:", !!placeAddress);
+        
+        // Generate description using OpenAI with improved error handling
         let generatedDescription = '';
-        try {
-          const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${OPENAI_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: [
-                {
-                  role: 'system',
-                  content: 'You are a travel guide. Generate a comprehensive, informative description about a tourist attraction. Include what makes it special, interesting facts, what visitors can expect, and practical information. Always mention "Recommended visit: 20 minutes" for attractions. Be engaging but factual.'
-                },
-                {
-                  role: 'user',
-                  content: `Generate a detailed description for "${place.name}" in ${location}. Type: ${place.type || 'attraction'}. Address: ${place.address || 'Unknown address'}. Include interesting facts, visitor experience, and practical tips. End with "Recommended visit: 20 minutes."`
-                }
-              ],
-              max_tokens: 250,
-              temperature: 0.7
-            }),
-          });
+        
+        // Only call OpenAI if we have valid place data
+        if (placeName && placeName !== 'Unknown Place') {
+          try {
+            console.log(`Calling OpenAI for: ${placeName}`);
+            
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                messages: [
+                  {
+                    role: 'system',
+                    content: 'You are a travel guide. Generate a comprehensive, informative description about a tourist attraction. Include what makes it special, interesting facts, what visitors can expect, and practical information. Always mention "Recommended visit: 20 minutes" for attractions. Be engaging but factual.'
+                  },
+                  {
+                    role: 'user',
+                    content: `Generate a detailed description for "${placeName}" in ${location}. Type: ${place.type || 'attraction'}. Address: ${placeAddress || 'Address not specified'}. Include interesting facts, visitor experience, and practical tips. End with "Recommended visit: 20 minutes."`
+                  }
+                ],
+                max_tokens: 250,
+                temperature: 0.7
+              }),
+            });
 
-          if (response.ok) {
-            const data = await response.json();
-            generatedDescription = data.choices[0]?.message?.content || '';
-            console.log(`Generated description for ${place.name}:`, generatedDescription);
-          } else {
-            console.error(`Failed to generate description for ${place.name}`);
+            console.log(`OpenAI API response status for ${placeName}:`, response.status);
+            
+            if (response.ok) {
+              const data = await response.json();
+              generatedDescription = data.choices[0]?.message?.content?.trim() || '';
+              console.log(`✅ Generated description for ${placeName}:`, generatedDescription);
+              
+              if (!generatedDescription) {
+                console.warn(`⚠️ Empty description returned from OpenAI for ${placeName}`);
+              }
+            } else {
+              const errorText = await response.text();
+              console.error(`❌ OpenAI API failed for ${placeName}:`, response.status, errorText);
+            }
+          } catch (error) {
+            console.error(`❌ Error calling OpenAI for ${placeName}:`, error);
           }
-        } catch (error) {
-          console.error(`Error generating description for ${place.name}:`, error);
+        } else {
+          console.warn(`⚠️ Skipping OpenAI call for invalid place data: ${placeName}`);
+        }
+        
+        // Enhanced fallback descriptions based on place type and name
+        if (!generatedDescription) {
+          console.log(`🔄 Using fallback description for ${placeName || 'Unknown Place'}`);
+          
+          const placeType = place.type || 'attraction';
+          const fallbackDescriptions = {
+            'restaurant': `${placeName || 'This restaurant'} offers authentic local cuisine in ${location}. A great spot to experience the local flavors and dining culture. Recommended visit: 20 minutes.`,
+            'museum': `${placeName || 'This museum'} showcases the rich history and culture of ${location}. Visitors can explore fascinating exhibits and learn about the local heritage. Recommended visit: 20 minutes.`,
+            'park': `${placeName || 'This park'} provides a peaceful green space in ${location}. Perfect for a relaxing stroll and enjoying nature in the urban environment. Recommended visit: 20 minutes.`,
+            'shopping': `${placeName || 'This shopping area'} is a popular destination for local goods and souvenirs in ${location}. Ideal for discovering unique items and local crafts. Recommended visit: 20 minutes.`,
+            'attraction': `${placeName || 'This attraction'} is a notable point of interest in ${location}. A must-see destination that offers visitors a unique local experience and cultural insight. Recommended visit: 20 minutes.`,
+            'default': `${placeName || 'This destination'} is a popular spot in ${location} worth visiting. It offers visitors an authentic local experience and insight into the area's character. Recommended visit: 20 minutes.`
+          };
+          
+          generatedDescription = fallbackDescriptions[placeType as keyof typeof fallbackDescriptions] || fallbackDescriptions.default;
+          console.log(`📝 Fallback description applied:`, generatedDescription);
         }
         
         const mappedPlace: LLMPlace = {
@@ -171,10 +214,28 @@ export function useOpenAI() {
       console.log("=== DEBUG: Final Places from TripAdvisor ===", places);
       console.log("=== FINAL DESCRIPTION CHECK ===");
       places.forEach((place, i) => {
-        console.log(`Place ${i + 1} - ${place.name}:`);
-        console.log("  Has description:", !!place.description);
-        console.log("  Description:", place.description);
+        console.log(`\n🔍 Place ${i + 1} - ${place.name}:`);
+        console.log("  ✅ Has description:", !!place.description);
+        console.log("  📝 Description:", place.description);
+        console.log("  📏 Description length:", place.description?.length || 0);
+        console.log("  🏠 Address:", place.address);
+        console.log("  📍 Coordinates:", place.coordinates);
+        console.log("  📷 Photo URL:", place.photoUrl || 'No photo');
+        console.log("  ⏰ Visit duration:", place.visitDuration);
+        console.log("  🚶 Walking time:", place.walkingTime);
       });
+      
+      // Additional validation check
+      const placesWithDescriptions = places.filter(place => place.description && place.description.trim().length > 0);
+      console.log(`\n📊 Summary: ${placesWithDescriptions.length}/${places.length} places have descriptions`);
+      
+      if (placesWithDescriptions.length !== places.length) {
+        console.warn("⚠️ Some places are missing descriptions!");
+        const missingDescriptions = places.filter(place => !place.description || place.description.trim().length === 0);
+        missingDescriptions.forEach(place => {
+          console.warn(`  - Missing description for: ${place.name}`);
+        });
+      }
       
       return places;
       
