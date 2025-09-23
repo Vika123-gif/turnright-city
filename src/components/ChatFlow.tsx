@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
@@ -6,9 +5,7 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { useDatabase } from "@/hooks/useDatabase";
 import { createClient } from "@supabase/supabase-js";
 import BackButton from "./BackButton";
-import WelcomeStep from "./steps/WelcomeStep";
-import TimeStep, { TIME_TO_MINUTES } from "./steps/TimeStep";
-import CategoriesStep from "./steps/CategoriesStep";
+import ChatBot from "./ChatBot";
 import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
@@ -21,16 +18,14 @@ const supabaseAnonKey =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3d3Fmb3BsaGh0eWprcmhhemJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDU5OTQsImV4cCI6MjA2NTU4MTk5NH0.fgFpmEdc3swzKw0xlGYt68a9vM9J2F3fKdT413UNoPk";
 
 type Step =
-  | "welcome"
-  | "time"
-  | "categories"
+  | "chat"
   | "generating"
   | "results"
   | "purchase"
   | "detailed-map";
 
 export default function ChatFlow() {
-  const [step, setStep] = useState<Step>("welcome");
+  const [step, setStep] = useState<Step>("chat");
   const [location, setLocation] = useState("");
   const [coordinates, setCoordinates] = useState(""); // Store coordinates separately for map
   const [timeWindow, setTimeWindow] = useState<number | null>(null);
@@ -44,6 +39,8 @@ export default function ChatFlow() {
   const [userSessionId, setUserSessionId] = useState<string>("");
   const [currentRouteGenerationId, setCurrentRouteGenerationId] = useState<string | null>(null);
   const [regenerationCount, setRegenerationCount] = useState(0);
+  const [chatVisible, setChatVisible] = useState(true);
+  const [isRouteGenerated, setIsRouteGenerated] = useState(false);
 
   const { getLLMPlaces } = useOpenAI();
   const { searchPlacesByName } = useGooglePlaces();
@@ -338,32 +335,32 @@ export default function ChatFlow() {
     localStorage.removeItem('pendingRouteData');
     localStorage.removeItem('pendingRouteGenerationId');
     localStorage.removeItem('pendingUserSessionId');
-    setStep("welcome");
+    setStep("chat");
+    setChatVisible(true);
+    setIsRouteGenerated(false);
   }
 
   function goBack() {
     console.log("=== DEBUG: goBack called from step:", step);
     switch (step) {
-      case "time":
-        setStep("welcome");
-        break;
-      case "categories":
-        setStep("time");
-        break;
       case "generating":
-        setStep("categories");
+        setStep("chat");
+        setChatVisible(true);
+        setIsRouteGenerated(false);
         break;
       case "detailed-map":
-        setStep("categories");
+        setStep("generating");
         break;
       case "purchase":
-        setStep("results");
+        setStep("detailed-map");
         break;
       case "results":
-        setStep("categories");
+        setStep("generating");
         break;
       default:
-        setStep("welcome");
+        setStep("chat");
+        setChatVisible(true);
+        setIsRouteGenerated(false);
     }
   }
 
@@ -462,6 +459,7 @@ export default function ChatFlow() {
     // Set purchase route and go directly to purchase step (now route display step)
     setPurchaseRoute(routeData);
     setStep("purchase");
+    setIsRouteGenerated(true);
   }
 
   // Handler for location exit tracking
@@ -529,124 +527,108 @@ export default function ChatFlow() {
     return url;
   }
 
+  const handleChatComplete = (data: { location: string; timeMinutes: number; categories: string[] }) => {
+    console.log("=== DEBUG: Chat completed ===");
+    console.log("Data received:", data);
+    
+    setLocation(data.location);
+    setTimeWindow(data.timeMinutes);
+    setGoals(data.categories);
+    setChatVisible(false);
+    setStep("generating");
+    
+    // Start generating places
+    fetchPlacesWithGoals(data.categories);
+  };
+
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-[#F3FCF8] px-2 py-10">
-      <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-md px-6 py-8 relative">
-        {step === "welcome" && (
-          <WelcomeStep
-            onLocation={handleLocationChange}
-            value={location}
-          />
-        )}
-
-        {step === "time" && (
-          <>
-            <div className="absolute top-4 left-4">
-              <BackButton onClick={goBack} />
-            </div>
-            <TimeStep
-              onNext={(timeMinutes) => {
-                setTimeWindow(timeMinutes);
-                setStep("categories");
-              }}
-              value={{ timeMinutes: timeWindow }}
-            />
-          </>
-        )}
-
-        {step === "categories" && (
-          <>
-            <div className="absolute top-4 left-4">
-              <BackButton onClick={goBack} />
-            </div>
-            <CategoriesStep
-              onNext={(categories) => {
-                setGoals(categories);
-                setStep("generating");
-                fetchPlacesWithGoals(categories);
-              }}
-              value={goals}
-            />
-          </>
-        )}
-
-        {step === "generating" && (
-          <>
-            <div className="absolute top-4 left-4">
-              <BackButton onClick={goBack} />
-            </div>
-            <GPTStep
-              places={places || []}
-              loading={generating}
-              onDone={() => setStep("results")}
-              error={error}
-            />
-          </>
-        )}
-
-        {step === "results" && (
-          <>
-            <div className="absolute top-4 left-4">
-              <BackButton onClick={goBack} />
-            </div>
-            <RoutePreviewStep
-              places={places || []}
-              onRegenerate={regenerate}
-              onBuy={handleBuyRoute}
-              purchasing={paying}
-              error={error}
-              location={location}
-              onTrackBuyClick={handleBuyButtonClick}
-            />
-          </>
-        )}
-
-        {step === "purchase" && (
-          <>
-            <div className="absolute top-4 left-4">
-              <BackButton onClick={goBack} />
-            </div>
-            <PurchaseStep
-              onFeedbackSubmit={handleTextFeedback}
-              onStartNew={reset}
-              purchaseRoute={purchaseRoute}
-              makeGoogleMapsRoute={makeGoogleMapsRoute}
-              makeAppleMapsRoute={makeAppleMapsRoute}
-              routeRating={routeRating}
-              onRatingSubmit={handleRouteRating}
-              RouteRatingComponent={RouteRating}
-              onViewDetailed={() => setStep("detailed-map")}
-            />
-          </>
-        )}
-
-        {step === "detailed-map" && places && (
-          <>
-            <div className="absolute top-4 left-4">
-              <BackButton onClick={goBack} />
-            </div>
-            <DetailedMapStep
-              places={places || []}
-              origin={location}
-              onBack={() => setStep("categories")}
-              onReset={reset}
-              onFeedbackSubmit={handleTextFeedback}
-            />
-            {console.log("=== DEBUG: DetailedMapStep rendered ===")}
-            {console.log("Enhanced Origin Data - Location String:", location)}
-            {console.log("Enhanced Origin Data - Coordinates:", coordinates)}
-            {console.log("Places with all data:", places?.map(p => ({ 
-              name: p.name, 
-              address: p.address, 
-              lat: p.lat, 
-              lon: p.lon, 
-              hasCoordinates: !!(p.lat && p.lon),
-              photoUrl: p.photoUrl ? 'present' : 'missing'
-            })))}
-          </>
-        )}
-      </div>
+      <ChatBot
+        onComplete={handleChatComplete}
+        isVisible={chatVisible}
+        onToggleVisibility={() => setChatVisible(!chatVisible)}
+        isRouteGenerated={isRouteGenerated}
+      />
       
+      {!chatVisible && (
+        <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-md px-6 py-8 relative">
+          {step === "generating" && (
+            <>
+              <div className="absolute top-4 left-4">
+                <BackButton onClick={goBack} />
+              </div>
+              <GPTStep
+                places={places || []}
+                loading={generating}
+                onDone={() => setStep("results")}
+                error={error}
+              />
+            </>
+          )}
+
+          {step === "results" && (
+            <>
+              <div className="absolute top-4 left-4">
+                <BackButton onClick={goBack} />
+              </div>
+              <RoutePreviewStep
+                places={places || []}
+                onRegenerate={regenerate}
+                onBuy={handleBuyRoute}
+                purchasing={paying}
+                error={error}
+                location={location}
+                onTrackBuyClick={handleBuyButtonClick}
+              />
+            </>
+          )}
+
+          {step === "purchase" && (
+            <>
+              <div className="absolute top-4 left-4">
+                <BackButton onClick={goBack} />
+              </div>
+              <PurchaseStep
+                onFeedbackSubmit={handleTextFeedback}
+                onStartNew={reset}
+                purchaseRoute={purchaseRoute}
+                makeGoogleMapsRoute={makeGoogleMapsRoute}
+                makeAppleMapsRoute={makeAppleMapsRoute}
+                routeRating={routeRating}
+                onRatingSubmit={handleRouteRating}
+                RouteRatingComponent={RouteRating}
+                onViewDetailed={() => setStep("detailed-map")}
+              />
+            </>
+          )}
+
+          {step === "detailed-map" && places && (
+            <>
+              <div className="absolute top-4 left-4">
+                <BackButton onClick={goBack} />
+              </div>
+              <DetailedMapStep
+                places={places || []}
+                origin={location}
+                onBack={() => setStep("results")}
+                onReset={reset}
+                onFeedbackSubmit={handleTextFeedback}
+              />
+              {console.log("=== DEBUG: DetailedMapStep rendered ===")}
+              {console.log("Enhanced Origin Data - Location String:", location)}
+              {console.log("Enhanced Origin Data - Coordinates:", coordinates)}
+              {console.log("Places with all data:", places?.map(p => ({ 
+                name: p.name, 
+                address: p.address, 
+                lat: p.lat, 
+                lon: p.lon, 
+                hasCoordinates: !!(p.lat && p.lon),
+                photoUrl: p.photoUrl ? 'present' : 'missing'
+              })))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
