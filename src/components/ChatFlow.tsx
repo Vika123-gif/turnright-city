@@ -489,7 +489,7 @@ export default function ChatFlow() {
       setCoordinates(""); // Clear coordinates if manual input
     }
     
-    setStep("time");
+    // Location is set, chat will continue with time question
   }
 
   function makeGoogleMapsRoute(origin: string, places: LLMPlace[] = []) {
