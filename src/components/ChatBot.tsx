@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Button from "./Button";
-import { MapPin, Clock, Shuffle, Send, ChevronUp, ChevronDown } from "lucide-react";
+import { MapPin, Clock, Shuffle, Send, ChevronUp, ChevronDown, Bot, User } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
@@ -113,21 +113,21 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       addBotMessage("Are you already in the city or planning a trip?");
       
       const scenarioComponent = (
-        <div className="flex gap-2 mt-3">
-          <Button
+        <div className="flex flex-col gap-3 mt-4">
+          <button
             onClick={() => handleScenarioSelect("onsite")}
-            variant="primary"
-            className="text-xs h-8"
+            className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
           >
+            <MapPin className="w-5 h-5" />
             I'm already here
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={() => handleScenarioSelect("planning")}
-            variant="outline"
-            className="text-xs h-8"
+            className="w-full py-4 px-6 bg-white border-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))] font-semibold rounded-2xl text-base transition-all duration-200 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
           >
-            Planning
-          </Button>
+            <Clock className="w-5 h-5" />
+            Planning a trip
+          </button>
         </div>
       );
       
@@ -138,7 +138,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
 
   const addBotMessage = (content: string, component?: React.ReactNode) => {
     const message: Message = {
-      id: Date.now().toString(),
+      id: `bot-${Date.now()}-${Math.random()}`,
       type: "bot",
       content,
       timestamp: new Date(),
@@ -149,7 +149,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
 
   const addUserMessage = (content: string) => {
     const message: Message = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}-${Math.random()}`,
       type: "user",
       content,
       timestamp: new Date()
@@ -173,34 +173,41 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
         addBotMessage("Great! Let's plan your trip. Which city would you like to visit and how many days will you stay?");
         
         const cityDatesComponent = (
-          <div className="space-y-3 mt-3">
+          <div className="space-y-4 mt-4">
             <Input
               type="text"
               placeholder="Enter city name..."
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleCitySubmit()}
-              className="w-full"
+              className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-base font-medium"
             />
             <div className="grid grid-cols-4 gap-2">
               {DAYS_OPTIONS.map((days) => (
-                <Button
+                <button
                   key={days}
-                  variant={selectedDays === days ? "primary" : "outline"}
                   onClick={() => setSelectedDays(days)}
-                  className="text-xs h-8"
+                  className={`py-3 px-2 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${
+                    selectedDays === days
+                      ? "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white shadow-lg"
+                      : "bg-white border-2 border-gray-200 text-gray-700 hover:border-[hsl(var(--primary))] hover:bg-green-50"
+                  }`}
                 >
                   {days} day{days !== "1" ? "s" : ""}
-                </Button>
+                </button>
               ))}
             </div>
-            <Button
+            <button
               onClick={handleCitySubmit}
               disabled={!userInput.trim() || !selectedDays}
-              className="text-xs h-8 w-full"
+              className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
+                !userInput.trim() || !selectedDays
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+              }`}
             >
               Continue
-            </Button>
+            </button>
           </div>
         );
         
@@ -224,21 +231,19 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
         addBotMessage("Do you know the address of your hotel/apartment?");
         
         const accommodationComponent = (
-          <div className="flex gap-2 mt-3">
-            <Button
+          <div className="flex flex-col gap-3 mt-4">
+            <button
               onClick={() => handleAccommodationSelect(true)}
-              variant="primary"
-              className="text-xs h-8"
+              className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
             >
-              Yes, specify
-            </Button>
-            <Button
+              Yes, I'll specify
+            </button>
+            <button
               onClick={() => handleAccommodationSelect(false)}
-              variant="outline"
-              className="text-xs h-8"
+              className="w-full py-4 px-6 bg-white border-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))] font-semibold rounded-2xl text-base transition-all duration-200 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:scale-[1.02] active:scale-[0.98]"
             >
-              Not yet
-            </Button>
+              Not yet decided
+            </button>
           </div>
         );
         
@@ -313,34 +318,40 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
 
   const showTimeComponent = () => {
     const timeComponent = (
-      <div className="space-y-3 mt-3">
-        <div className="grid grid-cols-2 gap-2">
+      <div className="space-y-4 mt-4">
+        <div className="grid grid-cols-2 gap-3">
           {TIMINGS.map((time) => (
-            <Button
+            <button
               key={time}
-              variant={selectedTime === time ? "primary" : "outline"}
               onClick={() => handleTimeSelect(time)}
-              className="text-xs h-8"
+              className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${
+                selectedTime === time
+                  ? "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white shadow-lg"
+                  : "bg-white border-2 border-gray-200 text-gray-700 hover:border-[hsl(var(--primary))] hover:bg-green-50"
+              }`}
             >
               {time}
-            </Button>
+            </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={selectedTime === "Custom" ? "primary" : "outline"}
+        <div className="flex items-center gap-3">
+          <button
             onClick={() => handleTimeSelect("Custom")}
-            className="text-xs h-8"
+            className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${
+              selectedTime === "Custom"
+                ? "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white shadow-lg"
+                : "bg-white border-2 border-gray-200 text-gray-700 hover:border-[hsl(var(--primary))] hover:bg-green-50"
+            }`}
           >
             Custom
-          </Button>
+          </button>
           {selectedTime === "Custom" && (
             <Input
               type="number"
               placeholder="Minutes"
               value={customMinutes}
               onChange={(e) => setCustomMinutes(e.target.value)}
-              className="w-20 h-8 text-xs"
+              className="flex-1 h-10 px-3 rounded-xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
               min="1"
             />
           )}
@@ -377,28 +388,25 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       addBotMessage("Do you need to end at a specific location?");
       
       const destinationComponent = (
-        <div className="flex gap-2 mt-3 flex-wrap">
-          <Button
+        <div className="flex flex-col gap-3 mt-4">
+          <button
             onClick={() => handleDestinationSelect("none")}
-            variant="outline"
-            className="text-xs h-8"
+            className="w-full py-4 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98]"
           >
-            No
-          </Button>
-          <Button
+            No specific end point
+          </button>
+          <button
             onClick={() => handleDestinationSelect("circle")}
-            variant="outline"
-            className="text-xs h-8"
+            className="w-full py-4 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98]"
           >
-            Circle route
-          </Button>
-          <Button
+            Circle route back to start
+          </button>
+          <button
             onClick={() => handleDestinationSelect("specific")}
-            variant="outline"
-            className="text-xs h-8"
+            className="w-full py-4 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98]"
           >
-            Enter point B
-          </Button>
+            I'll specify end point
+          </button>
         </div>
       );
       
@@ -445,34 +453,38 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
 
   const showInterestsComponent = (step: "interests" | "trip_interests") => {
     const categoriesComponent = (
-      <div className="space-y-3 mt-3">
-        <div className="grid grid-cols-2 gap-2">
+      <div className="space-y-4 mt-4">
+        <div className="grid grid-cols-2 gap-3">
           {CATEGORIES.map((category) => (
-            <label key={category} className="flex items-center space-x-2 cursor-pointer text-xs">
+            <label key={category} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
               <Checkbox
                 checked={selectedCategories.includes(category)}
                 onCheckedChange={() => handleCategoryToggle(category)}
+                className="w-5 h-5 rounded border-2 border-gray-300 data-[state=checked]:bg-[hsl(var(--primary))] data-[state=checked]:border-[hsl(var(--primary))]"
               />
-              <span>{category}</span>
+              <span className="text-sm font-medium text-gray-700">{category}</span>
             </label>
           ))}
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
+        <div className="flex flex-col gap-3">
+          <button
             onClick={handleSurpriseMe}
-            className="flex items-center gap-1 text-xs h-8"
+            className="w-full py-3 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
           >
-            <Shuffle className="w-3 h-3" />
+            <Shuffle className="w-5 h-5" />
             Surprise me
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={() => handleInterestsSubmit(step)}
             disabled={selectedCategories.length === 0}
-            className="text-xs h-8"
+            className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
+              selectedCategories.length === 0
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+            }`}
           >
             Continue
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -521,24 +533,25 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
 
   const showAdditionalSettings = (step: "additional_settings" | "trip_settings") => {
     const settingsComponent = (
-      <div className="space-y-3 mt-3">
-        <div className="space-y-2">
+      <div className="space-y-4 mt-4">
+        <div className="space-y-3">
           {ADDITIONAL_SETTINGS.map((setting) => (
-            <label key={setting} className="flex items-center space-x-2 cursor-pointer text-xs">
+            <label key={setting} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
               <Checkbox
                 checked={additionalSettings.includes(setting)}
                 onCheckedChange={() => handleSettingToggle(setting)}
+                className="w-5 h-5 rounded border-2 border-gray-300 data-[state=checked]:bg-[hsl(var(--primary))] data-[state=checked]:border-[hsl(var(--primary))]"
               />
-              <span>{setting}</span>
+              <span className="text-sm font-medium text-gray-700">{setting}</span>
             </label>
           ))}
         </div>
-        <Button
+        <button
           onClick={() => handleSettingsSubmit(step)}
-          className="text-xs h-8 w-full"
+          className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
         >
           {selectedScenario === "planning" ? "Create Trip Plan" : "Generate Route"}
-        </Button>
+        </button>
       </div>
     );
 
@@ -573,127 +586,169 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     }
   };
 
-  if (!isVisible && isRouteGenerated) {
-    return (
-      <div className="fixed bottom-4 right-4 z-50">
-        <Button
-          onClick={onToggleVisibility}
-          variant="primary"
-          className="rounded-full w-12 h-12 shadow-lg"
-        >
-          <ChevronUp className="w-5 h-5" />
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className={`fixed inset-0 bg-white z-40 flex flex-col ${!isVisible && isRouteGenerated ? 'hidden' : ''}`}>
+    <div className={`fixed inset-0 bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col ${!isVisible && isRouteGenerated ? 'hidden' : ''}`}>
+      {/* Header */}
       {isRouteGenerated && (
-        <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-          <h3 className="font-semibold text-gray-800">Chat with TurnRight</h3>
-          <Button
+        <div className="flex justify-between items-center p-4 bg-white/80 backdrop-blur-sm border-b border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] flex items-center justify-center">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="font-semibold text-gray-800">TurnRight</h3>
+          </div>
+          <button
             onClick={onToggleVisibility}
-            variant="outline"
-            className="text-xs h-8"
+            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Minimize chat"
           >
-            <ChevronDown className="w-4 h-4" />
-          </Button>
+            <ChevronDown className="w-5 h-5 text-gray-600" />
+          </button>
         </div>
       )}
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        {messages.map((message, index) => (
           <div
             key={message.id}
-            className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex gap-3 animate-fade-in ${
+              message.type === "user" ? "justify-end" : "justify-start"
+            }`}
+            style={{ animationDelay: `${index * 0.1}s` }}
           >
+            {message.type === "bot" && (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Bot className="w-4 h-4 text-white" />
+              </div>
+            )}
+            
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+              className={`max-w-[280px] sm:max-w-xs px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md ${
                 message.type === "user"
-                  ? "bg-[#008457] text-white"
-                  : "bg-gray-100 text-gray-800"
+                  ? "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white rounded-br-md"
+                  : "bg-white border border-gray-100 text-gray-800 rounded-bl-md"
               }`}
             >
-              {message.content && <p className="text-sm">{message.content}</p>}
-              {message.component}
+              {message.content && (
+                <p className="text-sm leading-relaxed font-medium">
+                  {message.content}
+                </p>
+              )}
+              {message.component && (
+                <div className="mt-3">
+                  {message.component}
+                </div>
+              )}
             </div>
+            
+            {message.type === "user" && (
+              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                <User className="w-4 h-4 text-gray-600" />
+              </div>
+            )}
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Input Areas */}
       {currentStep === "location" && (
-        <div className="p-4 border-t bg-gray-50 space-y-3">
-          <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100">
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 space-y-4">
+          <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-100">
             <input
               type="checkbox"
               id="locationConsent"
               checked={locationConsent}
               onChange={(e) => setLocationConsent(e.target.checked)}
-              className="mt-0.5"
+              className="mt-1 w-4 h-4 rounded border-2 border-gray-300 text-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
             />
-            <label htmlFor="locationConsent" className="text-xs text-gray-700 leading-relaxed">
+            <label htmlFor="locationConsent" className="text-sm text-gray-700 leading-relaxed font-medium">
               I consent to sharing my location for personalized recommendations
             </label>
           </div>
           
-          <div className="flex gap-2">
-            <Button
+          <div className="space-y-3">
+            <button
               onClick={handleDetectLocation}
               disabled={detecting || !locationConsent}
-              variant="primary"
-              className="flex items-center gap-2 text-xs h-8"
+              className={`w-full py-4 px-6 rounded-2xl font-semibold text-sm flex items-center justify-center gap-3 transition-all duration-200 ${
+                detecting || !locationConsent
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+              }`}
             >
-              <MapPin className="w-4 h-4" />
-              {detecting ? "Detecting..." : "Share Location"}
-            </Button>
-          </div>
-          
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="Or enter location manually..."
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleManualLocation()}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleManualLocation}
-              disabled={!userInput.trim()}
-              className="text-xs h-8"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
+              <MapPin className="w-5 h-5" />
+              {detecting ? "Detecting..." : "Share My Location"}
+            </button>
+            
+            <div className="flex gap-3">
+              <Input
+                type="text"
+                placeholder="Or enter location manually..."
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleManualLocation()}
+                className="flex-1 h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
+              />
+              <button
+                onClick={handleManualLocation}
+                disabled={!userInput.trim()}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+                  !userInput.trim()
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-105 active:scale-95"
+                }`}
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {currentStep === "time" && selectedTime === "Custom" && (
-        <div className="p-4 border-t bg-gray-50">
-          <div className="flex gap-2">
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex gap-3">
             <Input
               type="number"
               placeholder="Enter minutes..."
               value={customMinutes}
               onChange={(e) => setCustomMinutes(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleCustomTimeSubmit()}
-              className="flex-1"
+              className="flex-1 h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
               min="1"
             />
-            <Button
+            <button
               onClick={handleCustomTimeSubmit}
               disabled={!customMinutes}
-              className="text-xs h-8"
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
+                !customMinutes
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-105 active:scale-95"
+              }`}
             >
               <Send className="w-4 h-4" />
-            </Button>
+            </button>
           </div>
         </div>
       )}
     </div>
   );
+
+  if (!isVisible && isRouteGenerated) {
+    return (
+      <div className="fixed bottom-6 right-6 z-50">
+        <button
+          onClick={onToggleVisibility}
+          className="w-14 h-14 rounded-full bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center"
+          aria-label="Open chat"
+        >
+          <Bot className="w-6 h-6" />
+        </button>
+      </div>
+    );
+  }
 };
 
 export default ChatBot;
