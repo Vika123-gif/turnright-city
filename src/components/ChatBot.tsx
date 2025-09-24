@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Button from "./Button";
 import { MapPin, Clock, Shuffle, Send, ChevronUp, ChevronDown, Bot, User } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+// Removed UI component imports for testing
 
 const CATEGORIES = [
   "Restaurants", "Cafés", "Bars", "Viewpoints", "Parks", "Museums",
@@ -176,11 +175,14 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
         
         const cityDatesComponent = (
           <div className="space-y-4 mt-4">
-            <Input
+            <input
               type="text"
               placeholder="Enter city name..."
               value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
+              onChange={(e) => {
+                console.log('City input changed:', e.target.value);
+                setUserInput(e.target.value);
+              }}
               onKeyPress={(e) => e.key === "Enter" && handleCitySubmit()}
               className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-base font-medium"
             />
@@ -350,11 +352,14 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             Custom
           </button>
           {selectedTime === "Custom" && (
-            <Input
+            <input
               type="number"
               placeholder="Minutes"
               value={customMinutes}
-              onChange={(e) => setCustomMinutes(e.target.value)}
+              onChange={(e) => {
+                console.log('Custom minutes changed:', e.target.value);
+                setCustomMinutes(e.target.value);
+              }}
               className="flex-1 h-10 px-3 rounded-xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
               min="1"
             />
@@ -444,11 +449,14 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
         
         const destinationInputComponent = (
           <div className="space-y-4 mt-4">
-            <Input
+            <input
               type="text"
               placeholder="Enter destination address..."
               value={destinationInput}
-              onChange={(e) => setDestinationInput(e.target.value)}
+              onChange={(e) => {
+                console.log('Destination input changed:', e.target.value);
+                setDestinationInput(e.target.value);
+              }}
               onKeyPress={(e) => e.key === "Enter" && handleDestinationSubmit()}
               className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-base font-medium"
             />
@@ -486,9 +494,12 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
         <div className="grid grid-cols-2 gap-3">
           {CATEGORIES.map((category) => (
             <label key={category} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
-              <Checkbox
+              <input
+                type="checkbox"
                 checked={selectedCategories.includes(category)}
-                onCheckedChange={(checked) => {
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  console.log('Category checkbox changed:', category, checked);
                   if (checked) {
                     setSelectedCategories(prev => [...prev, category]);
                   } else {
@@ -566,9 +577,12 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
         <div className="space-y-3">
           {ADDITIONAL_SETTINGS.map((setting) => (
             <label key={setting} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
-              <Checkbox
+              <input
+                type="checkbox"
                 checked={additionalSettings.includes(setting)}
-                onCheckedChange={(checked) => {
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  console.log('Additional setting checkbox changed:', setting, checked);
                   if (checked) {
                     setAdditionalSettings(prev => [...prev, setting]);
                   } else {
@@ -720,11 +734,14 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             </button>
             
             <div className="flex gap-3">
-              <Input
+              <input
                 type="text"
                 placeholder="Or enter location manually..."
                 value={locationInput}
-                onChange={(e) => setLocationInput(e.target.value)}
+                onChange={(e) => {
+                  console.log('Location input changed:', e.target.value);
+                  setLocationInput(e.target.value);
+                }}
                 onKeyPress={(e) => e.key === "Enter" && handleManualLocation()}
                 className="flex-1 h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
               />
@@ -747,11 +764,14 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       {currentStep === "time" && selectedTime === "Custom" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
           <div className="flex gap-3">
-            <Input
+            <input
               type="number"
               placeholder="Enter minutes..."
               value={customMinutes}
-              onChange={(e) => setCustomMinutes(e.target.value)}
+              onChange={(e) => {
+                console.log('Custom time input changed:', e.target.value);
+                setCustomMinutes(e.target.value);
+              }}
               onKeyPress={(e) => e.key === "Enter" && handleCustomTimeSubmit()}
               className="flex-1 h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
               min="1"

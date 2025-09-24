@@ -33,14 +33,16 @@ const MyTrips: React.FC = () => {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('saved_routes')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('generated_at', { ascending: false });
+      // TODO: Uncomment after database migration is applied
+      // const { data, error } = await supabase
+      //   .from('saved_routes')
+      //   .select('*')
+      //   .eq('user_id', user.id)
+      //   .order('generated_at', { ascending: false });
 
-      if (error) throw error;
-      setSavedRoutes(data || []);
+      // if (error) throw error;
+      // setSavedRoutes(data || []);
+      setSavedRoutes([]); // Temporary empty array
     } catch (error) {
       console.error('Error fetching saved routes:', error);
     }
@@ -51,13 +53,14 @@ const MyTrips: React.FC = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('saved_routes')
-        .delete()
-        .eq('id', routeId)
-        .eq('user_id', user.id);
+      // TODO: Uncomment after database migration is applied
+      // const { error } = await supabase
+      //   .from('saved_routes')
+      //   .delete()
+      //   .eq('id', routeId)
+      //   .eq('user_id', user.id);
 
-      if (error) throw error;
+      // if (error) throw error;
       
       setSavedRoutes(prev => prev.filter(route => route.id !== routeId));
     } catch (error) {
