@@ -39,7 +39,7 @@ type ChatStep =
   | "interests" 
   | "additional_settings"
   | "generating"
-  | "route_preview"
+  | "route_results"
   // Scenario B (planning) steps  
   | "city_dates"
   | "accommodation"
@@ -353,15 +353,17 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       const placesWithPhotos: LLMPlace[] = await Promise.all(
         response.map(async (place, index) => {
           try {
+            // Get Google Places data
             const googlePlacesResponse = await searchPlacesByName({
               placeName: place.name,
               location: location,
               placeType: place.type
             });
             
+            let enrichedPlace = place;
             if (googlePlacesResponse.length > 0) {
               const foundPlace = googlePlacesResponse[0];
-              return {
+              enrichedPlace = {
                 ...place,
                 photoUrl: foundPlace.photoUrl || place.photoUrl,
                 coordinates: foundPlace.coordinates || place.coordinates,
@@ -371,11 +373,36 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
                 address: foundPlace.address || place.address || place.name
               };
             } else {
-              return {
+              enrichedPlace = {
                 ...place,
                 address: place.address || place.name,
               };
             }
+
+            // Generate AI description
+            try {
+              const descResponse = await fetch('https://gwwqfoplhhtyjkrhazbt.supabase.co/functions/v1/generate-place-description', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3d3Fmb3BsaGh0eWprcmhhemJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDU5OTQsImV4cCI6MjA2NTU4MTk5NH0.fgFpmEdc3swzKw0xlGYt68a9vM9J2F3fKdT413UNoPk'
+                },
+                body: JSON.stringify({
+                  placeName: place.name,
+                  placeType: place.type || 'attraction',
+                  city: location
+                })
+              });
+
+              if (descResponse.ok) {
+                const descData = await descResponse.json();
+                enrichedPlace.description = descData.description;
+              }
+            } catch (descError) {
+              console.error(`Error generating description for ${place.name}:`, descError);
+            }
+
+            return enrichedPlace;
           } catch (error) {
             console.error(`Error enriching place data for ${place.name}:`, error);
             return place;
@@ -383,15 +410,40 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
         })
       );
       
-      console.log("=== DEBUG: Places with photos ===", placesWithPhotos);
+      console.log("=== DEBUG: Places with photos and descriptions ===", placesWithPhotos);
       
       setPlaces(placesWithPhotos);
-      setCurrentStep("route_preview");
+      
+      // Show results in chat instead of preview component
+      setTimeout(() => {
+        addBotMessage("🎉 Here's your personalized route:");
+        
+        // Add each place as a separate message
+        placesWithPhotos.forEach((place, index) => {
+          setTimeout(() => {
+            const placeMessage = `📍 **${index + 1}. ${place.name}**
+📍 ${place.address}
+⏰ ${place.walkingTime} min walk${place.visitDuration ? ` • ${place.visitDuration} min visit` : ''}
+${place.type ? `🏷️ ${place.type}` : ''}
+
+${place.description || place.reason || 'A great place to visit on your route.'}`;
+            
+            addBotMessage(placeMessage);
+          }, index * 800);
+        });
+        
+        // Add action buttons after all places
+        setTimeout(() => {
+          setCurrentStep("route_results");
+        }, placesWithPhotos.length * 800 + 1000);
+        
+      }, 1000);
       
     } catch (e: any) {
       console.error("=== DEBUG: Error in generateRoute ===", e);
       setError(e.message || "Could not generate route.");
-      setCurrentStep("route_preview");
+      addBotMessage("❌ Sorry, I couldn't generate a route. Please try again with different settings.");
+      setCurrentStep("route_results");
     } finally {
       setGenerating(false);
     }
@@ -727,31 +779,43 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
         </div>
       )}
 
-      {currentStep === "generating" && (
+      {currentStep === "route_results" && places && places.length > 0 && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
-          <GPTStep
-            places={places || []}
-            loading={generating}
-            onDone={() => setCurrentStep("route_preview")}
-            error={error}
-          />
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                // Show interactive map
+                setCurrentStep("complete");
+                onComplete(collectedData);
+              }}
+              className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+            >
+              🗺️ Show Interactive Map
+            </button>
+            <button
+              onClick={handleRegenerate}
+              className="w-full py-3 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+            >
+              🔄 Generate New Route
+            </button>
+            {places.map((place, index) => (
+              place.lat && place.lon && (
+                <a
+                  key={index}
+                  href={`https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lon}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 px-4 bg-blue-50 border-2 border-blue-200 text-blue-700 font-medium rounded-xl text-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-100 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  📍 {place.name} on Google Maps
+                </a>
+              )
+            ))}
+          </div>
         </div>
       )}
 
-      {currentStep === "route_preview" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
-          <RoutePreviewStep
-            places={places || []}
-            onRegenerate={handleRegenerate}
-            onBuy={handleBuyRoute}
-            purchasing={false}
-            error={error}
-            location={collectedData.location || ""}
-          />
-        </div>
-      )}
-
-      {/* Removed legacy time input */}
+      {/* Removed generating and route_preview components since we show results in chat now */}
     </div>
   );
 };
