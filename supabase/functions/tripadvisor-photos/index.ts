@@ -217,6 +217,10 @@ function calculateOptimalStops(timeMinutes: number, candidatePlaces: any[], star
   // Add additional stops while time permits
   for (let i = 1; i < sortedCandidates.length && selectedStops.length < 8; i++) {
     const candidate = sortedCandidates[i];
+    
+    // Skip if no stops have been selected yet (lastStop would be undefined)
+    if (selectedStops.length === 0) continue;
+    
     const lastStop = selectedStops[selectedStops.length - 1];
     
     // Calculate walking time from last stop to this candidate
