@@ -124,10 +124,17 @@ const RoutePreviewStep: React.FC<Props> = ({
     const placesPerDay = 6; // Always 6 places per day for planning
     const groupedPlaces = [];
     
+    console.log('=== GROUPING DEBUG ===');
+    console.log('Total places:', places.length);
+    console.log('Days:', days);
+    console.log('Places per day:', placesPerDay);
+    
     for (let day = 0; day < days; day++) {
       const startIndex = day * placesPerDay;
       const endIndex = Math.min(startIndex + placesPerDay, places.length);
       const dayPlaces = places.slice(startIndex, endIndex);
+      
+      console.log(`Day ${day + 1}: places ${startIndex}-${endIndex-1}, got ${dayPlaces.length} places`);
       
       if (dayPlaces.length > 0) {
         groupedPlaces.push({
@@ -137,6 +144,7 @@ const RoutePreviewStep: React.FC<Props> = ({
       }
     }
     
+    console.log('Grouped places result:', groupedPlaces);
     return groupedPlaces;
   };
 
