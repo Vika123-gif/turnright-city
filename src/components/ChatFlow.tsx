@@ -190,7 +190,8 @@ export default function ChatFlow() {
         timeWindow: timeWindow || 60, // Pass as number (minutes), default to 1 hour
         userPrompt,
         regenerationAttempt: currentRegenerationCount,
-        maxPlaces: 3,
+        maxPlaces: scenario === "planning" ? (timeWindow || 1) * 6 : 3, // 6 places per day for planning
+        scenario: scenario || "onsite"
       });
       
       console.log("=== DEBUG: Places Response ===");

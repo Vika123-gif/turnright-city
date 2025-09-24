@@ -64,8 +64,9 @@ export function useOpenAI() {
       else if (timeWindow <= 360) actualMaxPlaces = 4;  // 6 hours = 4 places
       else actualMaxPlaces = 6;                         // full day = 6 places
     } else if (scenario === "planning") {
-      // For planning: 6 places per day
+      // For planning: 6 places per day, and timeWindow is number of days
       actualMaxPlaces = timeWindow * 6;
+      console.log(`Planning scenario: ${timeWindow} days × 6 places = ${actualMaxPlaces} total places`);
     }
     
     console.log("Calculated max places:", actualMaxPlaces);
@@ -73,8 +74,10 @@ export function useOpenAI() {
     // Convert timeWindow for API based on scenario
     let apiTimeWindow = timeWindow;
     if (scenario === "planning") {
-      // For planning: convert days to reasonable daily touring time (8 hours = 480 minutes per day)
-      apiTimeWindow = 480; // 8 hours per day for sightseeing
+      // For planning: call API multiple times for each day, but start with one day (480 minutes)
+      // We'll generate places for each day separately in the edge function
+      apiTimeWindow = 480 * timeWindow; // Total minutes for all days combined
+      console.log(`Planning API call: ${timeWindow} days × 480 minutes = ${apiTimeWindow} total minutes`);
     }
     // For onsite scenario, timeWindow is already in minutes from the time selection
     
