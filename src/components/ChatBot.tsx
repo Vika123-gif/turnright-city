@@ -492,43 +492,54 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     const categoriesComponent = (
       <div className="space-y-4 mt-4">
         <div className="grid grid-cols-2 gap-3">
-           {CATEGORIES.map((category) => (
-             <label key={category} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
-               <input
-                 type="checkbox"
-                 checked={selectedCategories.includes(category)}
-                 onChange={(e) => {
-                   const checked = e.target.checked;
-                   console.log('Category checkbox changed:', category, checked);
-                   console.log('Current selectedCategories:', selectedCategories);
-                   if (checked) {
+           {CATEGORIES.map((category) => {
+             const isChecked = selectedCategories.includes(category);
+             return (
+               <label 
+                 key={category} 
+                 className={`flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] ${
+                   isChecked 
+                     ? "border-[hsl(var(--primary))] bg-green-50" 
+                     : "border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50"
+                 }`}
+               >
+                 <input
+                   type="checkbox"
+                   checked={isChecked}
+                   onChange={() => {
+                     console.log('Toggling category:', category, 'Current state:', isChecked);
                      setSelectedCategories(prev => {
-                       const newCategories = [...prev, category];
-                       console.log('New selectedCategories:', newCategories);
-                       return newCategories;
+                       const newState = isChecked 
+                         ? prev.filter(c => c !== category)
+                         : [...prev, category];
+                       console.log('New selectedCategories:', newState);
+                       return newState;
                      });
-                   } else {
-                     setSelectedCategories(prev => {
-                       const newCategories = prev.filter(c => c !== category);
-                       console.log('New selectedCategories:', newCategories);
-                       return newCategories;
-                     });
-                   }
-                 }}
-                 className="w-5 h-5 accent-[hsl(var(--primary))] scale-125"
-               />
-               <span className="text-sm font-medium text-gray-700">{category}</span>
-             </label>
-           ))}
+                   }}
+                   className="w-4 h-4 text-[hsl(var(--primary))] bg-white border-gray-300 rounded focus:ring-[hsl(var(--primary))] focus:ring-2"
+                 />
+                 <span className="text-sm font-medium text-gray-700">{category}</span>
+               </label>
+             );
+           })}
         </div>
         <div className="flex flex-col gap-3">
-          <button
-            onClick={handleSurpriseMe}
-            className="w-full py-3 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
-          >
-            <Shuffle className="w-5 h-5" />
-            Surprise me
-          </button>
+           <button
+             onClick={handleSurpriseMe}
+             className="w-full py-3 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+           >
+             <Shuffle className="w-5 h-5" />
+             Surprise me
+           </button>
+           <button
+             onClick={() => {
+               console.log('Reset button clicked - clearing all categories');
+               setSelectedCategories([]);
+             }}
+             className="w-full py-2 px-4 bg-red-50 border-2 border-red-200 text-red-600 font-semibold rounded-xl text-sm transition-all duration-200 hover:border-red-300 hover:bg-red-100 hover:scale-[1.02] active:scale-[0.98]"
+           >
+             Reset All
+           </button>
            <button
              onClick={() => {
                console.log('Continue button clicked, selectedCategories:', selectedCategories);
