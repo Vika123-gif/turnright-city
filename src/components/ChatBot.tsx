@@ -43,6 +43,7 @@ type ChatStep =
   // Scenario B (planning) steps  
   | "city_dates"
   | "accommodation"
+  | "accommodation_input"
   | "trip_interests"
   | "trip_settings"
   | "trip_preview"
@@ -195,7 +196,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       addUserMessage("🏨 Yes, I'll specify");
       setTimeout(() => {
         addBotMessage("Please enter your accommodation address:");
-        // Show input for accommodation address
+        setCurrentStep("accommodation_input");
       }, 1000);
     } else {
       addUserMessage("🏨 Not yet decided");
@@ -207,7 +208,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   const proceedToTripInterests = () => {
     setTimeout(() => {
       addBotMessage("What interests you for this trip? Select as many as you like:");
-      proceedToTripInterests();
+      setCurrentStep("trip_interests");
     }, 1000);
   };
 
@@ -253,7 +254,6 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     }, 1000);
   };
 
-  const showTimeComponent = () => {
   const handleTimeSelect = (timeMinutes: number) => {
     addUserMessage(`⏰ ${timeMinutes} minutes`);
     setCollectedData(prev => ({ ...prev, timeMinutes }));
@@ -261,7 +261,6 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       addBotMessage("Do you need to end at a specific location?");
       setCurrentStep("destination");
     }, 1000);
-  };
   };
 
   const handleDestinationSelect = (type: "none" | "circle" | "specific") => {
@@ -409,6 +408,15 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     // Complete the flow - show the route
     setCurrentStep("complete");
     onComplete(collectedData);
+  };
+
+  const handleAccommodationSubmit = () => {
+    if (userInput.trim()) {
+      addUserMessage(`🏨 ${userInput}`);
+      setCollectedData(prev => ({ ...prev, accommodation: userInput }));
+      setUserInput("");
+      proceedToTripInterests();
+    }
   };
 
   const handleDestinationSubmit = () => {
@@ -580,6 +588,32 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
               className="w-full py-4 px-6 bg-white border-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))] font-semibold rounded-2xl text-base transition-all duration-200 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:scale-[1.02] active:scale-[0.98]"
             >
               Not yet decided
+            </button>
+          </div>
+        </div>
+      )}
+
+      {currentStep === "accommodation_input" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="space-y-4">
+            <input
+              type="text"
+              placeholder="Enter your accommodation address..."
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleAccommodationSubmit()}
+              className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-base font-medium"
+            />
+            <button
+              onClick={handleAccommodationSubmit}
+              disabled={!userInput.trim()}
+              className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
+                !userInput.trim()
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+              }`}
+            >
+              Continue
             </button>
           </div>
         </div>
