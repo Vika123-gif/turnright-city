@@ -42,8 +42,16 @@ const RoutePreviewStep: React.FC<Props> = ({
     onBuy();
   }
 
+  // Create Google Maps URL for entire route
+  const createRouteUrl = () => {
+    if (!places.length) return '';
+    
+    const waypoints = places.map(p => `${p.lat},${p.lon}`).join('|');
+    return `https://www.google.com/maps/dir/${waypoints}`;
+  };
+
   return (
-    <div className="chat-card text-left max-h-96 overflow-y-auto">
+    <div className="chat-card text-left">
       <div className="font-semibold text-lg mb-3 flex items-center gap-2">
         📍 Here's what I found for you:
       </div>
@@ -122,18 +130,31 @@ const RoutePreviewStep: React.FC<Props> = ({
         </>
       )}
       
-      <div className="flex flex-col gap-4 sticky bottom-0 bg-white pt-4 border-t border-gray-100">
+      <div className="flex flex-col gap-4">
         <Button variant="outline" onClick={onRegenerate} disabled={purchasing || processing}>
           <Repeat className="w-5 h-5 mr-2 -ml-1" /> Generate Again
         </Button>
+        
         {!error && places.length > 0 && (
-          <Button 
-            variant="primary" 
-            onClick={handleShowRoute} 
-            disabled={purchasing || processing}
-          >
-            {processing ? "Loading Route..." : "🗺️ Show Interactive Map"}
-          </Button>
+          <>
+            <Button 
+              variant="primary" 
+              onClick={handleShowRoute} 
+              disabled={purchasing || processing}
+            >
+              {processing ? "Loading Route..." : "🗺️ Show Interactive Map"}
+            </Button>
+            
+            {/* Google Maps route button */}
+            <a
+              href={createRouteUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full bg-blue-500 text-white font-semibold rounded-xl text-lg flex items-center justify-center min-h-[56px] px-6 py-3 transition-all duration-300 hover:bg-blue-600 text-center"
+            >
+              🗺️ Open Full Route in Google Maps
+            </a>
+          </>
         )}
 
         {/* MVP Link */}
