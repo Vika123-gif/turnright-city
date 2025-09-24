@@ -507,17 +507,17 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             <Shuffle className="w-5 h-5" />
             Surprise me
           </button>
-          <button
-            onClick={() => handleInterestsSubmit(step)}
-            disabled={selectedCategories.length === 0}
-            className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
-              selectedCategories.length === 0
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-            }`}
-          >
-            Continue
-          </button>
+           <button
+             onClick={() => handleInterestsSubmit(step)}
+             disabled={selectedCategories.length === 0}
+             className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
+               selectedCategories.length === 0
+                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                 : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+             }`}
+           >
+             Continue
+           </button>
         </div>
       </div>
     );
