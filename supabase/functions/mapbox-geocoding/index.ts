@@ -75,7 +75,7 @@ serve(async (req) => {
     
     // Priority: POI with detailed address components
     for (const feature of data.features) {
-      const hasDetailedAddress = feature.context?.some(ctx => 
+      const hasDetailedAddress = feature.context?.some((ctx: any) => 
         ctx.id?.includes('address') || ctx.id?.includes('postcode')
       );
       
@@ -180,7 +180,7 @@ serve(async (req) => {
     console.error('Error in mapbox-geocoding function:', error);
     return new Response(JSON.stringify({ 
       error: 'Failed to geocode address',
-      details: error.message 
+      details: error instanceof Error ? error.message : 'Unknown error' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

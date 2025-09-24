@@ -27,7 +27,7 @@ const SPECIFIC_TYPE_DURATION = {
 };
 
 // Function to generate interesting descriptions for places
-function generatePlaceDescription(place, details, normalizedType) {
+function generatePlaceDescription(place: any, details: any, normalizedType: any) {
   let description = '';
   
   // Use editorial summary if available
@@ -65,7 +65,7 @@ function generatePlaceDescription(place, details, normalizedType) {
 }
 
 // Function to generate ticket price information
-function generateTicketPriceInfo(details, normalizedType) {
+function generateTicketPriceInfo(details: any, normalizedType: any) {
   const priceLevel = details.price_level;
   
   // Generate price info based on type and price level
@@ -106,7 +106,7 @@ function generateTicketPriceInfo(details, normalizedType) {
 }
 
 // Function to get visit duration for a place type
-function getPlaceVisitDuration(placeTypes) {
+function getPlaceVisitDuration(placeTypes: any[]) {
   // Check museums first (priority over generic tourist attractions)
   if (placeTypes.includes('museum') || placeTypes.includes('art_gallery')) {
     return PLACE_TYPE_DURATION.museum; // 60 minutes
@@ -114,8 +114,8 @@ function getPlaceVisitDuration(placeTypes) {
   
   // Check specific types
   for (const type of placeTypes) {
-    if (SPECIFIC_TYPE_DURATION[type]) {
-      return SPECIFIC_TYPE_DURATION[type];
+    if (SPECIFIC_TYPE_DURATION[type as keyof typeof SPECIFIC_TYPE_DURATION]) {
+      return SPECIFIC_TYPE_DURATION[type as keyof typeof SPECIFIC_TYPE_DURATION];
     }
   }
   
@@ -134,13 +134,13 @@ function getPlaceVisitDuration(placeTypes) {
 }
 
 // Function to calculate optimal number of stops based on total available time
-function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng) {
+function calculateOptimalStops(timeMinutes: number, candidatePlaces: any[], startLat: number, startLng: number) {
   if (!candidatePlaces || candidatePlaces.length === 0) return [];
   
   console.log(`=== Time Budget Analysis for ${timeMinutes} minutes ===`);
   
   // Calculate popularity score for each place (rating * log(reviews) + bonus for high ratings)
-  const placesWithScores = candidatePlaces.map(place => {
+  const placesWithScores = candidatePlaces.map((place: any) => {
     const rating = place.rating || 0;
     const reviewCount = place.user_ratings_total || 0;
     
@@ -162,7 +162,7 @@ function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng)
   });
   
   // Sort by popularity score (highest first), then by distance as secondary
-  const sortedCandidates = placesWithScores.sort((a, b) => {
+  const sortedCandidates = placesWithScores.sort((a: any, b: any) => {
     const scoresDiff = b.popularityScore - a.popularityScore;
     if (Math.abs(scoresDiff) > 0.5) return scoresDiff; // Significant popularity difference
     
@@ -173,7 +173,7 @@ function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng)
   });
   
   console.log('Top candidates by popularity:');
-  sortedCandidates.slice(0, 5).forEach((place, i) => {
+  sortedCandidates.slice(0, 5).forEach((place: any, i: number) => {
     console.log(`${i+1}. ${place.name} - Score: ${place.popularityScore.toFixed(1)} (Rating: ${place.rating}, Reviews: ${place.user_ratings_total})`);
   });
   
@@ -242,7 +242,7 @@ function calculateOptimalStops(timeMinutes, candidatePlaces, startLat, startLng)
 }
 
 // Haversine distance formula for walking time
-function calculateDistance(lat1, lon1, lat2, lon2) {
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // Earth radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -253,7 +253,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c * 1000; // Distance in meters
 }
 
-function estimateWalkingTime(distance) {
+function estimateWalkingTime(distance: number) {
   const walkingSpeed = 80; // Meters per minute (4.8 km/h average)
   return Math.round(distance / walkingSpeed);
 }
@@ -372,7 +372,7 @@ serve(async (req) => {
         '1.5 hours': 90,
         '2+ hours': 120
       };
-      timeMinutes = timeMap[timeWindow] || 60;
+      timeMinutes = (timeMap as any)[timeWindow] || 60;
     } else {
       timeMinutes = 60; // Default to 1 hour
     }
@@ -385,11 +385,11 @@ serve(async (req) => {
     console.log(`Search parameters: radius=${radius}m (${(radius/1000).toFixed(1)}km), timeAvailable=${timeMinutes}min`);
 
     // Get unique types for search
-    const allTypes = goals.flatMap(goal => goalToTypesMap[goal] || ['point_of_interest']);
+    const allTypes = goals.flatMap((goal: any) => goalToTypesMap[goal as keyof typeof goalToTypesMap] || ['point_of_interest']);
     const uniqueTypes = [...new Set(allTypes)];
 
     // Helper function to normalize Google Places types
-    const normalizeType = (googleTypes) => {
+    const normalizeType = (googleTypes: any[]) => {
       if (googleTypes.includes('restaurant') || googleTypes.includes('cafe') || googleTypes.includes('bakery')) return 'restaurant';
       if (googleTypes.includes('bar') || googleTypes.includes('night_club')) return 'bar';
       if (googleTypes.includes('park')) return 'park';
@@ -468,8 +468,8 @@ serve(async (req) => {
         const normalizedType = normalizeType(placeTypes);
         
         // Check if this place actually matches the user's selected goals
-        const matchesGoals = goals.some(goal => {
-          const expectedTypes = goalToTypesMap[goal] || [];
+        const matchesGoals = goals.some((goal: any) => {
+          const expectedTypes = goalToTypesMap[goal as keyof typeof goalToTypesMap] || [];
           return expectedTypes.some(expectedType => {
             // Direct type match
             if (placeTypes.includes(expectedType)) return true;
@@ -578,8 +578,8 @@ serve(async (req) => {
         if (finalStops.length > 1) {
           // Add walking time from start to first stop
           const distToFirst = calculateDistance(lat, lng, finalStops[0].lat, finalStops[0].lon);
-          finalStops[0].walkingTimeFromPrevious = estimateWalkingTime(distToFirst);
-          totalWalkingTime += finalStops[0].walkingTimeFromPrevious;
+          (finalStops[0] as any).walkingTimeFromPrevious = estimateWalkingTime(distToFirst);
+          totalWalkingTime += (finalStops[0] as any).walkingTimeFromPrevious;
 
           // Calculate walking times between consecutive stops
           for (let i = 1; i < finalStops.length; i++) {
@@ -589,14 +589,14 @@ serve(async (req) => {
               finalStops[i].lat, 
               finalStops[i].lon
             );
-            finalStops[i].walkingTimeFromPrevious = estimateWalkingTime(dist);
-            totalWalkingTime += finalStops[i].walkingTimeFromPrevious;
+            (finalStops[i] as any).walkingTimeFromPrevious = estimateWalkingTime(dist);
+            totalWalkingTime += (finalStops[i] as any).walkingTimeFromPrevious;
           }
         } else {
           // Single stop - just calculate time from start
           const distToFirst = calculateDistance(lat, lng, finalStops[0].lat, finalStops[0].lon);
-          finalStops[0].walkingTimeFromPrevious = estimateWalkingTime(distToFirst);
-          totalWalkingTime += finalStops[0].walkingTimeFromPrevious;
+          (finalStops[0] as any).walkingTimeFromPrevious = estimateWalkingTime(distToFirst);
+          totalWalkingTime += (finalStops[0] as any).walkingTimeFromPrevious;
         }
 
         // Generate Google Maps URL for walking directions
@@ -649,7 +649,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('TripAdvisor photos function error:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500 
