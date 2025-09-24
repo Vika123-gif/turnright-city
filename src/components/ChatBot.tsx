@@ -331,19 +331,43 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     setError(null);
     
     try {
-      const { location, timeMinutes, categories = [] } = data;
-      
       console.log("=== DEBUG: Starting route generation ===");
-      console.log("Location:", location);
-      console.log("Time minutes:", timeMinutes);
-      console.log("Categories:", categories);
+      console.log("Data:", data);
+      console.log("Scenario:", data.scenario);
+      
+      let location: string;
+      let timeWindow: number;
+      let categories: string[] = [];
+      let userPrompt: string;
+      
+      if (data.scenario === "planning") {
+        // Planning scenario: use city and days
+        location = data.city || "";
+        timeWindow = data.days || 1;
+        categories = data.categories || [];
+        userPrompt = `Generate a ${timeWindow}-day trip plan for ${location} with interests: ${categories.join(", ")}`;
+        
+        console.log("Planning scenario - City:", location);
+        console.log("Planning scenario - Days:", timeWindow);
+        console.log("Planning scenario - Categories:", categories);
+      } else {
+        // Onsite scenario: use location and time in minutes
+        location = data.location || "";
+        timeWindow = data.timeMinutes || 180;
+        categories = data.categories || [];
+        userPrompt = `Generate a route for ${timeWindow} minutes in ${location} with interests: ${categories.join(", ")}`;
+        
+        console.log("Onsite scenario - Location:", location);
+        console.log("Onsite scenario - Time minutes:", timeWindow);
+        console.log("Onsite scenario - Categories:", categories);
+      }
       
       // Get LLM places
       const response = await getLLMPlaces({
         location,
         goals: categories,
-        timeWindow: timeMinutes,
-        userPrompt: `Generate a route for ${timeMinutes} minutes in ${location} with interests: ${categories.join(", ")}`
+        timeWindow: timeWindow,
+        userPrompt: userPrompt
       });
       console.log("=== DEBUG: LLM Response ===", response);
       
@@ -810,6 +834,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             }}
             purchasing={false}
             location={collectedData.location || ''}
+            days={collectedData.days || 1}
           />
         </div>
       )}
