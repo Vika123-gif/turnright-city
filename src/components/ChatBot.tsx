@@ -5,6 +5,10 @@ import CategoriesStep from "./steps/CategoriesStep";
 import TimeStep from "./steps/TimeStep";
 import LocationStep from "./steps/LocationStep";
 import AdditionalSettingsStep from "./steps/AdditionalSettingsStep";
+import GPTStep from "./steps/GPTStep";
+import RoutePreviewStep from "./steps/RoutePreviewStep";
+import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
+import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 
 const CATEGORIES = [
   "Restaurants", "Cafés", "Bars", "Viewpoints", "Parks", "Museums",
@@ -34,6 +38,7 @@ type ChatStep =
   | "destination_input"
   | "interests" 
   | "additional_settings"
+  | "generating"
   | "route_preview"
   // Scenario B (planning) steps  
   | "city_dates"
@@ -99,8 +104,15 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     accommodation?: string;
     hasAccommodation?: boolean;
   }>({ scenario: "onsite" });
+  
+  // Route generation states
+  const [places, setPlaces] = useState<LLMPlace[] | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { getLLMPlaces } = useOpenAI();
+  const { searchPlacesByName } = useGooglePlaces();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -300,16 +312,103 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     }, 1000);
   };
 
-  const handleAdditionalSettingsSubmit = (settings: string[]) => {
+  const handleAdditionalSettingsSubmit = async (settings: string[]) => {
     const finalData = { ...collectedData, additionalSettings: settings };
     setCollectedData(finalData);
     console.log('Final data being sent:', finalData);
-    setCurrentStep("complete");
     
+    // Start route generation
     setTimeout(() => {
       addBotMessage(`🚀 Perfect! Let me create your personalized ${selectedScenario === "planning" ? "trip plan" : "route"}...`);
-      onComplete(finalData);
+      setCurrentStep("generating");
+      generateRoute(finalData);
     }, 1000);
+  };
+
+  const generateRoute = async (data: any) => {
+    setGenerating(true);
+    setError(null);
+    
+    try {
+      const { location, timeMinutes, categories = [] } = data;
+      
+      console.log("=== DEBUG: Starting route generation ===");
+      console.log("Location:", location);
+      console.log("Time minutes:", timeMinutes);
+      console.log("Categories:", categories);
+      
+      // Get LLM places
+      const response = await getLLMPlaces({
+        location,
+        goals: categories,
+        timeWindow: timeMinutes,
+        userPrompt: `Generate a route for ${timeMinutes} minutes in ${location} with interests: ${categories.join(", ")}`
+      });
+      console.log("=== DEBUG: LLM Response ===", response);
+      
+      if (!response || response.length === 0) {
+        throw new Error("No places found for your criteria. Try different settings.");
+      }
+      
+      // Enrich places with photos and coordinates
+      const placesWithPhotos: LLMPlace[] = await Promise.all(
+        response.map(async (place, index) => {
+          try {
+            const googlePlacesResponse = await searchPlacesByName({
+              placeName: place.name,
+              location: location,
+              placeType: place.type
+            });
+            
+            if (googlePlacesResponse.length > 0) {
+              const foundPlace = googlePlacesResponse[0];
+              return {
+                ...place,
+                photoUrl: foundPlace.photoUrl || place.photoUrl,
+                coordinates: foundPlace.coordinates || place.coordinates,
+                lat: foundPlace.coordinates ? foundPlace.coordinates[1] : place.lat,
+                lon: foundPlace.coordinates ? foundPlace.coordinates[0] : place.lon,
+                walkingTime: foundPlace.walkingTime || place.walkingTime,
+                address: foundPlace.address || place.address || place.name
+              };
+            } else {
+              return {
+                ...place,
+                address: place.address || place.name,
+              };
+            }
+          } catch (error) {
+            console.error(`Error enriching place data for ${place.name}:`, error);
+            return place;
+          }
+        })
+      );
+      
+      console.log("=== DEBUG: Places with photos ===", placesWithPhotos);
+      
+      setPlaces(placesWithPhotos);
+      setCurrentStep("route_preview");
+      
+    } catch (e: any) {
+      console.error("=== DEBUG: Error in generateRoute ===", e);
+      setError(e.message || "Could not generate route.");
+      setCurrentStep("route_preview");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleRegenerate = () => {
+    console.log("=== DEBUG: Regenerate called ===");
+    setCurrentStep("generating");
+    generateRoute(collectedData);
+  };
+
+  const handleBuyRoute = () => {
+    console.log("=== DEBUG: handleBuyRoute called ===");
+    // Complete the flow - show the route
+    setCurrentStep("complete");
+    onComplete(collectedData);
   };
 
   const handleDestinationSubmit = () => {
@@ -590,6 +689,30 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
           <AdditionalSettingsStep 
             onNext={handleAdditionalSettingsSubmit} 
             buttonText="Create Trip Plan"
+          />
+        </div>
+      )}
+
+      {currentStep === "generating" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <GPTStep
+            places={places || []}
+            loading={generating}
+            onDone={() => setCurrentStep("route_preview")}
+            error={error}
+          />
+        </div>
+      )}
+
+      {currentStep === "route_preview" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <RoutePreviewStep
+            places={places || []}
+            onRegenerate={handleRegenerate}
+            onBuy={handleBuyRoute}
+            purchasing={false}
+            error={error}
+            location={collectedData.location || ""}
           />
         </div>
       )}
