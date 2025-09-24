@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import Button from "../Button";
-import { Repeat, MapPin, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Repeat, MapPin, Clock, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import { supabase } from "@/integrations/supabase/client";
 import Map from "../Map";
@@ -15,6 +15,7 @@ type Props = {
   location?: string;
   onTrackBuyClick?: (location: string, placesCount: number) => void;
   days?: number; // Number of days for the trip
+  scenario?: "onsite" | "planning"; // Add scenario prop
 };
 
 const RoutePreviewStep: React.FC<Props> = ({
@@ -26,6 +27,7 @@ const RoutePreviewStep: React.FC<Props> = ({
   location = '',
   onTrackBuyClick,
   days = 1,
+  scenario = "onsite",
 }) => {
   const [processing, setProcessing] = useState(false);
   const [currentDay, setCurrentDay] = useState(1);
@@ -46,9 +48,21 @@ const RoutePreviewStep: React.FC<Props> = ({
     }
   }
 
-  // Group places by days
+  // Handle PDF save
+  const handleSavePDF = () => {
+    // Simple implementation - open print dialog
+    window.print();
+  };
+
+  // Group places by days (for planning scenario)
   const groupPlacesByDays = () => {
-    const placesPerDay = Math.ceil(places.length / days);
+    if (scenario === "onsite") {
+      // For onsite, treat all places as one "day"
+      return [{ day: 1, places: places }];
+    }
+    
+    // For planning scenario, group by actual days
+    const placesPerDay = 6; // Always 6 places per day for planning
     const groupedPlaces = [];
     
     for (let day = 0; day < days; day++) {
@@ -73,7 +87,7 @@ const RoutePreviewStep: React.FC<Props> = ({
   return (
     <div className="chat-card text-left h-screen overflow-y-auto flex flex-col">
       <div className="font-semibold text-lg mb-3 flex items-center gap-2">
-        📍 Your {days}-day trip itinerary
+        📍 Your {scenario === "planning" ? `${days}-day trip itinerary` : "custom route"}
       </div>
       
       {error && (
@@ -82,8 +96,8 @@ const RoutePreviewStep: React.FC<Props> = ({
       
       {!error && (
         <>
-          {/* Day Navigation */}
-          {days > 1 && (
+          {/* Day Navigation - only show for planning scenario with multiple days */}
+          {scenario === "planning" && days > 1 && (
             <div className="flex items-center justify-between mb-4 bg-white rounded-lg p-3 border border-gray-200">
               <button
                 onClick={() => setCurrentDay(Math.max(1, currentDay - 1))}
@@ -132,10 +146,12 @@ const RoutePreviewStep: React.FC<Props> = ({
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex-1">
               <div className="bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white p-4">
                 <h3 className="text-xl font-bold flex items-center gap-2">
-                  <span className="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">
-                    {currentDayData.day}
-                  </span>
-                  Day {currentDayData.day}
+                  {scenario === "planning" && (
+                    <span className="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">
+                      {currentDayData.day}
+                    </span>
+                  )}
+                  {scenario === "planning" ? `Day ${currentDayData.day}` : "Your Route"}
                 </h3>
               </div>
               
@@ -199,15 +215,25 @@ const RoutePreviewStep: React.FC<Props> = ({
                 ))}
               </div>
               
-              {/* Day-specific Google Maps button */}
-              <div className="p-4 border-t border-gray-200">
+              {/* Google Maps and Save buttons */}
+              <div className="p-4 border-t border-gray-200 space-y-3">
                 <Button 
                   variant="outline"
                   onClick={() => handleOpenDayInGoogleMaps(currentDayData.places)}
                   disabled={purchasing || processing}
                   className="w-full"
                 >
-                  🌍 Open Day {currentDayData.day} Route in Google Maps
+                  🌍 Open {scenario === "planning" ? `Day ${currentDayData.day}` : ""} Route in Google Maps
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  onClick={handleSavePDF}
+                  disabled={purchasing || processing}
+                  className="w-full"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Save Route as PDF
                 </Button>
               </div>
             </div>

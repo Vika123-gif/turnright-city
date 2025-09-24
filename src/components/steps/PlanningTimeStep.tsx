@@ -1,16 +1,18 @@
-
 import React, { useState } from "react";
 import Button from "../Button";
 
-const DAYS = ["1 day", "2 days", "3 days", "4 days", "5 days"];
-const DAYS_TO_COUNT = { "1 day": 1, "2 days": 2, "3 days": 3, "4 days": 4, "5 days": 5 };
+const DAYS = ["1 day", "2 days", "3 days", "4 days", "5 days", "6 days", "7 days"];
+const DAYS_TO_COUNT = { 
+  "1 day": 1, "2 days": 2, "3 days": 3, "4 days": 4, 
+  "5 days": 5, "6 days": 6, "7 days": 7 
+};
 
 type Props = {
   onNext: (days: number) => void;
   value?: number;
 };
 
-const TimeStep: React.FC<Props> = ({ onNext, value }) => {
+const PlanningTimeStep: React.FC<Props> = ({ onNext, value }) => {
   const [selectedDays, setSelectedDays] = useState<string | null>(
     value ? Object.keys(DAYS_TO_COUNT).find(key => DAYS_TO_COUNT[key as keyof typeof DAYS_TO_COUNT] === value) || "Other" : null
   );
@@ -33,8 +35,6 @@ const TimeStep: React.FC<Props> = ({ onNext, value }) => {
     }
   };
 
-  const isFormValid = selectedDays && (selectedDays !== "Other" || customDays);
-
   return (
     <div className="space-y-4 mt-4">
       <div className="grid grid-cols-2 gap-3">
@@ -48,7 +48,10 @@ const TimeStep: React.FC<Props> = ({ onNext, value }) => {
                 : "bg-white border-2 border-gray-200 text-gray-700 hover:border-[hsl(var(--primary))] hover:bg-green-50"
             }`}
           >
-            {days}
+            <div className="flex flex-col items-center">
+              <span>{days}</span>
+              <span className="text-xs opacity-75">6 places/day</span>
+            </div>
           </button>
         ))}
       </div>
@@ -71,6 +74,7 @@ const TimeStep: React.FC<Props> = ({ onNext, value }) => {
             onChange={(e) => setCustomDays(e.target.value)}
             className="flex-1 h-10 px-3 rounded-xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
             min="1"
+            max="30"
           />
         )}
       </div>
@@ -87,4 +91,4 @@ const TimeStep: React.FC<Props> = ({ onNext, value }) => {
   );
 };
 
-export default TimeStep;
+export default PlanningTimeStep;

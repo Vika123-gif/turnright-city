@@ -39,19 +39,36 @@ export function useOpenAI() {
     userPrompt,
     regenerationAttempt = 0,
     maxPlaces = 6,
+    scenario = "planning"
   }: {
     location: string;
     goals: string[];
-    timeWindow: number; // Number of days
+    timeWindow: number; // Number of days for planning, minutes for onsite
     userPrompt: string;
     regenerationAttempt?: number;
     maxPlaces?: number;
+    scenario?: "onsite" | "planning";
   }): Promise<LLMPlace[]> {
     
     console.log("=== DEBUG: TripAdvisor-only route generation ===");
     console.log("Location received in hook:", location);
     console.log("Goals received in hook:", goals);
-    console.log("Time window (days):", timeWindow);
+    console.log("Time window:", timeWindow);
+    console.log("Scenario:", scenario);
+    
+    // Calculate maxPlaces based on scenario
+    let actualMaxPlaces = maxPlaces;
+    if (scenario === "onsite") {
+      // For onsite: 3h=2 places, 6h=4 places, 10h=6 places
+      if (timeWindow <= 180) actualMaxPlaces = 2;      // 3 hours
+      else if (timeWindow <= 360) actualMaxPlaces = 4;  // 6 hours
+      else actualMaxPlaces = 6;                         // full day
+    } else if (scenario === "planning") {
+      // For planning: 6 places per day
+      actualMaxPlaces = timeWindow * 6;
+    }
+    
+    console.log("Calculated max places:", actualMaxPlaces);
     
     try {
       // Call TripAdvisor function directly for route generation
@@ -60,8 +77,8 @@ export function useOpenAI() {
         body: { 
           location: location,
           goals: goals,
-          timeWindow: timeWindow, // Number of days
-          maxPlaces: timeWindow * maxPlaces // 6 places per day
+          timeWindow: timeWindow,
+          maxPlaces: actualMaxPlaces
         }
       });
       

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import Button from "./Button";
 import { MapPin, Clock, Shuffle, Send, ChevronUp, ChevronDown, Bot, User } from "lucide-react";
 import CategoriesStep from "./steps/CategoriesStep";
-import TimeStep from "./steps/TimeStep";
+import OnSiteTimeStep from "./steps/OnSiteTimeStep";
+import PlanningTimeStep from "./steps/PlanningTimeStep";
 import LocationStep from "./steps/LocationStep";
 import AdditionalSettingsStep from "./steps/AdditionalSettingsStep";
 import GPTStep from "./steps/GPTStep";
@@ -367,7 +368,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         location,
         goals: categories,
         timeWindow: timeWindow,
-        userPrompt: userPrompt
+        userPrompt: userPrompt,
+        scenario: data.scenario
       });
       console.log("=== DEBUG: LLM Response ===", response);
       
@@ -685,7 +687,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {currentStep === "time" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
-          <TimeStep onNext={(timeMinutes) => {
+          <OnSiteTimeStep onNext={(timeMinutes) => {
             addUserMessage(`⏰ ${timeMinutes} minutes`);
             setCollectedData(prev => ({ ...prev, timeMinutes }));
             setTimeout(() => {
