@@ -437,7 +437,32 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     if (type === "specific") {
       setTimeout(() => {
         addBotMessage("Please enter your destination address:");
-        // Show input for destination
+        
+        const destinationInputComponent = (
+          <div className="space-y-4 mt-4">
+            <Input
+              type="text"
+              placeholder="Enter destination address..."
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleDestinationSubmit()}
+              className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-base font-medium"
+            />
+            <button
+              onClick={handleDestinationSubmit}
+              disabled={!userInput.trim()}
+              className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
+                !userInput.trim()
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+              }`}
+            >
+              Continue
+            </button>
+          </div>
+        );
+        
+        addBotMessage("", destinationInputComponent);
       }, 1000);
     } else {
       proceedToInterests();
@@ -459,7 +484,13 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             <label key={category} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
               <Checkbox
                 checked={selectedCategories.includes(category)}
-                onCheckedChange={() => handleCategoryToggle(category)}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setSelectedCategories(prev => [...prev, category]);
+                  } else {
+                    setSelectedCategories(prev => prev.filter(c => c !== category));
+                  }
+                }}
                 className="w-5 h-5 rounded border-2 border-gray-300 data-[state=checked]:bg-[hsl(var(--primary))] data-[state=checked]:border-[hsl(var(--primary))]"
               />
               <span className="text-sm font-medium text-gray-700">{category}</span>
@@ -539,7 +570,13 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             <label key={setting} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
               <Checkbox
                 checked={additionalSettings.includes(setting)}
-                onCheckedChange={() => handleSettingToggle(setting)}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setAdditionalSettings(prev => [...prev, setting]);
+                  } else {
+                    setAdditionalSettings(prev => prev.filter(s => s !== setting));
+                  }
+                }}
                 className="w-5 h-5 rounded border-2 border-gray-300 data-[state=checked]:bg-[hsl(var(--primary))] data-[state=checked]:border-[hsl(var(--primary))]"
               />
               <span className="text-sm font-medium text-gray-700">{setting}</span>
@@ -576,6 +613,15 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       addBotMessage(`🚀 Perfect! Let me create your personalized ${selectedScenario === "planning" ? "trip plan" : "route"}...`);
       onComplete(finalData);
     }, 1000);
+  };
+
+  const handleDestinationSubmit = () => {
+    if (userInput.trim()) {
+      addUserMessage(`📍 ${userInput}`);
+      setCollectedData(prev => ({ ...prev, destination: userInput }));
+      setUserInput("");
+      proceedToInterests();
+    }
   };
 
   const handleManualLocation = () => {
