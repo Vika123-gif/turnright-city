@@ -9,10 +9,36 @@ const CATEGORIES = [
   "Architectural landmarks", "Coworking", "Bakery", "Specialty coffee"
 ];
 
-const TIMINGS = ["1h", "3h", "5h", "Full day"];
-const TIME_TO_MINUTES = { "1h": 60, "3h": 180, "5h": 300, "Full day": 480 };
+const TIMINGS = ["3h", "6h", "Half-day", "Day"];
+const TIME_TO_MINUTES = { "3h": 180, "6h": 360, "Half-day": 240, "Day": 480 };
 
-type ChatStep = "welcome" | "location" | "time" | "categories" | "complete";
+const DAYS_OPTIONS = ["1", "2", "3", "4", "5", "6", "7"];
+
+const ADDITIONAL_SETTINGS = [
+  "Barrier-free",
+  "More greenery", 
+  "Avoid bad air",
+  "Safety"
+];
+
+type Scenario = "onsite" | "planning";
+type ChatStep = 
+  | "welcome" 
+  | "scenario_fork"
+  // Scenario A (onsite) steps
+  | "location" 
+  | "time" 
+  | "destination"
+  | "interests" 
+  | "additional_settings"
+  | "route_preview"
+  // Scenario B (planning) steps  
+  | "city_dates"
+  | "accommodation"
+  | "trip_interests"
+  | "trip_settings"
+  | "trip_preview"
+  | "complete";
 
 type Message = {
   id: string;
@@ -23,7 +49,20 @@ type Message = {
 };
 
 type Props = {
-  onComplete: (data: { location: string; timeMinutes: number; categories: string[] }) => void;
+  onComplete: (data: { 
+    scenario: Scenario;
+    location?: string; 
+    timeMinutes?: number; 
+    categories?: string[];
+    destination?: string;
+    destinationType?: "none" | "circle" | "specific";
+    additionalSettings?: string[];
+    // Planning scenario data
+    city?: string;
+    days?: number;
+    accommodation?: string;
+    hasAccommodation?: boolean;
+  }) => void;
   isVisible: boolean;
   onToggleVisibility: () => void;
   isRouteGenerated: boolean;
@@ -33,16 +72,29 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentStep, setCurrentStep] = useState<ChatStep>("welcome");
   const [userInput, setUserInput] = useState("");
+  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customMinutes, setCustomMinutes] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [additionalSettings, setAdditionalSettings] = useState<string[]>([]);
   const [locationConsent, setLocationConsent] = useState(false);
   const [detecting, setDetecting] = useState(false);
+  const [destinationType, setDestinationType] = useState<"none" | "circle" | "specific" | null>(null);
+  const [selectedDays, setSelectedDays] = useState<string | null>(null);
+  const [hasAccommodation, setHasAccommodation] = useState<boolean | null>(null);
   const [collectedData, setCollectedData] = useState<{
-    location: string;
-    timeMinutes: number;
-    categories: string[];
-  } | null>(null);
+    scenario: Scenario;
+    location?: string;
+    timeMinutes?: number;
+    categories?: string[];
+    destination?: string;
+    destinationType?: "none" | "circle" | "specific";
+    additionalSettings?: string[];
+    city?: string;
+    days?: number;
+    accommodation?: string;
+    hasAccommodation?: boolean;
+  }>({ scenario: "onsite" });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -56,10 +108,31 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
 
   useEffect(() => {
     // Initialize with welcome message
-    addBotMessage("👋 Hi! I'm TurnRight, your personal city guide. I'll create the perfect route for you in seconds!");
+    addBotMessage("👋 Hi! I'm TurnRight, your personal city guide.");
     setTimeout(() => {
-      addBotMessage("🗺️ First, I need to know your location. Would you like to share it automatically or enter it manually?");
-      setCurrentStep("location");
+      addBotMessage("Are you already in the city or planning a trip?");
+      
+      const scenarioComponent = (
+        <div className="flex gap-2 mt-3">
+          <Button
+            onClick={() => handleScenarioSelect("onsite")}
+            variant="primary"
+            className="text-xs h-8"
+          >
+            I'm already here
+          </Button>
+          <Button
+            onClick={() => handleScenarioSelect("planning")}
+            variant="outline"
+            className="text-xs h-8"
+          >
+            Planning
+          </Button>
+        </div>
+      );
+      
+      addBotMessage("", scenarioComponent);
+      setCurrentStep("scenario_fork");
     }, 1000);
   }, []);
 
@@ -82,6 +155,121 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       timestamp: new Date()
     };
     setMessages(prev => [...prev, message]);
+  };
+
+  const handleScenarioSelect = (scenario: Scenario) => {
+    setSelectedScenario(scenario);
+    setCollectedData(prev => ({ ...prev, scenario }));
+    
+    if (scenario === "onsite") {
+      addUserMessage("🚶‍♂️ I'm already here");
+      setTimeout(() => {
+        addBotMessage("Perfect! I need to know your location. Would you like to share it automatically or enter it manually?");
+        setCurrentStep("location");
+      }, 1000);
+    } else {
+      addUserMessage("🗓️ Planning a trip");
+      setTimeout(() => {
+        addBotMessage("Great! Let's plan your trip. Which city would you like to visit and how many days will you stay?");
+        
+        const cityDatesComponent = (
+          <div className="space-y-3 mt-3">
+            <Input
+              type="text"
+              placeholder="Enter city name..."
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleCitySubmit()}
+              className="w-full"
+            />
+            <div className="grid grid-cols-4 gap-2">
+              {DAYS_OPTIONS.map((days) => (
+                <Button
+                  key={days}
+                  variant={selectedDays === days ? "primary" : "outline"}
+                  onClick={() => setSelectedDays(days)}
+                  className="text-xs h-8"
+                >
+                  {days} day{days !== "1" ? "s" : ""}
+                </Button>
+              ))}
+            </div>
+            <Button
+              onClick={handleCitySubmit}
+              disabled={!userInput.trim() || !selectedDays}
+              className="text-xs h-8 w-full"
+            >
+              Continue
+            </Button>
+          </div>
+        );
+        
+        addBotMessage("", cityDatesComponent);
+        setCurrentStep("city_dates");
+      }, 1000);
+    }
+  };
+
+  const handleCitySubmit = () => {
+    if (userInput.trim() && selectedDays) {
+      addUserMessage(`🏙️ ${userInput} for ${selectedDays} day${selectedDays !== "1" ? "s" : ""}`);
+      setCollectedData(prev => ({ 
+        ...prev, 
+        city: userInput, 
+        days: parseInt(selectedDays) 
+      }));
+      setUserInput("");
+      
+      setTimeout(() => {
+        addBotMessage("Do you know the address of your hotel/apartment?");
+        
+        const accommodationComponent = (
+          <div className="flex gap-2 mt-3">
+            <Button
+              onClick={() => handleAccommodationSelect(true)}
+              variant="primary"
+              className="text-xs h-8"
+            >
+              Yes, specify
+            </Button>
+            <Button
+              onClick={() => handleAccommodationSelect(false)}
+              variant="outline"
+              className="text-xs h-8"
+            >
+              Not yet
+            </Button>
+          </div>
+        );
+        
+        addBotMessage("", accommodationComponent);
+        setCurrentStep("accommodation");
+      }, 1000);
+    }
+  };
+
+  const handleAccommodationSelect = (hasAccommodation: boolean) => {
+    setHasAccommodation(hasAccommodation);
+    setCollectedData(prev => ({ ...prev, hasAccommodation }));
+    
+    if (hasAccommodation) {
+      addUserMessage("🏨 Yes, I'll specify");
+      setTimeout(() => {
+        addBotMessage("Please enter your accommodation address:");
+        // Show input for accommodation address
+      }, 1000);
+    } else {
+      addUserMessage("🏨 Not yet decided");
+      setCollectedData(prev => ({ ...prev, accommodation: "City center (temporary)" }));
+      proceedToTripInterests();
+    }
+  };
+
+  const proceedToTripInterests = () => {
+    setTimeout(() => {
+      addBotMessage("What interests you for this trip? Select as many as you like:");
+      showInterestsComponent("trip_interests");
+    }, 1000);
   };
 
   const handleDetectLocation = () => {
@@ -115,9 +303,15 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   };
 
   const handleLocationSubmit = (location: string) => {
-    setCollectedData(prev => ({ ...prev!, location }));
-    addBotMessage("✅ Perfect! Now, how much time do you have for exploring?");
+    setCollectedData(prev => ({ ...prev, location }));
     
+    setTimeout(() => {
+      addBotMessage("✅ Perfect! How much time do you have for exploring?");
+      showTimeComponent();
+    }, 1000);
+  };
+
+  const showTimeComponent = () => {
     const timeComponent = (
       <div className="space-y-3 mt-3">
         <div className="grid grid-cols-2 gap-2">
@@ -164,8 +358,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     if (time !== "Custom") {
       const timeMinutes = TIME_TO_MINUTES[time as keyof typeof TIME_TO_MINUTES];
       addUserMessage(`⏰ ${time}`);
-      setCollectedData(prev => ({ ...prev!, timeMinutes }));
-      proceedToCategories();
+      setCollectedData(prev => ({ ...prev, timeMinutes }));
+      proceedToDestination();
     }
   };
 
@@ -173,51 +367,118 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     if (customMinutes) {
       const timeMinutes = parseInt(customMinutes);
       addUserMessage(`⏰ ${customMinutes} minutes`);
-      setCollectedData(prev => ({ ...prev!, timeMinutes }));
-      proceedToCategories();
+      setCollectedData(prev => ({ ...prev, timeMinutes }));
+      proceedToDestination();
     }
   };
 
-  const proceedToCategories = () => {
+  const proceedToDestination = () => {
     setTimeout(() => {
-      addBotMessage("🎯 Great! What interests you? Select as many as you like:");
+      addBotMessage("Do you need to end at a specific location?");
       
-      const categoriesComponent = (
-        <div className="space-y-3 mt-3">
-          <div className="grid grid-cols-2 gap-2">
-            {CATEGORIES.map((category) => (
-              <label key={category} className="flex items-center space-x-2 cursor-pointer text-xs">
-                <Checkbox
-                  checked={selectedCategories.includes(category)}
-                  onCheckedChange={() => handleCategoryToggle(category)}
-                />
-                <span>{category}</span>
-              </label>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleSurpriseMe}
-              className="flex items-center gap-1 text-xs h-8"
-            >
-              <Shuffle className="w-3 h-3" />
-              Surprise me
-            </Button>
-            <Button
-              onClick={handleCategoriesSubmit}
-              disabled={selectedCategories.length === 0}
-              className="text-xs h-8"
-            >
-              Generate Route
-            </Button>
-          </div>
+      const destinationComponent = (
+        <div className="flex gap-2 mt-3 flex-wrap">
+          <Button
+            onClick={() => handleDestinationSelect("none")}
+            variant="outline"
+            className="text-xs h-8"
+          >
+            No
+          </Button>
+          <Button
+            onClick={() => handleDestinationSelect("circle")}
+            variant="outline"
+            className="text-xs h-8"
+          >
+            Circle route
+          </Button>
+          <Button
+            onClick={() => handleDestinationSelect("specific")}
+            variant="outline"
+            className="text-xs h-8"
+          >
+            Enter point B
+          </Button>
         </div>
       );
-
-      addBotMessage("", categoriesComponent);
-      setCurrentStep("categories");
+      
+      addBotMessage("", destinationComponent);
+      setCurrentStep("destination");
     }, 1000);
+  };
+
+  const handleDestinationSelect = (type: "none" | "circle" | "specific") => {
+    setDestinationType(type);
+    setCollectedData(prev => ({ ...prev, destinationType: type }));
+    
+    let userMessage = "";
+    switch (type) {
+      case "none":
+        userMessage = "🚶‍♂️ No specific end point";
+        break;
+      case "circle":
+        userMessage = "🔄 Circle route back to start";
+        break;
+      case "specific":
+        userMessage = "📍 I'll specify end point";
+        break;
+    }
+    
+    addUserMessage(userMessage);
+    
+    if (type === "specific") {
+      setTimeout(() => {
+        addBotMessage("Please enter your destination address:");
+        // Show input for destination
+      }, 1000);
+    } else {
+      proceedToInterests();
+    }
+  };
+
+  const proceedToInterests = () => {
+    setTimeout(() => {
+      addBotMessage("🎯 Great! What interests you? Select as many as you like:");
+      showInterestsComponent("interests");
+    }, 1000);
+  };
+
+  const showInterestsComponent = (step: "interests" | "trip_interests") => {
+    const categoriesComponent = (
+      <div className="space-y-3 mt-3">
+        <div className="grid grid-cols-2 gap-2">
+          {CATEGORIES.map((category) => (
+            <label key={category} className="flex items-center space-x-2 cursor-pointer text-xs">
+              <Checkbox
+                checked={selectedCategories.includes(category)}
+                onCheckedChange={() => handleCategoryToggle(category)}
+              />
+              <span>{category}</span>
+            </label>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleSurpriseMe}
+            className="flex items-center gap-1 text-xs h-8"
+          >
+            <Shuffle className="w-3 h-3" />
+            Surprise me
+          </Button>
+          <Button
+            onClick={() => handleInterestsSubmit(step)}
+            disabled={selectedCategories.length === 0}
+            className="text-xs h-8"
+          >
+            Continue
+          </Button>
+        </div>
+      </div>
+    );
+
+    addBotMessage("", categoriesComponent);
+    setCurrentStep(step);
   };
 
   const handleCategoryToggle = (category: string) => {
@@ -246,17 +507,62 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     setSelectedCategories(selected);
   };
 
-  const handleCategoriesSubmit = () => {
+  const handleInterestsSubmit = (step: "interests" | "trip_interests") => {
     if (selectedCategories.length > 0) {
       addUserMessage(`🎯 ${selectedCategories.join(", ")}`);
-      const finalData = { ...collectedData!, categories: selectedCategories };
-      setCurrentStep("complete");
+      setCollectedData(prev => ({ ...prev, categories: selectedCategories }));
       
       setTimeout(() => {
-        addBotMessage("🚀 Perfect! Let me create your personalized route...");
-        onComplete(finalData);
+        addBotMessage("Any additional preferences?");
+        showAdditionalSettings(step === "interests" ? "additional_settings" : "trip_settings");
       }, 1000);
     }
+  };
+
+  const showAdditionalSettings = (step: "additional_settings" | "trip_settings") => {
+    const settingsComponent = (
+      <div className="space-y-3 mt-3">
+        <div className="space-y-2">
+          {ADDITIONAL_SETTINGS.map((setting) => (
+            <label key={setting} className="flex items-center space-x-2 cursor-pointer text-xs">
+              <Checkbox
+                checked={additionalSettings.includes(setting)}
+                onCheckedChange={() => handleSettingToggle(setting)}
+              />
+              <span>{setting}</span>
+            </label>
+          ))}
+        </div>
+        <Button
+          onClick={() => handleSettingsSubmit(step)}
+          className="text-xs h-8 w-full"
+        >
+          {selectedScenario === "planning" ? "Create Trip Plan" : "Generate Route"}
+        </Button>
+      </div>
+    );
+
+    addBotMessage("", settingsComponent);
+    setCurrentStep(step);
+  };
+
+  const handleSettingToggle = (setting: string) => {
+    setAdditionalSettings(prev => 
+      prev.includes(setting) 
+        ? prev.filter(s => s !== setting)
+        : [...prev, setting]
+    );
+  };
+
+  const handleSettingsSubmit = (step: "additional_settings" | "trip_settings") => {
+    setCollectedData(prev => ({ ...prev, additionalSettings }));
+    const finalData = { ...collectedData, additionalSettings };
+    setCurrentStep("complete");
+    
+    setTimeout(() => {
+      addBotMessage(`🚀 Perfect! Let me create your personalized ${selectedScenario === "planning" ? "trip plan" : "route"}...`);
+      onComplete(finalData);
+    }, 1000);
   };
 
   const handleManualLocation = () => {

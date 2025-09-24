@@ -527,18 +527,38 @@ export default function ChatFlow() {
     return url;
   }
 
-  const handleChatComplete = (data: { location: string; timeMinutes: number; categories: string[] }) => {
+  const handleChatComplete = (data: { 
+    scenario: "onsite" | "planning";
+    location?: string; 
+    timeMinutes?: number; 
+    categories?: string[];
+    destination?: string;
+    destinationType?: "none" | "circle" | "specific";
+    additionalSettings?: string[];
+    city?: string;
+    days?: number;
+    accommodation?: string;
+    hasAccommodation?: boolean;
+  }) => {
     console.log("=== DEBUG: Chat completed ===");
     console.log("Data received:", data);
     
-    setLocation(data.location);
-    setTimeWindow(data.timeMinutes);
-    setGoals(data.categories);
-    setChatVisible(false);
-    setStep("generating");
-    
-    // Start generating places
-    fetchPlacesWithGoals(data.categories);
+    // For now, handle onsite scenario like before
+    if (data.scenario === "onsite" && data.location && data.timeMinutes && data.categories) {
+      setLocation(data.location);
+      setTimeWindow(data.timeMinutes);
+      setGoals(data.categories);
+      setChatVisible(false);
+      setStep("generating");
+      
+      // Start generating places
+      fetchPlacesWithGoals(data.categories);
+    } else if (data.scenario === "planning") {
+      // Handle planning scenario - for now just show a message
+      console.log("Planning scenario not fully implemented yet");
+      setChatVisible(false);
+      // TODO: Implement trip planning logic
+    }
   };
 
   return (
