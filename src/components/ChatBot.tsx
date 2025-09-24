@@ -479,69 +479,57 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   const renderCategories = (step: "interests" | "trip_interests") => (
     <div className="space-y-4 mt-4">
       <div className="grid grid-cols-2 gap-3">
-         {CATEGORIES.map((category) => {
-           const isChecked = selectedCategories.includes(category);
-           return (
-             <label 
-               key={category} 
-               className={`flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] ${
-                 isChecked 
-                   ? "border-[hsl(var(--primary))] bg-green-50" 
-                   : "border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50"
-               }`}
-             >
-               <input
-                 type="checkbox"
-                 checked={isChecked}
-                 onChange={() => {
-                   console.log('Toggling category:', category, 'Current state:', isChecked);
-                   setSelectedCategories(prev => {
-                     const newState = isChecked 
-                       ? prev.filter(c => c !== category)
-                       : [...prev, category];
-                     console.log('New selectedCategories:', newState);
-                     return newState;
-                   });
-                 }}
-                 className="w-4 h-4 rounded border-gray-300 accent-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]"
-               />
-               <span className="text-sm font-medium text-gray-700">{category}</span>
-             </label>
-           );
-         })}
+        {CATEGORIES.map((category) => {
+          const isChecked = selectedCategories.includes(category);
+          const id = `cat-${category.replace(/\s+/g, "-")}`;
+          return (
+            <label
+              key={category}
+              htmlFor={id}
+              className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border-2 transition ${
+                isChecked
+                  ? "border-[hsl(var(--primary))] bg-green-50"
+                  : "border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50"
+              }`}
+            >
+              {/* скрываем нативный чекбокс, но оставляем его контролируемым */}
+              <input
+                id={id}
+                type="checkbox"
+                className="peer sr-only"
+                checked={isChecked}
+                onChange={() => {
+                  setSelectedCategories(prev =>
+                    isChecked ? prev.filter(c => c !== category) : [...prev, category]
+                  );
+                }}
+              />
+              {/* рисуем свою «галочку» */}
+              <span
+                aria-hidden="true"
+                className={`h-5 w-5 rounded-md border grid place-items-center 
+                            ${isChecked ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-white" : "border-gray-300"}`}
+              >
+                {isChecked ? "✓" : ""}
+              </span>
+
+              <span className="text-sm font-medium text-gray-700">{category}</span>
+            </label>
+          );
+        })}
       </div>
-      <div className="flex flex-col gap-3">
-         <button
-           onClick={handleSurpriseMe}
-           className="w-full py-3 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
-         >
-           <Shuffle className="w-5 h-5" />
-           Surprise me
-         </button>
-         <button
-           onClick={() => {
-             console.log('Reset button clicked - clearing all categories');
-             setSelectedCategories([]);
-           }}
-           className="w-full py-2 px-4 bg-red-50 border-2 border-red-200 text-red-600 font-semibold rounded-xl text-sm transition-all duration-200 hover:border-red-300 hover:bg-red-100 hover:scale-[1.02] active:scale-[0.98]"
-         >
-           Reset All
-         </button>
-         <button
-           onClick={() => {
-             console.log('Continue button clicked, selectedCategories:', selectedCategories);
-             handleInterestsSubmit(step);
-           }}
-           disabled={selectedCategories.length === 0}
-           className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
-             selectedCategories.length === 0
-               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-               : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-           }`}
-         >
-           Continue ({selectedCategories.length})
-         </button>
-      </div>
+
+      <button
+        onClick={() => handleInterestsSubmit(step)}
+        disabled={selectedCategories.length === 0}
+        className={`w-full mt-3 py-4 px-6 rounded-2xl font-semibold text-base transition ${
+          selectedCategories.length === 0
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+            : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+        }`}
+      >
+        Continue ({selectedCategories.length})
+      </button>
     </div>
   );
 
@@ -648,8 +636,22 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     }
   };
 
+  if (!isVisible && isRouteGenerated) {
+    return (
+      <div className="fixed bottom-6 right-6 z-50">
+        <button
+          onClick={onToggleVisibility}
+          className="w-14 h-14 rounded-full bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center"
+          aria-label="Open chat"
+        >
+          <Bot className="w-6 h-6" />
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className={`fixed inset-0 bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col ${!isVisible && isRouteGenerated ? 'hidden' : ''}`}>
+    <div className="fixed inset-0 bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col">
       {/* Header */}
       {isRouteGenerated && (
         <div className="flex justify-between items-center p-4 bg-white/80 backdrop-blur-sm border-b border-gray-100 shadow-sm">
@@ -803,20 +805,6 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       )}
     </div>
   );
-
-  if (!isVisible && isRouteGenerated) {
-    return (
-      <div className="fixed bottom-6 right-6 z-50">
-        <button
-          onClick={onToggleVisibility}
-          className="w-14 h-14 rounded-full bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center"
-          aria-label="Open chat"
-        >
-          <Bot className="w-6 h-6" />
-        </button>
-      </div>
-    );
-  }
 };
 
 export default ChatBot;
