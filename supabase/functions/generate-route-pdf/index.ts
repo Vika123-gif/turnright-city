@@ -82,7 +82,7 @@ function generateRouteHTML(routeData: RouteData): string {
     groupedPlaces = [{ day: 1, places }];
   }
 
-  const goalsText = goals.length > 0 ? goals.join(', ') : 'Общий маршрут';
+  const goalsText = goals.length > 0 ? goals.join(', ') : 'General route';
 
   return `
     <!DOCTYPE html>
@@ -132,6 +132,19 @@ function generateRouteHTML(routeData: RouteData): string {
           padding: 15px;
           margin-bottom: 15px;
           background: #f9fafb;
+          display: flex;
+          gap: 15px;
+          align-items: flex-start;
+        }
+        .place-image {
+          width: 120px;
+          height: 80px;
+          object-fit: cover;
+          border-radius: 6px;
+          flex-shrink: 0;
+        }
+        .place-content {
+          flex: 1;
         }
         .place-name {
           font-size: 16px;
@@ -153,6 +166,15 @@ function generateRouteHTML(routeData: RouteData): string {
           gap: 15px;
           font-size: 12px;
           color: #6b7280;
+          margin-bottom: 10px;
+        }
+        .place-link {
+          color: #3b82f6;
+          text-decoration: none;
+          font-size: 12px;
+        }
+        .place-link:hover {
+          text-decoration: underline;
         }
         .footer {
           margin-top: 40px;
@@ -179,36 +201,45 @@ function generateRouteHTML(routeData: RouteData): string {
     <body>
       <div class="header">
         <h1>${routeName}</h1>
-        <p><strong>Локация:</strong> ${location}</p>
-        <p><strong>Тип:</strong> ${scenario === 'planning' ? 'Планирование поездки' : 'Маршрут на месте'}</p>
-        <p><strong>Категории:</strong> ${goalsText}</p>
-        <p><strong>Общее время ходьбы:</strong> ${totalWalkingTime} мин</p>
-        ${mapUrl ? `<a href="${mapUrl}" class="map-link">Открыть полный маршрут в Google Maps</a>` : ''}
+        <p><strong>Location:</strong> ${location}</p>
+        <p><strong>Type:</strong> ${scenario === 'planning' ? 'Trip Planning' : 'On-site Route'}</p>
+        <p><strong>Categories:</strong> ${goalsText}</p>
+        <p><strong>Total Walking Time:</strong> ${totalWalkingTime} min</p>
+        ${mapUrl ? `<a href="${mapUrl}" class="map-link">Open full route in Google Maps</a>` : ''}
       </div>
 
       ${groupedPlaces.map(group => `
         <div class="day-section">
           <div class="day-title">
-            ${scenario === 'planning' && days > 1 ? `День ${group.day}` : 'Маршрут'}
+            ${scenario === 'planning' && days > 1 ? `Day ${group.day}` : 'Route'}
           </div>
           
-          ${group.places.map((place, index) => `
+          ${group.places.map((place, index) => {
+            const googleMapsLink = place.lat && place.lon 
+              ? `https://www.google.com/maps/place/${place.lat},${place.lon}`
+              : `https://www.google.com/maps/search/${encodeURIComponent(place.name + ' ' + place.address)}`;
+            
+            return `
             <div class="place">
-              <div class="place-name">${index + 1}. ${place.name}</div>
-              ${place.address ? `<div class="place-address">📍 ${place.address}</div>` : ''}
-              ${place.description ? `<div class="place-description">${place.description}</div>` : ''}
-              <div class="place-details">
-                ${place.walkingTime ? `<span>🚶 ${place.walkingTime} мин пешком</span>` : ''}
-                ${place.rating ? `<span>⭐ ${place.rating}/5</span>` : ''}
+              ${place.photoUrl ? `<img src="${place.photoUrl}" alt="${place.name}" class="place-image" />` : ''}
+              <div class="place-content">
+                <div class="place-name">${index + 1}. ${place.name}</div>
+                ${place.address ? `<div class="place-address">📍 ${place.address}</div>` : ''}
+                ${place.description ? `<div class="place-description">${place.description}</div>` : ''}
+                <div class="place-details">
+                  ${place.walkingTime ? `<span>🚶 ${place.walkingTime} min walk</span>` : ''}
+                  ${place.rating ? `<span>⭐ ${place.rating}/5</span>` : ''}
+                </div>
+                <a href="${googleMapsLink}" class="place-link" target="_blank">View on Google Maps</a>
               </div>
             </div>
-          `).join('')}
+          `}).join('')}
         </div>
       `).join('')}
 
       <div class="footer">
-        <p>Маршрут создан с помощью TurnRight.city</p>
-        <p>Сгенерировано: ${new Date().toLocaleString('ru-RU')}</p>
+        <p>Route created with TurnRight.city</p>
+        <p>Generated: ${new Date().toLocaleString('en-US')}</p>
       </div>
     </body>
     </html>
