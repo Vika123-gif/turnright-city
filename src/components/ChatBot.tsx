@@ -492,25 +492,34 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     const categoriesComponent = (
       <div className="space-y-4 mt-4">
         <div className="grid grid-cols-2 gap-3">
-          {CATEGORIES.map((category) => (
-            <label key={category} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
-              <input
-                type="checkbox"
-                checked={selectedCategories.includes(category)}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  console.log('Category checkbox changed:', category, checked);
-                  if (checked) {
-                    setSelectedCategories(prev => [...prev, category]);
-                  } else {
-                    setSelectedCategories(prev => prev.filter(c => c !== category));
-                  }
-                }}
-                className="w-5 h-5 rounded border-2 border-gray-300 checked:bg-[hsl(var(--primary))] checked:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
-              />
-              <span className="text-sm font-medium text-gray-700">{category}</span>
-            </label>
-          ))}
+           {CATEGORIES.map((category) => (
+             <label key={category} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
+               <input
+                 type="checkbox"
+                 checked={selectedCategories.includes(category)}
+                 onChange={(e) => {
+                   const checked = e.target.checked;
+                   console.log('Category checkbox changed:', category, checked);
+                   console.log('Current selectedCategories:', selectedCategories);
+                   if (checked) {
+                     setSelectedCategories(prev => {
+                       const newCategories = [...prev, category];
+                       console.log('New selectedCategories:', newCategories);
+                       return newCategories;
+                     });
+                   } else {
+                     setSelectedCategories(prev => {
+                       const newCategories = prev.filter(c => c !== category);
+                       console.log('New selectedCategories:', newCategories);
+                       return newCategories;
+                     });
+                   }
+                 }}
+                 className="w-5 h-5 accent-[hsl(var(--primary))] scale-125"
+               />
+               <span className="text-sm font-medium text-gray-700">{category}</span>
+             </label>
+           ))}
         </div>
         <div className="flex flex-col gap-3">
           <button
@@ -521,7 +530,10 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             Surprise me
           </button>
            <button
-             onClick={() => handleInterestsSubmit(step)}
+             onClick={() => {
+               console.log('Continue button clicked, selectedCategories:', selectedCategories);
+               handleInterestsSubmit(step);
+             }}
              disabled={selectedCategories.length === 0}
              className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
                selectedCategories.length === 0
@@ -529,7 +541,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
              }`}
            >
-             Continue
+             Continue ({selectedCategories.length})
            </button>
         </div>
       </div>
