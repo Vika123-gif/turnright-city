@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Clock, Star, Calendar, Trash2, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAuth } from './AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { type LLMPlace } from '@/hooks/useOpenAI';
@@ -16,7 +17,7 @@ interface SavedRoute {
 }
 
 const MyTrips: React.FC = () => {
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
   const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<SavedRoute | null>(null);
@@ -84,12 +85,12 @@ const MyTrips: React.FC = () => {
           <p className="text-gray-600 mb-6">
             Sign in to save and manage your personalized routes
           </p>
-          <button
-            onClick={signInWithGoogle}
+          <Button
+            onClick={() => window.location.href = '/auth'}
             className="w-full py-3 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
           >
-            Sign in with Google
-          </button>
+            Sign in to view your trips
+          </Button>
         </div>
       </div>
     );

@@ -377,7 +377,7 @@ export const useDatabase = () => {
     places: LLMPlace[],
     totalWalkingTime: number,
     mapUrl: string | null,
-    userSessionId: string
+    userId: string  // Changed from userSessionId to userId for authenticated users
   ) => {
     try {
       console.log('=== SAVE USER ROUTE ATTEMPT ===');
@@ -385,7 +385,7 @@ export const useDatabase = () => {
       await testConnection();
       
       const insertData = {
-        user_session_id: userSessionId,
+        user_session_id: generateSessionId(), // Keep for backward compatibility
         route_name: routeName,
         location,
         scenario,
@@ -413,7 +413,7 @@ export const useDatabase = () => {
       console.log('Route saved successfully:', data);
       return data;
     } catch (err) {
-      console.error('=== SAVE ROUTE EXCEPTION ===');
+      console.error('=== ROUTE SAVE EXCEPTION ===');
       console.error('Exception details:', err);
       return null;
     }

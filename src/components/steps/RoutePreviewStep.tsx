@@ -4,7 +4,7 @@ import Button from "../Button";
 import { Repeat, MapPin, Clock, ChevronLeft, ChevronRight, Download, Save, Check, MoreVertical, ExternalLink } from "lucide-react";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import { supabase } from "@/integrations/supabase/client";
-import { useDatabase } from "@/hooks/useDatabase";
+import { useAuth } from "@/components/AuthProvider";
 import Map from "../Map";
 import {
   DropdownMenu,
@@ -45,7 +45,7 @@ const RoutePreviewStep: React.FC<Props> = ({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   
-  const { saveUserRoute } = useDatabase();
+  const { user } = useAuth();
 
   // Open specific day route in Google Maps
   function handleOpenDayInGoogleMaps(dayPlaces: LLMPlace[]) {
@@ -63,12 +63,15 @@ const RoutePreviewStep: React.FC<Props> = ({
     }
   }
 
-  // Handle route save - generate and download PDF
+  // Handle route save - generate and download PDF  
   const handleSaveRoute = async () => {
     if (places.length === 0) {
       console.error('Cannot save route: no places available');
       return;
     }
+
+    // Check if user is authenticated for saving to database
+    const canSaveToDatabase = user && user.id;
 
     setSaving(true);
     try {
@@ -220,9 +223,9 @@ const RoutePreviewStep: React.FC<Props> = ({
               <ExternalLink className="mr-2 h-4 w-4" />
               Open in Google Maps
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleSaveRoute} disabled={!userSessionId || saving} className="cursor-pointer">
+            <DropdownMenuItem onClick={handleSaveRoute} disabled={saving} className="cursor-pointer">
               <Save className="mr-2 h-4 w-4" />
-              {saved ? 'Route Saved!' : saving ? 'Saving...' : 'Save Route'}
+              {saved ? 'Route Saved!' : saving ? 'Saving...' : user ? 'Save & Download Route' : 'Download Route'}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onRegenerate} className="cursor-pointer">
               <Repeat className="mr-2 h-4 w-4" />
