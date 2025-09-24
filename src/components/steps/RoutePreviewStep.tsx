@@ -140,11 +140,12 @@ const RoutePreviewStep: React.FC<Props> = ({
   // Debug logging
   console.log('RoutePreviewStep Debug:', {
     scenario,
+    days,
     placesLength: places?.length,
     groupedPlaces,
     currentDay,
     currentDayData,
-    days
+    totalDays: groupedPlaces.length
   });
 
   return (
