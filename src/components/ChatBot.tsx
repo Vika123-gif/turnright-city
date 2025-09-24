@@ -72,12 +72,13 @@ type Props = {
     accommodation?: string;
     hasAccommodation?: boolean;
   }) => void;
+  onShowMap?: () => void; // New callback for showing map
   isVisible: boolean;
   onToggleVisibility: () => void;
   isRouteGenerated: boolean;
 };
 
-const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, isRouteGenerated }) => {
+const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVisibility, isRouteGenerated }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentStep, setCurrentStep] = useState<ChatStep>("welcome");
   const [userInput, setUserInput] = useState("");
@@ -765,9 +766,12 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
           <div className="flex flex-col gap-3">
             <button
               onClick={() => {
-                // Show interactive map
-                setCurrentStep("complete");
-                onComplete(collectedData);
+                if (onShowMap) {
+                  onShowMap();
+                } else {
+                  setCurrentStep("complete");
+                  onComplete(collectedData);
+                }
               }}
               className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
             >
@@ -797,8 +801,12 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             places={places}
             onRegenerate={handleRegenerate}
             onBuy={() => {
-              setCurrentStep("complete");
-              onComplete(collectedData);
+              if (onShowMap) {
+                onShowMap();
+              } else {
+                setCurrentStep("complete");
+                onComplete(collectedData);
+              }
             }}
             purchasing={false}
             location={collectedData.location || ''}
@@ -811,9 +819,12 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
           <div className="flex flex-col gap-3">
             <button
               onClick={() => {
-                // Show interactive map
-                setCurrentStep("complete");
-                onComplete(collectedData);
+                if (onShowMap) {
+                  onShowMap();
+                } else {
+                  setCurrentStep("complete");
+                  onComplete(collectedData);
+                }
               }}
               className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
             >

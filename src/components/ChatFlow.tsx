@@ -561,10 +561,24 @@ export default function ChatFlow() {
     }
   };
 
+  const handleShowMap = () => {
+    console.log("=== DEBUG: handleShowMap called ===");
+    console.log("Current places:", places);
+    console.log("Current location:", location);
+    
+    if (places && places.length > 0 && location) {
+      setChatVisible(false);
+      setStep("detailed-map");
+    } else {
+      console.error("Cannot show map - missing places or location");
+    }
+  };
+
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-[#F3FCF8] px-2 py-10">
       <ChatBot
         onComplete={handleChatComplete}
+        onShowMap={handleShowMap}
         isVisible={chatVisible}
         onToggleVisibility={() => setChatVisible(!chatVisible)}
         isRouteGenerated={isRouteGenerated}
