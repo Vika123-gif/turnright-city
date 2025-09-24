@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import Button from "./Button";
 import { MapPin, Clock, Shuffle, Send, ChevronUp, ChevronDown, Bot, User } from "lucide-react";
-// Removed UI component imports for testing
+import CategoriesStep from "./steps/CategoriesStep";
+import TimeStep from "./steps/TimeStep";
+import LocationStep from "./steps/LocationStep";
+import AdditionalSettingsStep from "./steps/AdditionalSettingsStep";
 
 const CATEGORIES = [
   "Restaurants", "Cafés", "Bars", "Viewpoints", "Parks", "Museums",
@@ -28,6 +31,7 @@ type ChatStep =
   | "location" 
   | "time" 
   | "destination"
+  | "destination_input"
   | "interests" 
   | "additional_settings"
   | "route_preview"
@@ -44,7 +48,6 @@ type Message = {
   type: "bot" | "user";
   content: string;
   timestamp: Date;
-  component?: () => React.ReactNode;
 };
 
 type Props = {
@@ -112,36 +115,16 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     addBotMessage("👋 Hi! I'm TurnRight, your personal city guide.");
     setTimeout(() => {
       addBotMessage("Are you already in the city or planning a trip?");
-      
-      addBotMessage("", () => (
-        <div className="flex flex-col gap-3 mt-4">
-          <button
-            onClick={() => handleScenarioSelect("onsite")}
-            className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
-          >
-            <MapPin className="w-5 h-5" />
-            I'm already here
-          </button>
-          <button
-            onClick={() => handleScenarioSelect("planning")}
-            className="w-full py-4 px-6 bg-white border-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))] font-semibold rounded-2xl text-base transition-all duration-200 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
-          >
-            <Clock className="w-5 h-5" />
-            Planning a trip
-          </button>
-        </div>
-      ));
       setCurrentStep("scenario_fork");
     }, 1000);
   }, []);
 
-  const addBotMessage = (content: string, component?: () => React.ReactNode) => {
+  const addBotMessage = (content: string) => {
     const message: Message = {
       id: `bot-${Date.now()}-${Math.random()}`,
       type: "bot",
       content,
-      timestamp: new Date(),
-      component
+      timestamp: new Date()
     };
     setMessages(prev => [...prev, message]);
   };
@@ -170,48 +153,6 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       addUserMessage("🗓️ Planning a trip");
       setTimeout(() => {
         addBotMessage("Great! Let's plan your trip. Which city would you like to visit and how many days will you stay?");
-        
-        addBotMessage("", () => (
-          <div className="space-y-4 mt-4">
-            <input
-              type="text"
-              placeholder="Enter city name..."
-              value={userInput}
-              onChange={(e) => {
-                console.log('City input changed:', e.target.value);
-                setUserInput(e.target.value);
-              }}
-              onKeyPress={(e) => e.key === "Enter" && handleCitySubmit()}
-              className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-base font-medium"
-            />
-            <div className="grid grid-cols-4 gap-2">
-              {DAYS_OPTIONS.map((days) => (
-                <button
-                  key={days}
-                  onClick={() => setSelectedDays(days)}
-                  className={`py-3 px-2 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${
-                    selectedDays === days
-                      ? "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white shadow-lg"
-                      : "bg-white border-2 border-gray-200 text-gray-700 hover:border-[hsl(var(--primary))] hover:bg-green-50"
-                  }`}
-                >
-                  {days} day{days !== "1" ? "s" : ""}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={handleCitySubmit}
-              disabled={!userInput.trim() || !selectedDays}
-              className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
-                !userInput.trim() || !selectedDays
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-              }`}
-            >
-              Continue
-            </button>
-          </div>
-        ));
         setCurrentStep("city_dates");
       }, 1000);
     }
@@ -229,23 +170,6 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       
       setTimeout(() => {
         addBotMessage("Do you know the address of your hotel/apartment?");
-        
-        addBotMessage("", () => (
-          <div className="flex flex-col gap-3 mt-4">
-            <button
-              onClick={() => handleAccommodationSelect(true)}
-              className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-            >
-              Yes, I'll specify
-            </button>
-            <button
-              onClick={() => handleAccommodationSelect(false)}
-              className="w-full py-4 px-6 bg-white border-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))] font-semibold rounded-2xl text-base transition-all duration-200 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              Not yet decided
-            </button>
-          </div>
-        ));
         setCurrentStep("accommodation");
       }, 1000);
     }
@@ -271,7 +195,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   const proceedToTripInterests = () => {
     setTimeout(() => {
       addBotMessage("What interests you for this trip? Select as many as you like:");
-      showInterestsComponent("trip_interests");
+      proceedToTripInterests();
     }, 1000);
   };
 
@@ -310,108 +234,22 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     setCollectedData(updatedData);
     console.log('Location set in collectedData:', updatedData);
     
+    addUserMessage(`📍 ${location}`);
     setTimeout(() => {
       addBotMessage("✅ Perfect! How much time do you have for exploring?");
-      showTimeComponent();
+      setCurrentStep("time");
     }, 1000);
   };
 
   const showTimeComponent = () => {
-    addBotMessage("⏰", () => (
-      <div className="space-y-4 mt-4">
-        <div className="grid grid-cols-2 gap-3">
-          {TIMINGS.map((time) => (
-            <button
-              key={time}
-              onClick={() => handleTimeSelect(time)}
-              className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${
-                selectedTime === time
-                  ? "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white shadow-lg"
-                  : "bg-white border-2 border-gray-200 text-gray-700 hover:border-[hsl(var(--primary))] hover:bg-green-50"
-              }`}
-            >
-              {time}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => handleTimeSelect("Custom")}
-            className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${
-              selectedTime === "Custom"
-                ? "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white shadow-lg"
-                : "bg-white border-2 border-gray-200 text-gray-700 hover:border-[hsl(var(--primary))] hover:bg-green-50"
-            }`}
-          >
-            Custom
-          </button>
-          {selectedTime === "Custom" && (
-            <input
-              type="number"
-              placeholder="Minutes"
-              value={customMinutes}
-              onChange={(e) => {
-                console.log('Custom minutes changed:', e.target.value);
-                setCustomMinutes(e.target.value);
-              }}
-              className="flex-1 h-10 px-3 rounded-xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
-              min="1"
-            />
-          )}
-        </div>
-      </div>
-    ));
-    setCurrentStep("time");
-  };
-
-  const handleTimeSelect = (time: string) => {
-    setSelectedTime(time);
-    
-    if (time !== "Custom") {
-      const timeMinutes = TIME_TO_MINUTES[time as keyof typeof TIME_TO_MINUTES];
-      addUserMessage(`⏰ ${time}`);
-      setCollectedData(prev => ({ ...prev, timeMinutes }));
-      proceedToDestination();
-    }
-  };
-
-  const handleCustomTimeSubmit = () => {
-    if (customMinutes) {
-      const timeMinutes = parseInt(customMinutes);
-      addUserMessage(`⏰ ${customMinutes} minutes`);
-      setCollectedData(prev => ({ ...prev, timeMinutes }));
-      proceedToDestination();
-    }
-  };
-
-  const proceedToDestination = () => {
+  const handleTimeSelect = (timeMinutes: number) => {
+    addUserMessage(`⏰ ${timeMinutes} minutes`);
+    setCollectedData(prev => ({ ...prev, timeMinutes }));
     setTimeout(() => {
       addBotMessage("Do you need to end at a specific location?");
-      
-      addBotMessage("", () => (
-        <div className="flex flex-col gap-3 mt-4">
-          <button
-            onClick={() => handleDestinationSelect("none")}
-            className="w-full py-4 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            No specific end point
-          </button>
-          <button
-            onClick={() => handleDestinationSelect("circle")}
-            className="w-full py-4 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            Circle route back to start
-          </button>
-          <button
-            onClick={() => handleDestinationSelect("specific")}
-            className="w-full py-4 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            I'll specify end point
-          </button>
-        </div>
-      ));
       setCurrentStep("destination");
     }, 1000);
+  };
   };
 
   const handleDestinationSelect = (type: "none" | "circle" | "specific") => {
@@ -436,33 +274,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     if (type === "specific") {
       setTimeout(() => {
         addBotMessage("Please enter your destination address:");
-        
-        addBotMessage("", () => (
-          <div className="space-y-4 mt-4">
-            <input
-              type="text"
-              placeholder="Enter destination address..."
-              value={destinationInput}
-              onChange={(e) => {
-                console.log('Destination input changed:', e.target.value);
-                setDestinationInput(e.target.value);
-              }}
-              onKeyPress={(e) => e.key === "Enter" && handleDestinationSubmit()}
-              className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-base font-medium"
-            />
-            <button
-              onClick={handleDestinationSubmit}
-              disabled={!destinationInput.trim()}
-              className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
-                !destinationInput.trim()
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-              }`}
-            >
-              Continue
-            </button>
-          </div>
-        ));
+        setCurrentStep("destination_input");
       }, 1000);
     } else {
       proceedToInterests();
@@ -472,143 +284,24 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   const proceedToInterests = () => {
     setTimeout(() => {
       addBotMessage("🎯 Great! What interests you? Select as many as you like:");
-      showInterestsComponent("interests");
+      setCurrentStep("interests");
     }, 1000);
   };
 
-  const renderCategories = (step: "interests" | "trip_interests") => (
-    <div className="space-y-4 mt-4">
-      <div className="grid grid-cols-2 gap-3">
-        {CATEGORIES.map((category) => {
-          const isChecked = selectedCategories.includes(category);
-          const id = `cat-${category.replace(/\s+/g, "-")}`;
-          return (
-            <label
-              key={category}
-              htmlFor={id}
-              className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border-2 transition ${
-                isChecked
-                  ? "border-[hsl(var(--primary))] bg-green-50"
-                  : "border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50"
-              }`}
-            >
-              {/* скрываем нативный чекбокс, но оставляем его контролируемым */}
-              <input
-                id={id}
-                type="checkbox"
-                className="peer sr-only"
-                checked={isChecked}
-                onChange={() => {
-                  setSelectedCategories(prev =>
-                    isChecked ? prev.filter(c => c !== category) : [...prev, category]
-                  );
-                }}
-              />
-              {/* рисуем свою «галочку» */}
-              <span
-                aria-hidden="true"
-                className={`h-5 w-5 rounded-md border grid place-items-center 
-                            ${isChecked ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-white" : "border-gray-300"}`}
-              >
-                {isChecked ? "✓" : ""}
-              </span>
-
-              <span className="text-sm font-medium text-gray-700">{category}</span>
-            </label>
-          );
-        })}
-      </div>
-
-      <button
-        onClick={() => handleInterestsSubmit(step)}
-        disabled={selectedCategories.length === 0}
-        className={`w-full mt-3 py-4 px-6 rounded-2xl font-semibold text-base transition ${
-          selectedCategories.length === 0
-            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-            : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-        }`}
-      >
-        Continue ({selectedCategories.length})
-      </button>
-    </div>
-  );
-
-  const showInterestsComponent = (step: "interests" | "trip_interests") => {
-    addBotMessage("", () => renderCategories(step));
-    setCurrentStep(step);
-  };
-
-  const handleSurpriseMe = () => {
-    const numCategories = Math.floor(Math.random() * 3) + 2;
-    const availableCategories = [...CATEGORIES];
-    const selected = [];
+  const handleInterestsSubmit = (categories: string[]) => {
+    addUserMessage(`🎯 ${categories.join(", ")}`);
+    const updatedData = { ...collectedData, categories };
+    setCollectedData(updatedData);
+    console.log('Categories set in collectedData:', updatedData);
     
-    if (Math.random() < 0.5) {
-      selected.push("Viewpoints");
-      availableCategories.splice(availableCategories.indexOf("Viewpoints"), 1);
-    }
-    
-    while (selected.length < numCategories && availableCategories.length > 0) {
-      const randomIndex = Math.floor(Math.random() * availableCategories.length);
-      selected.push(availableCategories.splice(randomIndex, 1)[0]);
-    }
-    
-    setSelectedCategories(selected);
+    setTimeout(() => {
+      addBotMessage("Any additional preferences?");
+      setCurrentStep("additional_settings");
+    }, 1000);
   };
 
-  const handleInterestsSubmit = (step: "interests" | "trip_interests") => {
-    if (selectedCategories.length > 0) {
-      addUserMessage(`🎯 ${selectedCategories.join(", ")}`);
-      const updatedData = { ...collectedData, categories: selectedCategories };
-      setCollectedData(updatedData);
-      console.log('Categories set in collectedData:', updatedData);
-      
-      setTimeout(() => {
-        addBotMessage("Any additional preferences?");
-        showAdditionalSettings(step === "interests" ? "additional_settings" : "trip_settings");
-      }, 1000);
-    }
-  };
-
-  const renderAdditionalSettings = (step: "additional_settings" | "trip_settings") => (
-    <div className="space-y-4 mt-4">
-      <div className="space-y-3">
-        {ADDITIONAL_SETTINGS.map((setting) => (
-          <label key={setting} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
-            <input
-              type="checkbox"
-              checked={additionalSettings.includes(setting)}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                console.log('Additional setting checkbox changed:', setting, checked);
-                if (checked) {
-                  setAdditionalSettings(prev => [...prev, setting]);
-                } else {
-                  setAdditionalSettings(prev => prev.filter(s => s !== setting));
-                }
-              }}
-              className="w-4 h-4 rounded border-gray-300 accent-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]"
-            />
-            <span className="text-sm font-medium text-gray-700">{setting}</span>
-          </label>
-        ))}
-      </div>
-      <button
-        onClick={() => handleSettingsSubmit(step)}
-        className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-      >
-        {selectedScenario === "planning" ? "Create Trip Plan" : "Generate Route"}
-      </button>
-    </div>
-  );
-
-  const showAdditionalSettings = (step: "additional_settings" | "trip_settings") => {
-    addBotMessage("", () => renderAdditionalSettings(step));
-    setCurrentStep(step);
-  };
-
-  const handleSettingsSubmit = (step: "additional_settings" | "trip_settings") => {
-    const finalData = { ...collectedData, additionalSettings };
+  const handleAdditionalSettingsSubmit = (settings: string[]) => {
+    const finalData = { ...collectedData, additionalSettings: settings };
     setCollectedData(finalData);
     console.log('Final data being sent:', finalData);
     setCurrentStep("complete");
@@ -699,11 +392,6 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
                   {message.content}
                 </p>
               )}
-              {message.component && (
-                <div className="mt-3">
-                  {message.component()}
-                </div>
-              )}
             </div>
             
             {message.type === "user" && (
@@ -716,93 +404,197 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Areas */}
-      {currentStep === "location" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 space-y-4">
-          <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-100">
-            <input
-              type="checkbox"
-              id="locationConsent"
-              checked={locationConsent}
-              onChange={(e) => setLocationConsent(e.target.checked)}
-              className="mt-1 w-4 h-4 rounded border-2 border-gray-300 text-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
-            />
-            <label htmlFor="locationConsent" className="text-sm text-gray-700 leading-relaxed font-medium">
-              I consent to sharing my location for personalized recommendations
-            </label>
-          </div>
-          
-          <div className="space-y-3">
+      {/* Current Step Component */}
+      {currentStep === "scenario_fork" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex flex-col gap-3">
             <button
-              onClick={handleDetectLocation}
-              disabled={detecting || !locationConsent}
-              className={`w-full py-4 px-6 rounded-2xl font-semibold text-sm flex items-center justify-center gap-3 transition-all duration-200 ${
-                detecting || !locationConsent
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-              }`}
+              onClick={() => handleScenarioSelect("onsite")}
+              className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
             >
               <MapPin className="w-5 h-5" />
-              {detecting ? "Detecting..." : "Share My Location"}
+              I'm already here
             </button>
-            
-            <div className="flex gap-3">
-              <input
-                type="text"
-                placeholder="Or enter location manually..."
-                value={locationInput}
-                onChange={(e) => {
-                  console.log('Location input changed:', e.target.value);
-                  setLocationInput(e.target.value);
-                }}
-                onKeyPress={(e) => e.key === "Enter" && handleManualLocation()}
-                className="flex-1 h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
-              />
-              <button
-                onClick={handleManualLocation}
-                disabled={!locationInput.trim()}
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                  !locationInput.trim()
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-105 active:scale-95"
-                }`}
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
+            <button
+              onClick={() => handleScenarioSelect("planning")}
+              className="w-full py-4 px-6 bg-white border-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))] font-semibold rounded-2xl text-base transition-all duration-200 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+            >
+              <Clock className="w-5 h-5" />
+              Planning a trip
+            </button>
           </div>
         </div>
       )}
 
-      {currentStep === "time" && selectedTime === "Custom" && (
+      {currentStep === "city_dates" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
-          <div className="flex gap-3">
+          <div className="space-y-4">
             <input
-              type="number"
-              placeholder="Enter minutes..."
-              value={customMinutes}
-              onChange={(e) => {
-                console.log('Custom time input changed:', e.target.value);
-                setCustomMinutes(e.target.value);
-              }}
-              onKeyPress={(e) => e.key === "Enter" && handleCustomTimeSubmit()}
-              className="flex-1 h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
-              min="1"
+              type="text"
+              placeholder="Enter city name..."
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleCitySubmit()}
+              className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-base font-medium"
             />
+            <div className="grid grid-cols-4 gap-2">
+              {DAYS_OPTIONS.map((days) => (
+                <button
+                  key={days}
+                  onClick={() => setSelectedDays(days)}
+                  className={`py-3 px-2 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 ${
+                    selectedDays === days
+                      ? "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white shadow-lg"
+                      : "bg-white border-2 border-gray-200 text-gray-700 hover:border-[hsl(var(--primary))] hover:bg-green-50"
+                  }`}
+                >
+                  {days} day{days !== "1" ? "s" : ""}
+                </button>
+              ))}
+            </div>
             <button
-              onClick={handleCustomTimeSubmit}
-              disabled={!customMinutes}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                !customMinutes
+              onClick={handleCitySubmit}
+              disabled={!userInput.trim() || !selectedDays}
+              className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
+                !userInput.trim() || !selectedDays
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-105 active:scale-95"
+                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
               }`}
             >
-              <Send className="w-4 h-4" />
+              Continue
             </button>
           </div>
         </div>
       )}
+
+      {currentStep === "accommodation" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => handleAccommodationSelect(true)}
+              className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Yes, I'll specify
+            </button>
+            <button
+              onClick={() => handleAccommodationSelect(false)}
+              className="w-full py-4 px-6 bg-white border-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))] font-semibold rounded-2xl text-base transition-all duration-200 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Not yet decided
+            </button>
+          </div>
+        </div>
+      )}
+
+      {currentStep === "location" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <LocationStep onNext={handleLocationSubmit} />
+        </div>
+      )}
+
+      {currentStep === "time" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <TimeStep onNext={(timeMinutes) => {
+            addUserMessage(`⏰ ${timeMinutes} minutes`);
+            setCollectedData(prev => ({ ...prev, timeMinutes }));
+            setTimeout(() => {
+              addBotMessage("Do you need to end at a specific location?");
+              setCurrentStep("destination");
+            }, 1000);
+          }} />
+        </div>
+      )}
+
+      {currentStep === "destination" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => handleDestinationSelect("none")}
+              className="w-full py-4 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              No specific end point
+            </button>
+            <button
+              onClick={() => handleDestinationSelect("circle")}
+              className="w-full py-4 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Circle route back to start
+            </button>
+            <button
+              onClick={() => handleDestinationSelect("specific")}
+              className="w-full py-4 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98]"
+            >
+              I'll specify end point
+            </button>
+          </div>
+        </div>
+      )}
+
+      {currentStep === "destination_input" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="space-y-4">
+            <input
+              type="text"
+              placeholder="Enter destination address..."
+              value={destinationInput}
+              onChange={(e) => setDestinationInput(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleDestinationSubmit()}
+              className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-base font-medium"
+            />
+            <button
+              onClick={handleDestinationSubmit}
+              disabled={!destinationInput.trim()}
+              className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
+                !destinationInput.trim()
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+              }`}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {currentStep === "interests" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <CategoriesStep onNext={handleInterestsSubmit} />
+        </div>
+      )}
+
+      {currentStep === "additional_settings" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <AdditionalSettingsStep 
+            onNext={handleAdditionalSettingsSubmit} 
+            buttonText={selectedScenario === "planning" ? "Create Trip Plan" : "Generate Route"}
+          />
+        </div>
+      )}
+
+      {currentStep === "trip_interests" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <CategoriesStep onNext={(categories) => {
+            addUserMessage(`🎯 ${categories.join(", ")}`);
+            const updatedData = { ...collectedData, categories };
+            setCollectedData(updatedData);
+            setTimeout(() => {
+              addBotMessage("Any additional preferences for your trip?");
+              setCurrentStep("trip_settings");
+            }, 1000);
+          }} />
+        </div>
+      )}
+
+      {currentStep === "trip_settings" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <AdditionalSettingsStep 
+            onNext={handleAdditionalSettingsSubmit} 
+            buttonText="Create Trip Plan"
+          />
+        </div>
+      )}
+
+      {/* Removed legacy time input */}
     </div>
   );
 };
