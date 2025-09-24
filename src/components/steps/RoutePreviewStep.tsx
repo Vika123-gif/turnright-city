@@ -84,6 +84,16 @@ const RoutePreviewStep: React.FC<Props> = ({
   const groupedPlaces = groupPlacesByDays();
   const currentDayData = groupedPlaces.find(day => day.day === currentDay);
 
+  // Debug logging
+  console.log('RoutePreviewStep Debug:', {
+    scenario,
+    placesLength: places?.length,
+    groupedPlaces,
+    currentDay,
+    currentDayData,
+    days
+  });
+
   return (
     <div className="chat-card text-left h-screen overflow-y-auto flex flex-col">
       <div className="font-semibold text-lg mb-3 flex items-center gap-2">
@@ -142,21 +152,21 @@ const RoutePreviewStep: React.FC<Props> = ({
           )}
 
           {/* Current Day Content */}
-          {currentDayData && (
+          {(currentDayData || (scenario === "onsite" && places.length > 0)) && (
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex-1">
               <div className="bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white p-4">
                 <h3 className="text-xl font-bold flex items-center gap-2">
-                  {scenario === "planning" && (
+                  {scenario === "planning" && currentDayData && (
                     <span className="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">
                       {currentDayData.day}
                     </span>
                   )}
-                  {scenario === "planning" ? `Day ${currentDayData.day}` : "Your Route"}
+                  {scenario === "planning" ? `Day ${currentDayData?.day || 1}` : "Your Route"}
                 </h3>
               </div>
               
               <div className="p-4 space-y-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
-                {currentDayData.places.map((p, i) => (
+                {(currentDayData?.places || places).map((p, i) => (
                   <div key={i} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
                     {/* Place Image */}
                     <div className="w-full h-32 overflow-hidden">
@@ -219,7 +229,7 @@ const RoutePreviewStep: React.FC<Props> = ({
               <div className="p-4 border-t border-gray-200 space-y-3">
                 <Button 
                   variant="outline"
-                  onClick={() => handleOpenDayInGoogleMaps(currentDayData.places)}
+                  onClick={() => handleOpenDayInGoogleMaps(currentDayData?.places || places)}
                   disabled={purchasing || processing}
                   className="w-full flex items-center justify-center gap-2"
                 >
