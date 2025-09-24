@@ -1,11 +1,17 @@
 
 import React, { useState } from "react";
 import Button from "../Button";
-import { Repeat, MapPin, Clock, ChevronLeft, ChevronRight, Download, Save, Check } from "lucide-react";
+import { Repeat, MapPin, Clock, ChevronLeft, ChevronRight, Download, Save, Check, MoreVertical, ExternalLink } from "lucide-react";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import { supabase } from "@/integrations/supabase/client";
 import { useDatabase } from "@/hooks/useDatabase";
 import Map from "../Map";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Props = {
   places: LLMPlace[];
@@ -149,7 +155,32 @@ const RoutePreviewStep: React.FC<Props> = ({
   });
 
   return (
-    <div className="chat-card text-left h-screen overflow-y-auto flex flex-col">
+    <div className="chat-card text-left h-screen overflow-hidden flex flex-col relative">
+      {/* Floating Action Menu */}
+      <div className="absolute top-4 right-4 z-10">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="bg-white shadow-lg hover:shadow-xl w-10 h-10 p-0 flex items-center justify-center">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => handleOpenDayInGoogleMaps(currentDayData?.places || places)}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open in Google Maps
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSaveRoute} disabled={!userSessionId || saving}>
+              <Save className="mr-2 h-4 w-4" />
+              {saved ? 'Route Saved!' : saving ? 'Saving...' : 'Save Route'}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onRegenerate}>
+              <Repeat className="mr-2 h-4 w-4" />
+              Generate Again
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <div className="font-semibold text-lg mb-3 flex items-center gap-2">
         📍 Your {scenario === "planning" ? `${days}-day trip itinerary` : "custom route"}
       </div>
@@ -160,27 +191,27 @@ const RoutePreviewStep: React.FC<Props> = ({
       
       {!error && (
         <>
-          {/* Day Navigation - only show for planning scenario with multiple days */}
+          {/* Day Navigation - compact version */}
           {scenario === "planning" && days > 1 && (
-            <div className="flex items-center justify-between mb-4 bg-white rounded-lg p-3 border border-gray-200">
+            <div className="flex items-center justify-center mb-4 gap-2">
               <button
                 onClick={() => setCurrentDay(Math.max(1, currentDay - 1))}
                 disabled={currentDay === 1}
-                className={`p-2 rounded-full transition-colors ${
+                className={`p-1 rounded-full transition-colors ${
                   currentDay === 1 
                     ? 'text-gray-300 cursor-not-allowed' 
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
               
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {Array.from({ length: days }, (_, i) => i + 1).map(day => (
                   <button
                     key={day}
                     onClick={() => setCurrentDay(day)}
-                    className={`w-8 h-8 rounded-full text-sm font-bold transition-colors ${
+                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
                       currentDay === day
                         ? 'bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -194,24 +225,24 @@ const RoutePreviewStep: React.FC<Props> = ({
               <button
                 onClick={() => setCurrentDay(Math.min(days, currentDay + 1))}
                 disabled={currentDay === days}
-                className={`p-2 rounded-full transition-colors ${
+                className={`p-1 rounded-full transition-colors ${
                   currentDay === days 
                     ? 'text-gray-300 cursor-not-allowed' 
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           )}
 
-          {/* Current Day Content */}
+          {/* Route Content - Full Height */}
           {places && places.length > 0 && (
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex-1">
-              <div className="bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white p-4">
-                <h3 className="text-xl font-bold flex items-center gap-2">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col">
+              <div className="bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white p-3">
+                <h3 className="text-lg font-bold flex items-center gap-2">
                   {scenario === "planning" && currentDayData && (
-                    <span className="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold">
+                    <span className="bg-white/20 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
                       {currentDayData.day}
                     </span>
                   )}
@@ -219,124 +250,82 @@ const RoutePreviewStep: React.FC<Props> = ({
                 </h3>
               </div>
               
-              <div className="p-4 space-y-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
-                {(currentDayData?.places || places).map((p, i) => (
-                  <div key={i} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                    {/* Place Image */}
-                    <div className="w-full h-32 overflow-hidden">
-                      {p.photoUrl ? (
-                        <img 
-                          src={p.photoUrl} 
-                          alt={p.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLElement;
-                            target.style.display = 'none';
-                            target.nextElementSibling?.classList.remove('hidden');
-                          }}
-                        />
-                      ) : null}
-                      <div className={`w-full h-32 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center ${p.photoUrl ? 'hidden' : ''}`}>
-                        <div className="text-green-600 text-sm font-medium">📍 {p.name}</div>
-                      </div>
-                    </div>
-                    
-                    {/* Place Info */}
-                    <div className="p-3">
-                      <div className="font-semibold text-base mb-1">
-                        {`${i + 1}. ${p.name}`}
-                      </div>
-                      <div className="text-gray-600 text-sm flex items-center gap-1 mb-2">
-                        <MapPin className="w-3 h-3" />
-                        {p.address}
-                      </div>
-                      <div className="text-xs text-gray-500 flex items-center gap-3">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          🚶 {p.walkingTime} min walk
-                        </span>
-                        {p.type && <span>Type: {p.type}</span>}
-                      </div>
-                      {p.description && (
-                        <div className="text-sm mt-2 text-gray-700 bg-white p-2 rounded leading-relaxed">
-                          {p.description}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-3 space-y-2">
+                  {(currentDayData?.places || places).map((p, i) => (
+                    <div key={i} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                      {/* Compact Place Image */}
+                      <div className="w-full h-24 overflow-hidden">
+                        {p.photoUrl ? (
+                          <img 
+                            src={p.photoUrl} 
+                            alt={p.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLElement;
+                              target.style.display = 'none';
+                              target.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`w-full h-24 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center ${p.photoUrl ? 'hidden' : ''}`}>
+                          <div className="text-green-600 text-xs font-medium">📍 {p.name}</div>
                         </div>
-                      )}
+                      </div>
                       
-                      {/* Google Maps link for each place */}
-                      {p.lat && p.lon && (
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full hover:bg-blue-200 transition-colors"
-                        >
-                          📍 Open in Google Maps
-                        </a>
-                      )}
+                      {/* Compact Place Info */}
+                      <div className="p-2">
+                        <div className="font-semibold text-sm mb-1">
+                          {`${i + 1}. ${p.name}`}
+                        </div>
+                        <div className="text-gray-600 text-xs flex items-center gap-1 mb-1">
+                          <MapPin className="w-3 h-3" />
+                          {p.address}
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center gap-3 mb-2">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            🚶 {p.walkingTime} min
+                          </span>
+                          {p.type && <span>{p.type}</span>}
+                        </div>
+                        {p.description && (
+                          <div className="text-xs mt-1 text-gray-700 bg-white p-2 rounded leading-relaxed">
+                            {p.description}
+                          </div>
+                        )}
+                        
+                        {/* Compact Google Maps link */}
+                        {p.lat && p.lon && (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200 transition-colors"
+                          >
+                            📍 Maps
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}
         </>
       )}
       
-      {/* Action buttons - always visible when places exist */}
-      {places && places.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-4">
-          <div className="p-4 space-y-3">
-            <Button 
-              variant="outline"
-              onClick={() => handleOpenDayInGoogleMaps(currentDayData?.places || places)}
-              disabled={purchasing || processing}
-              className="w-full flex items-center justify-center gap-2"
-            >
-              🌍 {scenario === "onsite" ? "Open Full Route in Google Maps" : "Open Route in Google Maps"}
-            </Button>
-            
-            <Button 
-              variant="outline"
-              onClick={handleSaveRoute}
-              disabled={purchasing || processing || saving || !userSessionId}
-              className="w-full flex items-center justify-center gap-2"
-            >
-              {saved ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Route Saved!
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  {saving ? 'Saving...' : (scenario === "onsite" ? "Save Route" : "Save Trip")}
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-      
-      <div className="flex flex-col gap-4 sticky bottom-0 bg-white pt-4 border-t border-gray-100">
-        <Button variant="outline" onClick={onRegenerate} disabled={purchasing || processing}>
-          <Repeat className="w-5 h-5 mr-2 -ml-1" /> Generate Again
-        </Button>
-
-        {/* MVP Link */}
-        <div className="border-t pt-4 text-center">
-          <p className="text-sm text-gray-600 mb-2">
-            Save for the next generations!
-          </p>
-          <a
-            href="https://turnright.city/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#008457] underline font-medium text-sm hover:text-[#00BC72] transition-colors"
-          >
-            Visit TurnRight.city
-          </a>
-        </div>
+      {/* Compact Bottom Link */}
+      <div className="text-center py-2 border-t border-gray-100 bg-white">
+        <a
+          href="https://turnright.city/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#008457] underline text-xs hover:text-[#00BC72] transition-colors"
+        >
+          TurnRight.city
+        </a>
       </div>
     </div>
   );
