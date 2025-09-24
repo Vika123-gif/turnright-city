@@ -838,7 +838,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             location={collectedData.location || collectedData.city || ''}
             days={collectedData.days || 1}
             scenario={collectedData.scenario}
-            userSessionId=""
+            userSessionId="demo-session" // Временная сессия для демо
             goals={collectedData.categories || []}
           />
         </div>

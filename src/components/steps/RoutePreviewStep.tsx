@@ -128,13 +128,38 @@ const RoutePreviewStep: React.FC<Props> = ({
     console.log('Total places:', places.length);
     console.log('Days:', days);
     console.log('Places per day:', placesPerDay);
+    console.log('Should have:', days * placesPerDay, 'places total');
+    
+    // If we don't have enough places, we'll work with what we have
+    // and distribute them across days as evenly as possible
+    let allPlaces = [...places];
     
     for (let day = 0; day < days; day++) {
       const startIndex = day * placesPerDay;
-      const endIndex = Math.min(startIndex + placesPerDay, places.length);
-      const dayPlaces = places.slice(startIndex, endIndex);
+      let dayPlaces;
       
-      console.log(`Day ${day + 1}: places ${startIndex}-${endIndex-1}, got ${dayPlaces.length} places`);
+      if (startIndex >= allPlaces.length) {
+        // If we've run out of places, cycle back to the beginning
+        // but try to avoid exact duplicates by shuffling slightly
+        const remainingPlaces = [...places].slice((day % places.length));
+        dayPlaces = remainingPlaces.slice(0, placesPerDay);
+      } else {
+        const endIndex = Math.min(startIndex + placesPerDay, allPlaces.length);
+        dayPlaces = allPlaces.slice(startIndex, endIndex);
+        
+        // If we don't have enough places for this day, add from the beginning
+        while (dayPlaces.length < placesPerDay && places.length > 0) {
+          const additionalPlace = places[dayPlaces.length % places.length];
+          if (!dayPlaces.find(p => p.name === additionalPlace.name)) {
+            dayPlaces.push(additionalPlace);
+          } else {
+            // If all places are already used, stop adding
+            break;
+          }
+        }
+      }
+      
+      console.log(`Day ${day + 1}: got ${dayPlaces.length} places`);
       
       if (dayPlaces.length > 0) {
         groupedPlaces.push({
