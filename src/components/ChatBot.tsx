@@ -310,7 +310,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   };
 
   const handleLocationSubmit = (location: string) => {
-    setCollectedData(prev => ({ ...prev, location }));
+    const updatedData = { ...collectedData, location };
+    setCollectedData(updatedData);
+    console.log('Location set in collectedData:', updatedData);
     
     setTimeout(() => {
       addBotMessage("✅ Perfect! How much time do you have for exploring?");
@@ -547,7 +549,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   const handleInterestsSubmit = (step: "interests" | "trip_interests") => {
     if (selectedCategories.length > 0) {
       addUserMessage(`🎯 ${selectedCategories.join(", ")}`);
-      setCollectedData(prev => ({ ...prev, categories: selectedCategories }));
+      const updatedData = { ...collectedData, categories: selectedCategories };
+      setCollectedData(updatedData);
+      console.log('Categories set in collectedData:', updatedData);
       
       setTimeout(() => {
         addBotMessage("Any additional preferences?");
@@ -591,8 +595,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   };
 
   const handleSettingsSubmit = (step: "additional_settings" | "trip_settings") => {
-    setCollectedData(prev => ({ ...prev, additionalSettings }));
     const finalData = { ...collectedData, additionalSettings };
+    setCollectedData(finalData);
+    console.log('Final data being sent:', finalData);
     setCurrentStep("complete");
     
     setTimeout(() => {
