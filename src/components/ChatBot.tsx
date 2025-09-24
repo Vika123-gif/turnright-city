@@ -506,7 +506,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
                     setSelectedCategories(prev => prev.filter(c => c !== category));
                   }
                 }}
-                className="w-5 h-5 rounded border-2 border-gray-300 data-[state=checked]:bg-[hsl(var(--primary))] data-[state=checked]:border-[hsl(var(--primary))]"
+                className="w-5 h-5 rounded border-2 border-gray-300 checked:bg-[hsl(var(--primary))] checked:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20"
               />
               <span className="text-sm font-medium text-gray-700">{category}</span>
             </label>
