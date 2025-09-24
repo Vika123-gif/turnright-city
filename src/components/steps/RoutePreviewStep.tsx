@@ -152,7 +152,7 @@ const RoutePreviewStep: React.FC<Props> = ({
           )}
 
           {/* Current Day Content */}
-          {(currentDayData || (scenario === "onsite" && places.length > 0)) && (
+          {places && places.length > 0 && (
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex-1">
               <div className="bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white p-4">
                 <h3 className="text-xl font-bold flex items-center gap-2">
@@ -224,31 +224,35 @@ const RoutePreviewStep: React.FC<Props> = ({
                   </div>
                 ))}
               </div>
-              
-              {/* Google Maps and Save buttons */}
-              <div className="p-4 border-t border-gray-200 space-y-3">
-                <Button 
-                  variant="outline"
-                  onClick={() => handleOpenDayInGoogleMaps(currentDayData?.places || places)}
-                  disabled={purchasing || processing}
-                  className="w-full flex items-center justify-center gap-2"
-                >
-                  🌍 {scenario === "onsite" ? "Open Full Route in Google Maps" : "Open Route in Google Maps"}
-                </Button>
-                
-                <Button 
-                  variant="outline"
-                  onClick={handleSavePDF}
-                  disabled={purchasing || processing}
-                  className="w-full flex items-center justify-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  {scenario === "onsite" ? "Save Route" : "Save Route as PDF"}
-                </Button>
-              </div>
             </div>
           )}
         </>
+      )}
+      
+      {/* Action buttons - always visible when places exist */}
+      {places && places.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-4">
+          <div className="p-4 space-y-3">
+            <Button 
+              variant="outline"
+              onClick={() => handleOpenDayInGoogleMaps(currentDayData?.places || places)}
+              disabled={purchasing || processing}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              🌍 {scenario === "onsite" ? "Open Full Route in Google Maps" : "Open Route in Google Maps"}
+            </Button>
+            
+            <Button 
+              variant="outline"
+              onClick={handleSavePDF}
+              disabled={purchasing || processing}
+              className="w-full flex items-center justify-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              {scenario === "onsite" ? "Save Route" : "Save Route as PDF"}
+            </Button>
+          </div>
+        </div>
       )}
       
       <div className="flex flex-col gap-4 sticky bottom-0 bg-white pt-4 border-t border-gray-100">
