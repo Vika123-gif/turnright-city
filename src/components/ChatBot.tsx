@@ -72,6 +72,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentStep, setCurrentStep] = useState<ChatStep>("welcome");
   const [userInput, setUserInput] = useState("");
+  const [destinationInput, setDestinationInput] = useState("");
+  const [locationInput, setLocationInput] = useState("");
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customMinutes, setCustomMinutes] = useState("");
@@ -443,16 +445,16 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             <Input
               type="text"
               placeholder="Enter destination address..."
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
+              value={destinationInput}
+              onChange={(e) => setDestinationInput(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleDestinationSubmit()}
               className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-base font-medium"
             />
             <button
               onClick={handleDestinationSubmit}
-              disabled={!userInput.trim()}
+              disabled={!destinationInput.trim()}
               className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
-                !userInput.trim()
+                !destinationInput.trim()
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
               }`}
@@ -524,14 +526,6 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     setCurrentStep(step);
   };
 
-  const handleCategoryToggle = (category: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(category) 
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
-    );
-  };
-
   const handleSurpriseMe = () => {
     const numCategories = Math.floor(Math.random() * 3) + 2;
     const availableCategories = [...CATEGORIES];
@@ -596,14 +590,6 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     setCurrentStep(step);
   };
 
-  const handleSettingToggle = (setting: string) => {
-    setAdditionalSettings(prev => 
-      prev.includes(setting) 
-        ? prev.filter(s => s !== setting)
-        : [...prev, setting]
-    );
-  };
-
   const handleSettingsSubmit = (step: "additional_settings" | "trip_settings") => {
     setCollectedData(prev => ({ ...prev, additionalSettings }));
     const finalData = { ...collectedData, additionalSettings };
@@ -616,19 +602,19 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   };
 
   const handleDestinationSubmit = () => {
-    if (userInput.trim()) {
-      addUserMessage(`📍 ${userInput}`);
-      setCollectedData(prev => ({ ...prev, destination: userInput }));
-      setUserInput("");
+    if (destinationInput.trim()) {
+      addUserMessage(`📍 ${destinationInput}`);
+      setCollectedData(prev => ({ ...prev, destination: destinationInput }));
+      setDestinationInput("");
       proceedToInterests();
     }
   };
 
   const handleManualLocation = () => {
-    if (userInput.trim()) {
-      addUserMessage(`📍 ${userInput}`);
-      handleLocationSubmit(userInput);
-      setUserInput("");
+    if (locationInput.trim()) {
+      addUserMessage(`📍 ${locationInput}`);
+      handleLocationSubmit(locationInput);
+      setLocationInput("");
     }
   };
 
@@ -732,16 +718,16 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
               <Input
                 type="text"
                 placeholder="Or enter location manually..."
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
+                value={locationInput}
+                onChange={(e) => setLocationInput(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleManualLocation()}
                 className="flex-1 h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[hsl(var(--primary))] focus:ring-2 focus:ring-[hsl(var(--primary))]/20 text-sm font-medium"
               />
               <button
                 onClick={handleManualLocation}
-                disabled={!userInput.trim()}
+                disabled={!locationInput.trim()}
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                  !userInput.trim()
+                  !locationInput.trim()
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-105 active:scale-95"
                 }`}
