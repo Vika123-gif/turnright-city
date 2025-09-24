@@ -484,7 +484,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col">
+    <div className="fixed inset-0 bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col max-h-screen">
       {/* Header */}
       {isRouteGenerated && (
         <div className="flex justify-between items-center p-4 bg-white/80 backdrop-blur-sm border-b border-gray-100 shadow-sm">
@@ -505,7 +505,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       )}
       
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4" style={{ maxHeight: 'calc(100vh - 200px)' }}>
         {messages.map((message, index) => (
           <div
             key={message.id}
@@ -803,6 +803,23 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             purchasing={false}
             location={collectedData.location || ''}
           />
+        </div>
+      )}
+
+      {currentStep === "route_results" && places && places.length > 0 && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                // Show interactive map
+                setCurrentStep("complete");
+                onComplete(collectedData);
+              }}
+              className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+            >
+              🗺️ Show Interactive Map
+            </button>
+          </div>
         </div>
       )}
     </div>
