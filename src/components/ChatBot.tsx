@@ -39,6 +39,7 @@ type ChatStep =
   | "interests" 
   | "additional_settings"
   | "generating"
+  | "route_preview"
   | "route_results"
   // Scenario B (planning) steps  
   | "city_dates"
@@ -414,36 +415,15 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       
       setPlaces(placesWithPhotos);
       
-      // Show results in chat instead of preview component
-      setTimeout(() => {
-        addBotMessage("🎉 Here's your personalized route:");
-        
-        // Add each place as a separate message
-        placesWithPhotos.forEach((place, index) => {
-          setTimeout(() => {
-            const placeMessage = `📍 **${index + 1}. ${place.name}**
-📍 ${place.address}
-⏰ ${place.walkingTime} min walk${place.visitDuration ? ` • ${place.visitDuration} min visit` : ''}
-${place.type ? `🏷️ ${place.type}` : ''}
-
-${place.description || place.reason || 'A great place to visit on your route.'}`;
-            
-            addBotMessage(placeMessage);
-          }, index * 800);
-        });
-        
-        // Add action buttons after all places
-        setTimeout(() => {
-          setCurrentStep("route_results");
-        }, placesWithPhotos.length * 800 + 1000);
-        
-      }, 1000);
+      // Store places and transition to preview step
+      setPlaces(placesWithPhotos);
+      setCurrentStep("route_preview");
       
     } catch (e: any) {
       console.error("=== DEBUG: Error in generateRoute ===", e);
       setError(e.message || "Could not generate route.");
       addBotMessage("❌ Sorry, I couldn't generate a route. Please try again with different settings.");
-      setCurrentStep("route_results");
+      setCurrentStep("route_preview");
     } finally {
       setGenerating(false);
     }
@@ -451,6 +431,7 @@ ${place.description || place.reason || 'A great place to visit on your route.'}`
 
   const handleRegenerate = () => {
     console.log("=== DEBUG: Regenerate called ===");
+    setPlaces([]);
     setCurrentStep("generating");
     generateRoute(collectedData);
   };
@@ -792,30 +773,38 @@ ${place.description || place.reason || 'A great place to visit on your route.'}`
             >
               🗺️ Show Interactive Map
             </button>
-            <button
-              onClick={handleRegenerate}
-              className="w-full py-3 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
-            >
-              🔄 Generate New Route
-            </button>
-            {places.map((place, index) => (
-              place.lat && place.lon && (
-                <a
-                  key={index}
-                  href={`https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lon}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2 px-4 bg-blue-50 border-2 border-blue-200 text-blue-700 font-medium rounded-xl text-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-100 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  📍 {place.name} on Google Maps
-                </a>
-              )
-            ))}
           </div>
         </div>
       )}
 
-      {/* Removed generating and route_preview components since we show results in chat now */}
+      {currentStep === "generating" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="text-center py-8">
+            <div className="animate-spin w-8 h-8 border-2 border-[hsl(var(--primary))] border-t-transparent rounded-full mx-auto mb-4"></div>
+            <div className="text-lg font-semibold text-gray-700">
+              🤖 Generating your perfect route...
+            </div>
+            <div className="text-sm text-gray-500 mt-2">
+              Finding the best places for you
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentStep === "route_preview" && places && places.length > 0 && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <RoutePreviewStep
+            places={places}
+            onRegenerate={handleRegenerate}
+            onBuy={() => {
+              setCurrentStep("complete");
+              onComplete(collectedData);
+            }}
+            purchasing={false}
+            location={collectedData.location || ''}
+          />
+        </div>
+      )}
     </div>
   );
 };

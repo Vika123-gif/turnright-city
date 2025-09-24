@@ -95,9 +95,11 @@ const RoutePreviewStep: React.FC<Props> = ({
                       </span>
                       {p.type && <span>Type: {p.type}</span>}
                     </div>
-                    {p.reason && (
-                      <div className="text-sm mt-2 text-[#008457] bg-green-50 p-2 rounded">{p.reason}</div>
-                    )}
+          {p.description && (
+            <div className="text-sm mt-2 text-gray-700 bg-gray-50 p-2 rounded leading-relaxed">
+              {p.description}
+            </div>
+          )}
                   </div>
                 </div>
               ))
