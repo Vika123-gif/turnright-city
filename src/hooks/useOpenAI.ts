@@ -70,6 +70,16 @@ export function useOpenAI() {
     
     console.log("Calculated max places:", actualMaxPlaces);
     
+    // Convert timeWindow for API based on scenario
+    let apiTimeWindow = timeWindow;
+    if (scenario === "planning") {
+      // For planning: convert days to reasonable daily touring time (8 hours = 480 minutes per day)
+      apiTimeWindow = 480; // 8 hours per day for sightseeing
+    }
+    // For onsite scenario, timeWindow is already in minutes from the time selection
+    
+    console.log("API timeWindow (minutes):", apiTimeWindow);
+    
     try {
       // Call TripAdvisor function directly for route generation
       const { supabase } = await import("@/integrations/supabase/client");
@@ -77,7 +87,7 @@ export function useOpenAI() {
         body: { 
           location: location,
           goals: goals,
-          timeWindow: timeWindow,
+          timeWindow: apiTimeWindow,
           maxPlaces: actualMaxPlaces
         }
       });
