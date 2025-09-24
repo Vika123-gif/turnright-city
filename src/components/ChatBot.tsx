@@ -44,7 +44,7 @@ type Message = {
   type: "bot" | "user";
   content: string;
   timestamp: Date;
-  component?: React.ReactNode;
+  component?: () => React.ReactNode;
 };
 
 type Props = {
@@ -113,7 +113,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     setTimeout(() => {
       addBotMessage("Are you already in the city or planning a trip?");
       
-      const scenarioComponent = (
+      addBotMessage("", () => (
         <div className="flex flex-col gap-3 mt-4">
           <button
             onClick={() => handleScenarioSelect("onsite")}
@@ -130,14 +130,12 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             Planning a trip
           </button>
         </div>
-      );
-      
-      addBotMessage("", scenarioComponent);
+      ));
       setCurrentStep("scenario_fork");
     }, 1000);
   }, []);
 
-  const addBotMessage = (content: string, component?: React.ReactNode) => {
+  const addBotMessage = (content: string, component?: () => React.ReactNode) => {
     const message: Message = {
       id: `bot-${Date.now()}-${Math.random()}`,
       type: "bot",
@@ -173,7 +171,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       setTimeout(() => {
         addBotMessage("Great! Let's plan your trip. Which city would you like to visit and how many days will you stay?");
         
-        const cityDatesComponent = (
+        addBotMessage("", () => (
           <div className="space-y-4 mt-4">
             <input
               type="text"
@@ -213,9 +211,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
               Continue
             </button>
           </div>
-        );
-        
-        addBotMessage("", cityDatesComponent);
+        ));
         setCurrentStep("city_dates");
       }, 1000);
     }
@@ -234,7 +230,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       setTimeout(() => {
         addBotMessage("Do you know the address of your hotel/apartment?");
         
-        const accommodationComponent = (
+        addBotMessage("", () => (
           <div className="flex flex-col gap-3 mt-4">
             <button
               onClick={() => handleAccommodationSelect(true)}
@@ -249,9 +245,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
               Not yet decided
             </button>
           </div>
-        );
-        
-        addBotMessage("", accommodationComponent);
+        ));
         setCurrentStep("accommodation");
       }, 1000);
     }
@@ -323,7 +317,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
   };
 
   const showTimeComponent = () => {
-    const timeComponent = (
+    addBotMessage("⏰", () => (
       <div className="space-y-4 mt-4">
         <div className="grid grid-cols-2 gap-3">
           {TIMINGS.map((time) => (
@@ -366,9 +360,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
           )}
         </div>
       </div>
-    );
-
-    addBotMessage("⏰", timeComponent);
+    ));
     setCurrentStep("time");
   };
 
@@ -396,7 +388,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     setTimeout(() => {
       addBotMessage("Do you need to end at a specific location?");
       
-      const destinationComponent = (
+      addBotMessage("", () => (
         <div className="flex flex-col gap-3 mt-4">
           <button
             onClick={() => handleDestinationSelect("none")}
@@ -417,9 +409,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
             I'll specify end point
           </button>
         </div>
-      );
-      
-      addBotMessage("", destinationComponent);
+      ));
       setCurrentStep("destination");
     }, 1000);
   };
@@ -447,7 +437,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
       setTimeout(() => {
         addBotMessage("Please enter your destination address:");
         
-        const destinationInputComponent = (
+        addBotMessage("", () => (
           <div className="space-y-4 mt-4">
             <input
               type="text"
@@ -472,9 +462,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
               Continue
             </button>
           </div>
-        );
-        
-        addBotMessage("", destinationInputComponent);
+        ));
       }, 1000);
     } else {
       proceedToInterests();
@@ -488,77 +476,77 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     }, 1000);
   };
 
-  const showInterestsComponent = (step: "interests" | "trip_interests") => {
-    const categoriesComponent = (
-      <div className="space-y-4 mt-4">
-        <div className="grid grid-cols-2 gap-3">
-           {CATEGORIES.map((category) => {
-             const isChecked = selectedCategories.includes(category);
-             return (
-               <label 
-                 key={category} 
-                 className={`flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] ${
-                   isChecked 
-                     ? "border-[hsl(var(--primary))] bg-green-50" 
-                     : "border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50"
-                 }`}
-               >
-                 <input
-                   type="checkbox"
-                   checked={isChecked}
-                   onChange={() => {
-                     console.log('Toggling category:', category, 'Current state:', isChecked);
-                     setSelectedCategories(prev => {
-                       const newState = isChecked 
-                         ? prev.filter(c => c !== category)
-                         : [...prev, category];
-                       console.log('New selectedCategories:', newState);
-                       return newState;
-                     });
-                   }}
-                   className="w-4 h-4 text-[hsl(var(--primary))] bg-white border-gray-300 rounded focus:ring-[hsl(var(--primary))] focus:ring-2"
-                 />
-                 <span className="text-sm font-medium text-gray-700">{category}</span>
-               </label>
-             );
-           })}
-        </div>
-        <div className="flex flex-col gap-3">
-           <button
-             onClick={handleSurpriseMe}
-             className="w-full py-3 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
-           >
-             <Shuffle className="w-5 h-5" />
-             Surprise me
-           </button>
-           <button
-             onClick={() => {
-               console.log('Reset button clicked - clearing all categories');
-               setSelectedCategories([]);
-             }}
-             className="w-full py-2 px-4 bg-red-50 border-2 border-red-200 text-red-600 font-semibold rounded-xl text-sm transition-all duration-200 hover:border-red-300 hover:bg-red-100 hover:scale-[1.02] active:scale-[0.98]"
-           >
-             Reset All
-           </button>
-           <button
-             onClick={() => {
-               console.log('Continue button clicked, selectedCategories:', selectedCategories);
-               handleInterestsSubmit(step);
-             }}
-             disabled={selectedCategories.length === 0}
-             className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
-               selectedCategories.length === 0
-                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                 : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-             }`}
-           >
-             Continue ({selectedCategories.length})
-           </button>
-        </div>
+  const renderCategories = (step: "interests" | "trip_interests") => (
+    <div className="space-y-4 mt-4">
+      <div className="grid grid-cols-2 gap-3">
+         {CATEGORIES.map((category) => {
+           const isChecked = selectedCategories.includes(category);
+           return (
+             <label 
+               key={category} 
+               className={`flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] ${
+                 isChecked 
+                   ? "border-[hsl(var(--primary))] bg-green-50" 
+                   : "border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50"
+               }`}
+             >
+               <input
+                 type="checkbox"
+                 checked={isChecked}
+                 onChange={() => {
+                   console.log('Toggling category:', category, 'Current state:', isChecked);
+                   setSelectedCategories(prev => {
+                     const newState = isChecked 
+                       ? prev.filter(c => c !== category)
+                       : [...prev, category];
+                     console.log('New selectedCategories:', newState);
+                     return newState;
+                   });
+                 }}
+                 className="w-4 h-4 rounded border-gray-300 accent-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]"
+               />
+               <span className="text-sm font-medium text-gray-700">{category}</span>
+             </label>
+           );
+         })}
       </div>
-    );
+      <div className="flex flex-col gap-3">
+         <button
+           onClick={handleSurpriseMe}
+           className="w-full py-3 px-6 bg-white border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl text-base transition-all duration-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+         >
+           <Shuffle className="w-5 h-5" />
+           Surprise me
+         </button>
+         <button
+           onClick={() => {
+             console.log('Reset button clicked - clearing all categories');
+             setSelectedCategories([]);
+           }}
+           className="w-full py-2 px-4 bg-red-50 border-2 border-red-200 text-red-600 font-semibold rounded-xl text-sm transition-all duration-200 hover:border-red-300 hover:bg-red-100 hover:scale-[1.02] active:scale-[0.98]"
+         >
+           Reset All
+         </button>
+         <button
+           onClick={() => {
+             console.log('Continue button clicked, selectedCategories:', selectedCategories);
+             handleInterestsSubmit(step);
+           }}
+           disabled={selectedCategories.length === 0}
+           className={`w-full py-4 px-6 rounded-2xl font-semibold text-base transition-all duration-200 ${
+             selectedCategories.length === 0
+               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+               : "bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+           }`}
+         >
+           Continue ({selectedCategories.length})
+         </button>
+      </div>
+    </div>
+  );
 
-    addBotMessage("", categoriesComponent);
+  const showInterestsComponent = (step: "interests" | "trip_interests") => {
+    addBotMessage("", () => renderCategories(step));
     setCurrentStep(step);
   };
 
@@ -594,40 +582,40 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
     }
   };
 
-  const showAdditionalSettings = (step: "additional_settings" | "trip_settings") => {
-    const settingsComponent = (
-      <div className="space-y-4 mt-4">
-        <div className="space-y-3">
-          {ADDITIONAL_SETTINGS.map((setting) => (
-            <label key={setting} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
-              <input
-                type="checkbox"
-                checked={additionalSettings.includes(setting)}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  console.log('Additional setting checkbox changed:', setting, checked);
-                  if (checked) {
-                    setAdditionalSettings(prev => [...prev, setting]);
-                  } else {
-                    setAdditionalSettings(prev => prev.filter(s => s !== setting));
-                  }
-                }}
-                className="w-5 h-5 rounded border-2 border-gray-300 data-[state=checked]:bg-[hsl(var(--primary))] data-[state=checked]:border-[hsl(var(--primary))]"
-              />
-              <span className="text-sm font-medium text-gray-700">{setting}</span>
-            </label>
-          ))}
-        </div>
-        <button
-          onClick={() => handleSettingsSubmit(step)}
-          className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-        >
-          {selectedScenario === "planning" ? "Create Trip Plan" : "Generate Route"}
-        </button>
+  const renderAdditionalSettings = (step: "additional_settings" | "trip_settings") => (
+    <div className="space-y-4 mt-4">
+      <div className="space-y-3">
+        {ADDITIONAL_SETTINGS.map((setting) => (
+          <label key={setting} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
+            <input
+              type="checkbox"
+              checked={additionalSettings.includes(setting)}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                console.log('Additional setting checkbox changed:', setting, checked);
+                if (checked) {
+                  setAdditionalSettings(prev => [...prev, setting]);
+                } else {
+                  setAdditionalSettings(prev => prev.filter(s => s !== setting));
+                }
+              }}
+              className="w-4 h-4 rounded border-gray-300 accent-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]"
+            />
+            <span className="text-sm font-medium text-gray-700">{setting}</span>
+          </label>
+        ))}
       </div>
-    );
+      <button
+        onClick={() => handleSettingsSubmit(step)}
+        className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+      >
+        {selectedScenario === "planning" ? "Create Trip Plan" : "Generate Route"}
+      </button>
+    </div>
+  );
 
-    addBotMessage("", settingsComponent);
+  const showAdditionalSettings = (step: "additional_settings" | "trip_settings") => {
+    addBotMessage("", () => renderAdditionalSettings(step));
     setCurrentStep(step);
   };
 
@@ -711,7 +699,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, isVisible, onToggleVisibility, i
               )}
               {message.component && (
                 <div className="mt-3">
-                  {message.component}
+                  {message.component()}
                 </div>
               )}
             </div>
