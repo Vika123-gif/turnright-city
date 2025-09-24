@@ -325,9 +325,21 @@ serve(async (req) => {
       lat = geocodeData.results[0].geometry.location.lat;
       lng = geocodeData.results[0].geometry.location.lng;
       console.log(`Geocoded ${location} to:`, { lat, lng });
+      
+      // Validate that we got valid coordinates
+      if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+        console.error('Invalid coordinates from geocoding:', { lat, lng });
+        throw new Error(`Failed to get valid coordinates for location: ${location}`);
+      }
     }
 
-    // Map goals to Google Places types (expanded mapping)
+    // Additional validation for coordinates
+    if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+      console.error('Invalid coordinates after processing:', { lat, lng, location });
+      throw new Error(`Invalid coordinates for location: ${location}`);
+    }
+
+    console.log('Final coordinates validation passed:', { lat, lng });
     const goalToTypesMap = {
       'Parks': ['park'],
       'Restaurants': ['restaurant', 'cafe', 'bar', 'bakery'],
@@ -623,8 +635,8 @@ serve(async (req) => {
           timeAvailableMinutes: timeMinutes,
           searchRadius: radius,
           totalWalkingTime,
-          totalVisitTime: finalStops.reduce((sum, stop) => sum + (stop.visitDuration || 0), 0),
-          location: { lat, lng },
+          totalVisitTime: finalStops.reduce((sum: number, stop: any) => sum + (stop.visitDuration || 0), 0),
+          location: (lat !== undefined && lng !== undefined) ? { lat, lng } : null,
           goals,
           timeWindow
         }

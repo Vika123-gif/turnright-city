@@ -59,10 +59,10 @@ export function useOpenAI() {
     // Calculate maxPlaces based on scenario
     let actualMaxPlaces = maxPlaces;
     if (scenario === "onsite") {
-      // For onsite: 3h=2 places, 6h=4 places, 10h=6 places
-      if (timeWindow <= 180) actualMaxPlaces = 2;      // 3 hours
-      else if (timeWindow <= 360) actualMaxPlaces = 4;  // 6 hours
-      else actualMaxPlaces = 6;                         // full day
+      // For onsite: 3h=2 places, 6h=4 places, 10h+ (full day)=6 places
+      if (timeWindow <= 180) actualMaxPlaces = 2;      // 3 hours = 2 places
+      else if (timeWindow <= 360) actualMaxPlaces = 4;  // 6 hours = 4 places
+      else actualMaxPlaces = 6;                         // full day = 6 places
     } else if (scenario === "planning") {
       // For planning: 6 places per day
       actualMaxPlaces = timeWindow * 6;

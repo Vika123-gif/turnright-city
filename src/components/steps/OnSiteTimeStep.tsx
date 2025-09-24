@@ -33,14 +33,7 @@ const OnSiteTimeStep: React.FC<Props> = ({ onNext, value }) => {
                 : "bg-white border-2 border-gray-200 text-gray-700 hover:border-[hsl(var(--primary))] hover:bg-green-50"
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span>{time}</span>
-              <span className="text-xs opacity-75">
-                {time === "3 hours" && "2 places"}
-                {time === "6 hours" && "4 places"}
-                {time === "Full day" && "6 places"}
-              </span>
-            </div>
+            {time}
           </button>
         ))}
       </div>

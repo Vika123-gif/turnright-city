@@ -223,7 +223,7 @@ const RoutePreviewStep: React.FC<Props> = ({
                   disabled={purchasing || processing}
                   className="w-full"
                 >
-                  🌍 Open {scenario === "planning" ? `Day ${currentDayData.day}` : ""} Route in Google Maps
+                  🌍 Open Route in Google Maps
                 </Button>
                 
                 <Button 
