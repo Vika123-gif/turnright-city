@@ -221,19 +221,19 @@ const RoutePreviewStep: React.FC<Props> = ({
                   variant="outline"
                   onClick={() => handleOpenDayInGoogleMaps(currentDayData.places)}
                   disabled={purchasing || processing}
-                  className="w-full"
+                  className="w-full flex items-center justify-center gap-2"
                 >
-                  🌍 Open Route in Google Maps
+                  🌍 {scenario === "onsite" ? "Open Full Route in Google Maps" : "Open Route in Google Maps"}
                 </Button>
                 
                 <Button 
                   variant="outline"
                   onClick={handleSavePDF}
                   disabled={purchasing || processing}
-                  className="w-full"
+                  className="w-full flex items-center justify-center gap-2"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Save Route as PDF
+                  <Download className="w-4 h-4" />
+                  {scenario === "onsite" ? "Save Route" : "Save Route as PDF"}
                 </Button>
               </div>
             </div>
