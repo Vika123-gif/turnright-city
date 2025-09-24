@@ -63,10 +63,10 @@ const RoutePreviewStep: React.FC<Props> = ({
     }
   }
 
-  // Handle route save
+  // Handle route save - generate and download PDF
   const handleSaveRoute = async () => {
-    if (!userSessionId || places.length === 0) {
-      console.error('Cannot save route: missing user session or places');
+    if (places.length === 0) {
+      console.error('Cannot save route: no places available');
       return;
     }
 
@@ -87,7 +87,7 @@ const RoutePreviewStep: React.FC<Props> = ({
         .join('/');
       const mapUrl = waypoints ? `https://www.google.com/maps/dir/${waypoints}` : null;
 
-      const savedRoute = await saveUserRoute(
+      const routeData = {
         routeName,
         location,
         scenario,
@@ -95,19 +95,37 @@ const RoutePreviewStep: React.FC<Props> = ({
         goals,
         places,
         totalWalkingTime,
-        mapUrl,
-        userSessionId
-      );
+        mapUrl
+      };
 
-      if (savedRoute) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000); // Reset after 3 seconds
-        console.log('Route saved successfully!');
-      } else {
-        console.error('Failed to save route');
+      // Call edge function to generate PDF
+      const response = await supabase.functions.invoke('generate-route-pdf', {
+        body: { routeData }
+      });
+
+      if (response.error) {
+        console.error('Error generating PDF:', response.error);
+        return;
       }
+
+      // Create blob from HTML content and download
+      const htmlContent = response.data;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${routeName.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      console.log('Route PDF generated and downloaded successfully!');
+      
     } catch (error) {
-      console.error('Error saving route:', error);
+      console.error('Error generating route PDF:', error);
     } finally {
       setSaving(false);
     }
