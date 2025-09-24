@@ -19,8 +19,7 @@ export type LLMPlace = {
   website?: string; // Official website
 };
 
-// Inserted user-provided OpenAI API key below.
-const OPENAI_API_KEY = "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";
+// OpenAI descriptions are now generated through edge function
 
 // Simple place count logic
 const TIME_TO_PLACES = {
@@ -98,56 +97,36 @@ export function useOpenAI() {
         console.log("Has valid name:", !!placeName);
         console.log("Has valid address:", !!placeAddress);
         
-        // Generate description using OpenAI with improved error handling
+        // Generate description using edge function
         let generatedDescription = '';
         
-        // Only call OpenAI if we have valid place data
+        // Only call edge function if we have valid place data
         if (placeName && placeName !== 'Unknown Place') {
           try {
-            console.log(`Calling OpenAI for: ${placeName}`);
+            console.log(`Calling edge function for: ${placeName}`);
             
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${OPENAI_API_KEY}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                messages: [
-                  {
-                    role: 'system',
-                    content: 'You are a travel guide. Generate a comprehensive, informative description about a tourist attraction. Include what makes it special, interesting facts, what visitors can expect, and practical information. Always mention "Recommended visit: 20 minutes" for attractions. Be engaging but factual.'
-                  },
-                  {
-                    role: 'user',
-                    content: `Generate a detailed description for "${placeName}" in ${location}. Type: ${place.type || 'attraction'}. Address: ${placeAddress || 'Address not specified'}. Include interesting facts, visitor experience, and practical tips. End with "Recommended visit: 20 minutes."`
-                  }
-                ],
-                max_tokens: 250,
-                temperature: 0.7
-              }),
+            const { supabase } = await import("@/integrations/supabase/client");
+            const { data: descriptionData, error: descriptionError } = await supabase.functions.invoke('generate-place-description', {
+              body: { 
+                placeName: placeName,
+                placeType: place.type || 'attraction',
+                city: location
+              }
             });
 
-            console.log(`OpenAI API response status for ${placeName}:`, response.status);
-            
-            if (response.ok) {
-              const data = await response.json();
-              generatedDescription = data.choices[0]?.message?.content?.trim() || '';
+            if (descriptionError) {
+              console.error(`❌ Edge function error for ${placeName}:`, descriptionError);
+            } else if (descriptionData?.description) {
+              generatedDescription = descriptionData.description.trim();
               console.log(`✅ Generated description for ${placeName}:`, generatedDescription);
-              
-              if (!generatedDescription) {
-                console.warn(`⚠️ Empty description returned from OpenAI for ${placeName}`);
-              }
             } else {
-              const errorText = await response.text();
-              console.error(`❌ OpenAI API failed for ${placeName}:`, response.status, errorText);
+              console.warn(`⚠️ Empty description returned from edge function for ${placeName}`);
             }
           } catch (error) {
-            console.error(`❌ Error calling OpenAI for ${placeName}:`, error);
+            console.error(`❌ Error calling edge function for ${placeName}:`, error);
           }
         } else {
-          console.warn(`⚠️ Skipping OpenAI call for invalid place data: ${placeName}`);
+          console.warn(`⚠️ Skipping edge function call for invalid place data: ${placeName}`);
         }
         
         // Enhanced fallback descriptions based on place type and name
