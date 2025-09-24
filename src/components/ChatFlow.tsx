@@ -29,6 +29,7 @@ export default function ChatFlow() {
   const [location, setLocation] = useState("");
   const [coordinates, setCoordinates] = useState(""); // Store coordinates separately for map
   const [timeWindow, setTimeWindow] = useState<number | null>(null);
+  const [scenario, setScenario] = useState<"onsite" | "planning">("onsite");
   const [goals, setGoals] = useState<string[]>([]);
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +46,7 @@ export default function ChatFlow() {
   const { getLLMPlaces } = useOpenAI();
   const { searchPlacesByName } = useGooglePlaces();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
-  const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, testConnection } = useDatabase();
+  const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, saveUserRoute, getSavedRoutes, testConnection } = useDatabase();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -543,7 +544,10 @@ export default function ChatFlow() {
     console.log("=== DEBUG: Chat completed ===");
     console.log("Data received:", data);
     
-    // For now, handle onsite scenario like before
+    // Update scenario state
+    setScenario(data.scenario);
+    
+    // Handle onsite scenario
     if (data.scenario === "onsite" && data.location && data.timeMinutes && data.categories) {
       setLocation(data.location);
       setTimeWindow(data.timeMinutes);
@@ -553,11 +557,18 @@ export default function ChatFlow() {
       
       // Start generating places
       fetchPlacesWithGoals(data.categories);
-    } else if (data.scenario === "planning") {
-      // Handle planning scenario - for now just show a message
-      console.log("Planning scenario not fully implemented yet");
+    } else if (data.scenario === "planning" && data.city && data.days && data.categories) {
+      // Handle planning scenario
+      setLocation(data.city);
+      setTimeWindow(data.days);
+      setGoals(data.categories);
       setChatVisible(false);
-      // TODO: Implement trip planning logic
+      setStep("generating");
+      
+      // Start generating places for trip planning
+      fetchPlacesWithGoals(data.categories);
+    } else {
+      console.error("Missing required data for scenario:", data.scenario);
     }
   };
 
@@ -613,6 +624,10 @@ export default function ChatFlow() {
                 error={error}
                 location={location}
                 onTrackBuyClick={handleBuyButtonClick}
+                days={timeWindow || 1}
+                scenario={scenario}
+                userSessionId={userSessionId}
+                goals={goals || []}
               />
             </>
           )}

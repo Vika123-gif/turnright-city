@@ -368,6 +368,81 @@ export const useDatabase = () => {
     }
   };
 
+  const saveUserRoute = async (
+    routeName: string,
+    location: string,
+    scenario: string,
+    days: number,
+    goals: string[],
+    places: LLMPlace[],
+    totalWalkingTime: number,
+    mapUrl: string | null,
+    userSessionId: string
+  ) => {
+    try {
+      console.log('=== SAVE USER ROUTE ATTEMPT ===');
+      console.log('Connection test before insert...');
+      await testConnection();
+      
+      const insertData = {
+        user_session_id: userSessionId,
+        route_name: routeName,
+        location,
+        scenario,
+        days,
+        goals,
+        places: places,
+        total_places: places.length,
+        total_walking_time: totalWalkingTime,
+        map_url: mapUrl,
+      };
+
+      console.log('Insert data for saved route:', insertData);
+
+      const { data, error } = await supabase
+        .from('saved_routes')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
+
+      console.log('Route saved successfully:', data);
+      return data;
+    } catch (err) {
+      console.error('=== SAVE ROUTE EXCEPTION ===');
+      console.error('Exception details:', err);
+      return null;
+    }
+  };
+
+  const getSavedRoutes = async (userSessionId: string) => {
+    try {
+      console.log('=== GET SAVED ROUTES ATTEMPT ===');
+      
+      const { data, error } = await supabase
+        .from('saved_routes')
+        .select('*')
+        .eq('user_session_id', userSessionId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Supabase select error:', error);
+        throw error;
+      }
+
+      console.log('Retrieved saved routes:', data);
+      return data;
+    } catch (err) {
+      console.error('=== GET SAVED ROUTES EXCEPTION ===');
+      console.error('Exception details:', err);
+      return null;
+    }
+  };
+
   return {
     generateSessionId,
     trackVisitorSession,
@@ -376,6 +451,8 @@ export const useDatabase = () => {
     saveBuyButtonClick,
     saveRoutePurchase,
     saveFeedback,
+    saveUserRoute,
+    getSavedRoutes,
     testConnection,
   };
 };

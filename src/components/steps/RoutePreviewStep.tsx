@@ -1,9 +1,10 @@
 
 import React, { useState } from "react";
 import Button from "../Button";
-import { Repeat, MapPin, Clock, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Repeat, MapPin, Clock, ChevronLeft, ChevronRight, Download, Save, Check } from "lucide-react";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import { supabase } from "@/integrations/supabase/client";
+import { useDatabase } from "@/hooks/useDatabase";
 import Map from "../Map";
 
 type Props = {
@@ -16,6 +17,8 @@ type Props = {
   onTrackBuyClick?: (location: string, placesCount: number) => void;
   days?: number; // Number of days for the trip
   scenario?: "onsite" | "planning"; // Add scenario prop
+  userSessionId?: string; // Add user session ID for saving
+  goals?: string[]; // Add goals for saving
 };
 
 const RoutePreviewStep: React.FC<Props> = ({
@@ -28,9 +31,15 @@ const RoutePreviewStep: React.FC<Props> = ({
   onTrackBuyClick,
   days = 1,
   scenario = "onsite",
+  userSessionId = '',
+  goals = [],
 }) => {
   const [processing, setProcessing] = useState(false);
   const [currentDay, setCurrentDay] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  
+  const { saveUserRoute } = useDatabase();
 
   // Open specific day route in Google Maps
   function handleOpenDayInGoogleMaps(dayPlaces: LLMPlace[]) {
@@ -48,10 +57,54 @@ const RoutePreviewStep: React.FC<Props> = ({
     }
   }
 
-  // Handle PDF save
-  const handleSavePDF = () => {
-    // Simple implementation - open print dialog
-    window.print();
+  // Handle route save
+  const handleSaveRoute = async () => {
+    if (!userSessionId || places.length === 0) {
+      console.error('Cannot save route: missing user session or places');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Generate a route name based on location and current date
+      const routeName = `${location} ${scenario === 'planning' ? 'Trip' : 'Route'} - ${new Date().toLocaleDateString()}`;
+      
+      // Calculate total walking time from places (use walkingTime property)
+      const totalWalkingTime = places.reduce((total, place) => {
+        return total + (place.walkingTime || 0);
+      }, 0);
+
+      // Build Google Maps URL for the route
+      const waypoints = places
+        .filter(place => place.lat && place.lon)
+        .map(place => `${place.lat},${place.lon}`)
+        .join('/');
+      const mapUrl = waypoints ? `https://www.google.com/maps/dir/${waypoints}` : null;
+
+      const savedRoute = await saveUserRoute(
+        routeName,
+        location,
+        scenario,
+        days,
+        goals,
+        places,
+        totalWalkingTime,
+        mapUrl,
+        userSessionId
+      );
+
+      if (savedRoute) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000); // Reset after 3 seconds
+        console.log('Route saved successfully!');
+      } else {
+        console.error('Failed to save route');
+      }
+    } catch (error) {
+      console.error('Error saving route:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Group places by days (for planning scenario)
@@ -244,12 +297,21 @@ const RoutePreviewStep: React.FC<Props> = ({
             
             <Button 
               variant="outline"
-              onClick={handleSavePDF}
-              disabled={purchasing || processing}
+              onClick={handleSaveRoute}
+              disabled={purchasing || processing || saving || !userSessionId}
               className="w-full flex items-center justify-center gap-2"
             >
-              <Download className="w-4 h-4" />
-              {scenario === "onsite" ? "Save Route" : "Save Route as PDF"}
+              {saved ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Route Saved!
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  {saving ? 'Saving...' : (scenario === "onsite" ? "Save Route" : "Save Trip")}
+                </>
+              )}
             </Button>
           </div>
         </div>

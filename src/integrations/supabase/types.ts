@@ -141,6 +141,54 @@ export type Database = {
           },
         ]
       }
+      saved_routes: {
+        Row: {
+          created_at: string
+          days: number | null
+          goals: string[]
+          id: string
+          location: string
+          map_url: string | null
+          places: Json
+          route_name: string
+          scenario: string
+          total_places: number
+          total_walking_time: number | null
+          updated_at: string
+          user_session_id: string
+        }
+        Insert: {
+          created_at?: string
+          days?: number | null
+          goals: string[]
+          id?: string
+          location: string
+          map_url?: string | null
+          places: Json
+          route_name: string
+          scenario: string
+          total_places: number
+          total_walking_time?: number | null
+          updated_at?: string
+          user_session_id: string
+        }
+        Update: {
+          created_at?: string
+          days?: number | null
+          goals?: string[]
+          id?: string
+          location?: string
+          map_url?: string | null
+          places?: Json
+          route_name?: string
+          scenario?: string
+          total_places?: number
+          total_walking_time?: number | null
+          updated_at?: string
+          user_session_id?: string
+        }
+        Relationships: []
+      }
       user_feedback: {
         Row: {
           id: string
