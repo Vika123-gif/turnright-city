@@ -27,7 +27,7 @@ const RoutePreviewStep: React.FC<Props> = ({
 }) => {
   const [processing, setProcessing] = useState(false);
 
-  // Temporarily disable payment - show route directly
+  // Show interactive map with all generated places
   function handleShowRoute() {
     console.log("=== DEBUG: handleShowRoute called (payment disabled) ===");
     console.log("Current places:", places);
@@ -40,6 +40,22 @@ const RoutePreviewStep: React.FC<Props> = ({
     
     // Directly call onBuy to show the route without payment
     onBuy();
+  }
+
+  // Open entire route in Google Maps
+  function handleOpenInGoogleMaps() {
+    if (!places || places.length === 0) return;
+    
+    // Build waypoints from places with coordinates
+    const waypoints = places
+      .filter(place => place.lat && place.lon)
+      .map(place => `${place.lat},${place.lon}`)
+      .join('/');
+    
+    if (waypoints) {
+      const googleMapsUrl = `https://www.google.com/maps/dir/${waypoints}`;
+      window.open(googleMapsUrl, '_blank');
+    }
   }
 
   return (
@@ -127,13 +143,22 @@ const RoutePreviewStep: React.FC<Props> = ({
           <Repeat className="w-5 h-5 mr-2 -ml-1" /> Generate Again
         </Button>
         {!error && places.length > 0 && (
-          <Button 
-            variant="primary" 
-            onClick={handleShowRoute} 
-            disabled={purchasing || processing}
-          >
-            {processing ? "Loading Route..." : "🗺️ Show Interactive Map"}
-          </Button>
+          <>
+            <Button 
+              variant="outline"
+              onClick={handleOpenInGoogleMaps}
+              disabled={purchasing || processing}
+            >
+              🌍 Open Route in Google Maps
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleShowRoute} 
+              disabled={purchasing || processing}
+            >
+              {processing ? "Loading Route..." : "🗺️ Show Interactive Map"}
+            </Button>
+          </>
         )}
 
         {/* MVP Link */}
