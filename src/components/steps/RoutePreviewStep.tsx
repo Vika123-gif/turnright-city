@@ -43,7 +43,7 @@ const RoutePreviewStep: React.FC<Props> = ({
   }
 
   return (
-    <div className="chat-card text-left max-h-96 overflow-y-auto">
+    <div className="chat-card text-left h-screen overflow-y-auto flex flex-col">
       <div className="font-semibold text-lg mb-3 flex items-center gap-2">
         📍 Here's what I found for you:
       </div>
