@@ -177,7 +177,7 @@ function calculateOptimalStops(timeMinutes: number, candidatePlaces: any[], star
     console.log(`${i+1}. ${place.name} - Score: ${place.popularityScore.toFixed(1)} (Rating: ${place.rating}, Reviews: ${place.user_ratings_total})`);
   });
   
-  const selectedStops = [];
+  const selectedStops: any[] = [];
   let remainingTime = timeMinutes;
   let totalWalkingTime = 0;
   let totalVisitTime = 0;
@@ -185,6 +185,17 @@ function calculateOptimalStops(timeMinutes: number, candidatePlaces: any[], star
   // Always include walking time from start to first location
   if (sortedCandidates.length > 0) {
     const firstStop = sortedCandidates[0];
+    
+    // Validate first stop has coordinates
+    if (typeof firstStop.lat !== 'number' || typeof firstStop.lon !== 'number') {
+      console.error('First stop missing coordinates:', { 
+        name: firstStop.name, 
+        lat: firstStop.lat, 
+        lon: firstStop.lon 
+      });
+      return selectedStops;
+    }
+    
     const walkingTimeToFirst = estimateWalkingTime(
       calculateDistance(startLat, startLng, firstStop.lat, firstStop.lon)
     );
@@ -506,8 +517,8 @@ serve(async (req) => {
         const enrichedPlace = {
           name: place.name,
           address: place.vicinity || place.formatted_address || 'Address not available',
-          lat: place.geometry.location.lat,
-          lon: place.geometry.location.lng,
+          lat: place.geometry?.location?.lat,
+          lon: place.geometry?.location?.lng,
           types: place.types || [],
           typeNormalized: normalizedType,
           webUrl: details.url || details.website,
@@ -520,7 +531,16 @@ serve(async (req) => {
           ticketPrice: ticketPrice
         };
         
-        enrichedCandidates.push(enrichedPlace);
+        // Validate coordinates before adding
+        if (typeof enrichedPlace.lat === 'number' && typeof enrichedPlace.lon === 'number') {
+          enrichedCandidates.push(enrichedPlace);
+        } else {
+          console.error(`Skipping place with invalid coordinates: ${place.name}`, {
+            lat: enrichedPlace.lat,
+            lon: enrichedPlace.lon,
+            geometry: place.geometry
+          });
+        }
         
       } catch (error) {
         console.error(`Error enriching place ${place.name}:`, error);
@@ -544,6 +564,21 @@ serve(async (req) => {
     }
 
     // Use the new time-based calculation
+    console.log('Coordinates before calculateOptimalStops:', { lat, lng });
+    console.log('Sample candidate coordinates:', enrichedCandidates.slice(0, 2).map(c => ({ name: c.name, lat: c.lat, lon: c.lon })));
+    
+    if (typeof lat !== 'number' || typeof lng !== 'number') {
+      console.error('Invalid start coordinates:', { lat, lng, location });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Invalid start coordinates for location: ${location}. Got lat: ${lat}, lng: ${lng}`,
+          places: []
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+    
     const optimalStops = calculateOptimalStops(timeMinutes, enrichedCandidates, lat, lng);
     
     console.log(`Selected ${optimalStops.length} optimal stops that fit within ${timeMinutes} minutes`);

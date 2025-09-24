@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from '../_shared/cors.ts'
 
-const GOOGLE_PLACES_API_KEY = Deno.env.get('GOOGLE_PLACES_API_KEY')
+const GOOGLE_PLACES_API_KEY = Deno.env.get('GOOGLE_API_KEY')  // Fixed: was GOOGLE_PLACES_API_KEY
 
 serve(async (req) => {
   // Handle CORS
