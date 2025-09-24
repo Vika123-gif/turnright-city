@@ -157,23 +157,23 @@ const RoutePreviewStep: React.FC<Props> = ({
   return (
     <div className="chat-card text-left h-screen overflow-hidden flex flex-col relative">
       {/* Floating Action Menu */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-50">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="bg-white shadow-lg hover:shadow-xl w-10 h-10 p-0 flex items-center justify-center">
+            <Button variant="outline" className="bg-white shadow-lg hover:shadow-xl w-10 h-10 p-0 flex items-center justify-center border border-gray-300">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => handleOpenDayInGoogleMaps(currentDayData?.places || places)}>
+          <DropdownMenuContent align="end" className="w-56 bg-white border border-gray-200 shadow-lg z-50">
+            <DropdownMenuItem onClick={() => handleOpenDayInGoogleMaps(currentDayData?.places || places)} className="cursor-pointer">
               <ExternalLink className="mr-2 h-4 w-4" />
               Open in Google Maps
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleSaveRoute} disabled={!userSessionId || saving}>
+            <DropdownMenuItem onClick={handleSaveRoute} disabled={!userSessionId || saving} className="cursor-pointer">
               <Save className="mr-2 h-4 w-4" />
               {saved ? 'Route Saved!' : saving ? 'Saving...' : 'Save Route'}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onRegenerate}>
+            <DropdownMenuItem onClick={onRegenerate} className="cursor-pointer">
               <Repeat className="mr-2 h-4 w-4" />
               Generate Again
             </DropdownMenuItem>
