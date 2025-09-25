@@ -32,6 +32,7 @@ export default function ChatFlow() {
   const [scenario, setScenario] = useState<"onsite" | "planning">("onsite");
   const [goals, setGoals] = useState<string[]>([]);
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
+  const [selectedDayPlaces, setSelectedDayPlaces] = useState<LLMPlace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [routeRating, setRouteRating] = useState<number | null>(null);
@@ -576,14 +577,23 @@ export default function ChatFlow() {
   const handleShowMap = () => {
     console.log("=== DEBUG: handleShowMap called ===");
     console.log("Current places:", places);
+    console.log("Current selectedDayPlaces:", selectedDayPlaces);
     console.log("Current location:", location);
     
-    if (places && places.length > 0 && location) {
+    const placesToShow = selectedDayPlaces || places;
+    if (placesToShow && placesToShow.length > 0 && location) {
       setChatVisible(false);
       setStep("detailed-map");
     } else {
       console.error("Cannot show map - missing places or location");
     }
+  };
+
+  const handleShowDayMap = (dayPlaces: LLMPlace[]) => {
+    console.log("=== DEBUG: handleShowDayMap called ===");
+    console.log("Day places:", dayPlaces);
+    setSelectedDayPlaces(dayPlaces);
+    handleShowMap();
   };
 
   return (
@@ -630,6 +640,7 @@ export default function ChatFlow() {
                 scenario={scenario}
                 userSessionId={userSessionId}
                 goals={goals || []}
+                onShowDayMap={handleShowDayMap}
               />
             </>
           )}
@@ -659,9 +670,12 @@ export default function ChatFlow() {
                 <BackButton onClick={goBack} />
               </div>
               <DetailedMapStep
-                places={places || []}
+                places={selectedDayPlaces || places || []}
                 origin={location}
-                onBack={() => setStep("results")}
+                onBack={() => {
+                  setSelectedDayPlaces(null); // Reset selected day places when going back
+                  setStep("results");
+                }}
                 onReset={reset}
                 onFeedbackSubmit={handleTextFeedback}
               />

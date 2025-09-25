@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import Button from "../Button";
 import { Repeat, MapPin, Clock, ChevronLeft, ChevronRight, Download, Save, Check, MoreVertical, ExternalLink } from "lucide-react";
@@ -26,6 +25,7 @@ type Props = {
   userSessionId?: string; // Add user session ID for saving
   goals?: string[]; // Add goals for saving
   onStartNew?: () => void; // Add start new dialog callback
+  onShowDayMap?: (dayPlaces: LLMPlace[]) => void; // Add callback for showing day-specific map
 };
 
 const RoutePreviewStep: React.FC<Props> = ({
@@ -41,6 +41,7 @@ const RoutePreviewStep: React.FC<Props> = ({
   userSessionId = '',
   goals = [],
   onStartNew,
+  onShowDayMap,
 }) => {
   const [processing, setProcessing] = useState(false);
   const [currentDay, setCurrentDay] = useState(1);
@@ -301,15 +302,29 @@ const RoutePreviewStep: React.FC<Props> = ({
           {/* Route Content - Full Height */}
           {places && places.length > 0 && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col">
+              {/* Day Content with individual map link */}
               <div className="bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white p-3">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                  {scenario === "planning" && currentDayData && (
-                    <span className="bg-white/20 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
-                      {currentDayData.day}
-                    </span>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    {scenario === "planning" && currentDayData && (
+                      <span className="bg-white/20 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                        {currentDayData.day}
+                      </span>
+                    )}
+                    {scenario === "planning" ? `Day ${currentDayData?.day || 1}` : "Your Route"}
+                  </h3>
+                  
+                  {/* Individual Day Map Button for Planning Scenario */}
+                  {scenario === "planning" && currentDayData && onShowDayMap && (
+                    <button
+                      onClick={() => onShowDayMap(currentDayData.places)}
+                      className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                    >
+                      <MapPin className="w-3 h-3" />
+                      Show Map
+                    </button>
                   )}
-                  {scenario === "planning" ? `Day ${currentDayData?.day || 1}` : "Your Route"}
-                </h3>
+                </div>
               </div>
               
               <div className="flex-1 overflow-y-auto">
@@ -372,6 +387,45 @@ const RoutePreviewStep: React.FC<Props> = ({
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* All Days Navigation for Planning Scenario */}
+          {scenario === "planning" && days > 1 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-green-900 mb-3">All Days Navigation</h4>
+              <div className="grid grid-cols-1 gap-2">
+                {groupedPlaces.map(dayData => (
+                  <div key={dayData.day} className="flex items-center justify-between bg-white p-3 rounded-lg border border-green-100">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white text-xs font-bold flex items-center justify-center">
+                        {dayData.day}
+                      </span>
+                      <span className="font-medium text-gray-700">
+                        Day {dayData.day} ({dayData.places.length} places)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleOpenDayInGoogleMaps(dayData.places)}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Google Maps
+                      </button>
+                      {onShowDayMap && (
+                        <button
+                          onClick={() => onShowDayMap(dayData.places)}
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                        >
+                          <MapPin className="w-3 h-3" />
+                          Interactive Map
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
