@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Button from "./Button";
-import { MapPin, Clock, Shuffle, Send, ChevronUp, ChevronDown, Bot, User } from "lucide-react";
+import BackButton from "./BackButton";
+import { MapPin, Clock, Shuffle, Send, ChevronUp, ChevronDown, Bot, User, ArrowLeft } from "lucide-react";
 import CategoriesStep from "./steps/CategoriesStep";
 import OnSiteTimeStep from "./steps/OnSiteTimeStep";
 import PlanningTimeStep from "./steps/PlanningTimeStep";
@@ -134,6 +135,65 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       setCurrentStep("scenario_fork");
     }, 1000);
   }, []);
+
+  // Step navigation mapping
+  const stepFlow = {
+    onsite: ["scenario_fork", "location", "time", "destination", "destination_input", "interests", "additional_settings"],
+    planning: ["scenario_fork", "city_dates", "accommodation", "accommodation_input", "trip_interests", "trip_settings"]
+  };
+
+  const handleGoBack = () => {
+    const currentFlow = selectedScenario ? stepFlow[selectedScenario] : [];
+    const currentIndex = currentFlow.indexOf(currentStep);
+    
+    if (currentIndex > 0) {
+      const previousStep = currentFlow[currentIndex - 1];
+      setCurrentStep(previousStep as ChatStep);
+      
+      // Remove the last message to undo the current step's message
+      setMessages(prev => prev.slice(0, -1));
+    } else if (currentStep === "destination_input" && destinationType === "specific") {
+      // Special case: go back from destination_input to destination
+      setCurrentStep("destination");
+      setMessages(prev => prev.slice(0, -1));
+    } else if (currentStep === "accommodation_input" && hasAccommodation) {
+      // Special case: go back from accommodation_input to accommodation
+      setCurrentStep("accommodation");
+      setMessages(prev => prev.slice(0, -1));
+    }
+  };
+
+  const startNewDialog = () => {
+    // Reset all states
+    setMessages([]);
+    setCurrentStep("welcome");
+    setSelectedScenario(null);
+    setSelectedTime(null);
+    setCustomMinutes("");
+    setSelectedCategories([]);
+    setAdditionalSettings([]);
+    setLocationConsent(false);
+    setDetecting(false);
+    setDestinationType(null);
+    setSelectedDays(null);
+    setHasAccommodation(null);
+    setCollectedData({ scenario: "onsite" });
+    setPlaces(null);
+    setGenerating(false);
+    setError(null);
+    setUserInput("");
+    setDestinationInput("");
+    setLocationInput("");
+    
+    // Restart with welcome message
+    setTimeout(() => {
+      addBotMessage("👋 Hi! I'm TurnRight, your personal city guide.");
+      setTimeout(() => {
+        addBotMessage("Are you already in the city or planning a trip?");
+        setCurrentStep("scenario_fork");
+      }, 1000);
+    }, 100);
+  };
 
   const addBotMessage = (content: string) => {
     const message: Message = {
@@ -595,6 +655,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {currentStep === "city_dates" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <div className="space-y-4">
             <input
               type="text"
@@ -636,6 +699,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {currentStep === "accommodation" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <div className="flex flex-col gap-3">
             <button
               onClick={() => handleAccommodationSelect(true)}
@@ -655,6 +721,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {currentStep === "accommodation_input" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <div className="space-y-4">
             <input
               type="text"
@@ -681,12 +750,18 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {currentStep === "location" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <LocationStep onNext={handleLocationSubmit} />
         </div>
       )}
 
       {currentStep === "time" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <OnSiteTimeStep onNext={(timeMinutes) => {
             addUserMessage(`⏰ ${timeMinutes} minutes`);
             setCollectedData(prev => ({ ...prev, timeMinutes }));
@@ -700,6 +775,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {currentStep === "destination" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <div className="flex flex-col gap-3">
             <button
               onClick={() => handleDestinationSelect("none")}
@@ -725,6 +803,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {currentStep === "destination_input" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <div className="space-y-4">
             <input
               type="text"
@@ -751,12 +832,18 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {currentStep === "interests" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <CategoriesStep onNext={handleInterestsSubmit} />
         </div>
       )}
 
       {currentStep === "additional_settings" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <AdditionalSettingsStep 
             onNext={handleAdditionalSettingsSubmit} 
             buttonText={selectedScenario === "planning" ? "Create Trip Plan" : "Generate Route"}
@@ -766,6 +853,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {currentStep === "trip_interests" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <CategoriesStep onNext={(categories) => {
             addUserMessage(`🎯 ${categories.join(", ")}`);
             const updatedData = { ...collectedData, categories };
@@ -780,6 +870,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {currentStep === "trip_settings" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
           <AdditionalSettingsStep 
             onNext={handleAdditionalSettingsSubmit} 
             buttonText="Create Trip Plan"
@@ -840,6 +933,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             scenario={collectedData.scenario}
             userSessionId="demo-session" // Временная сессия для демо
             goals={collectedData.categories || []}
+            onStartNew={startNewDialog}
           />
         </div>
       )}

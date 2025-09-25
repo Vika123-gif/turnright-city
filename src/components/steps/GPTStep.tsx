@@ -9,6 +9,7 @@ type Props = {
   loading: boolean;
   onDone: () => void;
   error?: string | null;
+  onStartNew?: () => void;
 };
 
 const GPTStep: React.FC<Props> = ({
@@ -16,6 +17,7 @@ const GPTStep: React.FC<Props> = ({
   loading,
   onDone,
   error,
+  onStartNew,
 }) => {
   return (
     <div className="chat-card text-left min-h-[220px] flex flex-col justify-between gap-5">
@@ -44,6 +46,13 @@ const GPTStep: React.FC<Props> = ({
         {!loading && places.length > 0 && (
           <Button variant="primary" onClick={onDone}>
             Next
+          </Button>
+        )}
+
+        {/* Start New Dialog Button */}
+        {!loading && onStartNew && (
+          <Button variant="outline" onClick={onStartNew}>
+            Start New Dialog
           </Button>
         )}
 

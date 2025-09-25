@@ -608,6 +608,7 @@ export default function ChatFlow() {
                 loading={generating}
                 onDone={() => setStep("results")}
                 error={error}
+                onStartNew={reset}
               />
             </>
           )}

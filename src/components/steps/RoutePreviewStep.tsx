@@ -25,6 +25,7 @@ type Props = {
   scenario?: "onsite" | "planning"; // Add scenario prop
   userSessionId?: string; // Add user session ID for saving
   goals?: string[]; // Add goals for saving
+  onStartNew?: () => void; // Add start new dialog callback
 };
 
 const RoutePreviewStep: React.FC<Props> = ({
@@ -39,6 +40,7 @@ const RoutePreviewStep: React.FC<Props> = ({
   scenario = "onsite",
   userSessionId = '',
   goals = [],
+  onStartNew,
 }) => {
   const [processing, setProcessing] = useState(false);
   const [currentDay, setCurrentDay] = useState(1);
@@ -231,6 +233,12 @@ const RoutePreviewStep: React.FC<Props> = ({
               <Repeat className="mr-2 h-4 w-4" />
               Generate Again
             </DropdownMenuItem>
+            {onStartNew && (
+              <DropdownMenuItem onClick={onStartNew} className="cursor-pointer">
+                <Check className="mr-2 h-4 w-4" />
+                Start New Dialog
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
