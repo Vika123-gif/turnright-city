@@ -17,7 +17,6 @@ export type LLMPlace = {
   openingHours?: string[]; // Opening hours for each day
   ticketPrice?: string; // Ticket price information
   website?: string; // Official website
-  day?: number; // Day number for multi-day planning (scenario="planning")
 };
 
 // OpenAI descriptions are now generated through edge function
@@ -65,11 +64,9 @@ export function useOpenAI() {
       else if (timeWindow <= 360) actualMaxPlaces = 4;  // 6 hours = 4 places
       else actualMaxPlaces = 6;                         // full day = 6 places
     } else if (scenario === "planning") {
-      // For planning: generate places for each day separately to avoid duplicates
-      console.log(`Planning scenario: ${timeWindow} days with unique places per day`);
-      
-      // Call the API to handle multi-day planning with unique places
-      actualMaxPlaces = timeWindow * 6; // Total places needed across all days
+      // For planning: 6 places per day, and timeWindow is number of days
+      actualMaxPlaces = timeWindow * 6;
+      console.log(`Planning scenario: ${timeWindow} days × 6 places = ${actualMaxPlaces} total places`);
     }
     
     console.log("Calculated max places:", actualMaxPlaces);
@@ -77,9 +74,10 @@ export function useOpenAI() {
     // Convert timeWindow for API based on scenario
     let apiTimeWindow = timeWindow;
     if (scenario === "planning") {
-      // For planning: pass number of days directly, let edge function handle daily separation
-      apiTimeWindow = timeWindow; // Number of days
-      console.log(`Planning API call: ${timeWindow} days for unique daily places`);
+      // For planning: call API multiple times for each day, but start with one day (480 minutes)
+      // We'll generate places for each day separately in the edge function
+      apiTimeWindow = 480 * timeWindow; // Total minutes for all days combined
+      console.log(`Planning API call: ${timeWindow} days × 480 minutes = ${apiTimeWindow} total minutes`);
     }
     // For onsite scenario, timeWindow is already in minutes from the time selection
     
@@ -93,8 +91,7 @@ export function useOpenAI() {
           location: location,
           goals: goals,
           timeWindow: apiTimeWindow,
-          maxPlaces: actualMaxPlaces,
-          scenario: scenario // Pass scenario to edge function
+          maxPlaces: actualMaxPlaces
         }
       });
       
