@@ -26,7 +26,9 @@ const Index = () => {
       {/* Header with auth status */}
       <header className="w-full bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-900">TurnRight.city</h1>
+          <h1 className="text-xl font-bold text-gray-900 cursor-pointer" onClick={() => navigate('/')}>
+            TurnRight.city
+          </h1>
           <div className="flex items-center gap-4">
             {user ? (
               <div className="flex items-center gap-3">
