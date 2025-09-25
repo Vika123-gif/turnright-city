@@ -25,25 +25,15 @@ const Start = () => {
           Your AI city guide: smart walking routes in seconds.
         </h1>
 
-        {/* Action Buttons */}
+        {/* Action Button */}
         <div className="space-y-4">
-          <div className="space-y-3">
-            <Button 
-              onClick={() => navigate('/')} 
-              size="lg" 
-              className="w-full"
-            >
-              I'm already in the city
-            </Button>
-            <Button 
-              onClick={() => navigate('/')} 
-              variant="outline" 
-              size="lg" 
-              className="w-full"
-            >
-              I'm planning a trip
-            </Button>
-          </div>
+          <Button 
+            onClick={() => navigate('/chat')} 
+            size="lg" 
+            className="w-full"
+          >
+            Start
+          </Button>
 
           {/* Info Link */}
           <Dialog open={showInfo} onOpenChange={setShowInfo}>
