@@ -280,12 +280,13 @@ serve(async (req) => {
   }
 
   try {
-    const { location, goals, timeWindow } = await req.json();
+    const { location, goals, timeWindow, scenario = 'onsite' } = await req.json();
     
     console.log('=== GPT-Powered Route Generation Pipeline ===');
     console.log('Location:', location);
     console.log('Goals:', goals);
     console.log('Time Window:', timeWindow);
+    console.log('Scenario:', scenario);
     console.log('Environment check - OpenAI key available:', !!Deno.env.get('OPENAI_API_KEY'));
     console.log('Environment check - Google API key available:', !!Deno.env.get('GOOGLE_API_KEY'));
 
@@ -371,25 +372,35 @@ serve(async (req) => {
       'Viewpoints': ['tourist_attraction', 'point_of_interest']
     };
 
-    // Parse time window to get minutes
+    // Parse time window based on scenario
     let timeMinutes;
-    if (typeof timeWindow === 'number') {
-      timeMinutes = timeWindow;
-    } else if (typeof timeWindow === 'string') {
-      // Legacy support for string time windows
-      const timeMap = {
-        '1h': 60,
-        '3h': 180,
-        '5h': 300,
-        'Full day': 480,
-        '30 minutes': 30,
-        '1 hour': 60,
-        '1.5 hours': 90,
-        '2+ hours': 120
-      };
-      timeMinutes = (timeMap as any)[timeWindow] || 60;
+    let numberOfDays = 1;
+    
+    if (scenario === 'planning') {
+      // For planning scenario, timeWindow is number of days
+      numberOfDays = typeof timeWindow === 'number' ? timeWindow : 1;
+      timeMinutes = 480; // 8 hours per day for planning
+      console.log(`Planning scenario: ${numberOfDays} days, ${timeMinutes} minutes per day`);
     } else {
-      timeMinutes = 60; // Default to 1 hour
+      // For onsite scenario, timeWindow is minutes
+      if (typeof timeWindow === 'number') {
+        timeMinutes = timeWindow;
+      } else if (typeof timeWindow === 'string') {
+        // Legacy support for string time windows
+        const timeMap = {
+          '1h': 60,
+          '3h': 180,
+          '5h': 300,
+          'Full day': 480,
+          '30 minutes': 30,
+          '1 hour': 60,
+          '1.5 hours': 90,
+          '2+ hours': 120
+        };
+        timeMinutes = (timeMap as any)[timeWindow] || 60;
+      } else {
+        timeMinutes = 60; // Default to 1 hour
+      }
     }
 
     console.log(`Time available: ${timeMinutes} minutes`);
@@ -553,7 +564,7 @@ serve(async (req) => {
 
     console.log(`Enriched ${enrichedCandidates.length} candidates`);
 
-    // STEP 3: Calculate optimal stops based on time constraints
+    // STEP 3: Calculate optimal stops based on time constraints and scenario
     console.log('=== Calculating optimal stops based on time constraints ===');
     
     if (enrichedCandidates.length === 0) {
@@ -567,28 +578,73 @@ serve(async (req) => {
       );
     }
 
-    // Use the new time-based calculation
-    console.log('Coordinates before calculateOptimalStops:', { lat, lng });
-    console.log('Sample candidate coordinates:', enrichedCandidates.slice(0, 2).map(c => ({ name: c.name, lat: c.lat, lon: c.lon })));
+    let finalStopsAllDays: any[] = [];
     
-    if (typeof lat !== 'number' || typeof lng !== 'number') {
-      console.error('Invalid start coordinates:', { lat, lng, location });
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `Invalid start coordinates for location: ${location}. Got lat: ${lat}, lng: ${lng}`,
-          places: []
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
+    if (scenario === 'planning' && numberOfDays > 1) {
+      // For multi-day planning, generate unique places for each day
+      console.log(`Generating unique places for ${numberOfDays} days`);
+      
+      const placesPerDay = 6;
+      const usedPlaceIds = new Set<string>();
+      
+      for (let day = 1; day <= numberOfDays; day++) {
+        console.log(`=== Generating places for Day ${day} ===`);
+        
+        // Filter out already used places
+        const availableCandidates = enrichedCandidates.filter(place => 
+          !usedPlaceIds.has(place.name + '|' + place.lat + '|' + place.lon)
+        );
+        
+        if (availableCandidates.length === 0) {
+          console.log(`No more unique places available for day ${day}`);
+          break;
+        }
+        
+        console.log(`Available candidates for day ${day}: ${availableCandidates.length}`);
+        
+        // Calculate optimal stops for this day
+        const dayStops = calculateOptimalStops(timeMinutes, availableCandidates, lat, lng);
+        
+        // Mark these places as used
+        dayStops.forEach(place => {
+          usedPlaceIds.add(place.name + '|' + place.lat + '|' + place.lon);
+        });
+        
+        // Add day information to each place
+        const dayStopsWithDay = dayStops.map(place => ({
+          ...place,
+          day: day
+        }));
+        
+        finalStopsAllDays.push(...dayStopsWithDay);
+        console.log(`Day ${day}: Selected ${dayStops.length} places`);
+      }
+      
+      console.log(`Total places across ${numberOfDays} days: ${finalStopsAllDays.length}`);
+    } else {
+      // Single day or onsite scenario
+      console.log('Coordinates before calculateOptimalStops:', { lat, lng });
+      console.log('Sample candidate coordinates:', enrichedCandidates.slice(0, 2).map(c => ({ name: c.name, lat: c.lat, lon: c.lon })));
+      
+      if (typeof lat !== 'number' || typeof lng !== 'number') {
+        console.error('Invalid start coordinates:', { lat, lng, location });
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Invalid start coordinates for location: ${location}. Got lat: ${lat}, lng: ${lng}`,
+            places: []
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+      
+      finalStopsAllDays = calculateOptimalStops(timeMinutes, enrichedCandidates, lat, lng);
     }
     
-    const optimalStops = calculateOptimalStops(timeMinutes, enrichedCandidates, lat, lng);
-    
-    console.log(`Selected ${optimalStops.length} optimal stops that fit within ${timeMinutes} minutes`);
+    console.log(`Selected ${finalStopsAllDays.length} optimal stops`);
 
     // Convert to final format with enriched data
-    const finalStops = optimalStops.map(place => ({
+    const finalStops = finalStopsAllDays.map(place => ({
       name: place.name,
       lat: place.lat,
       lon: place.lon,
@@ -602,7 +658,8 @@ serve(async (req) => {
       description: place.description,
       openingHours: place.openingHours,
       ticketPrice: place.ticketPrice,
-      website: place.website
+      website: place.website,
+      day: place.day || 1 // Add day information
     }));
 
     // STEP 4: Calculate walking times and generate map route
@@ -672,6 +729,8 @@ serve(async (req) => {
           candidatesEnriched: enrichedCandidates.length,
           finalStopsReturned: finalStops.length,
           timeAvailableMinutes: timeMinutes,
+          numberOfDays: numberOfDays,
+          scenario: scenario,
           searchRadius: radius,
           totalWalkingTime,
           totalVisitTime: finalStops.reduce((sum: number, stop: any) => sum + (stop.visitDuration || 0), 0),
