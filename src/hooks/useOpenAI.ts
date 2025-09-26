@@ -17,6 +17,7 @@ export type LLMPlace = {
   openingHours?: string[]; // Opening hours for each day
   ticketPrice?: string; // Ticket price information
   website?: string; // Official website
+  day?: number; // Optional day property for multi-day planning
 };
 
 // OpenAI descriptions are now generated through edge function

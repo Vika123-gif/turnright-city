@@ -133,6 +133,73 @@ function getPlaceVisitDuration(placeTypes: any[]) {
   return PLACE_TYPE_DURATION.attraction;
 }
 
+// Function to distribute places across multiple days without repeats
+function distributeAcrossDays(candidatePlaces: any[], numberOfDays: number, timePerDay: number, startLat: number, startLng: number) {
+  console.log(`=== Distributing places across ${numberOfDays} days ===`);
+  
+  // Calculate popularity score for all places
+  const placesWithScores = candidatePlaces.map((place: any) => {
+    const rating = place.rating || 0;
+    const reviewCount = place.user_ratings_total || 0;
+    
+    let popularityScore = 0;
+    if (rating > 0) {
+      popularityScore += rating * 2;
+      if (reviewCount > 0) {
+        popularityScore += Math.log(reviewCount + 1) * 0.5;
+      }
+      if (rating >= 4.5) popularityScore += 2;
+      if (rating >= 4.0) popularityScore += 1;
+    }
+    
+    return {
+      ...place,
+      popularityScore
+    };
+  });
+  
+  // Sort by popularity
+  const sortedCandidates = placesWithScores.sort((a: any, b: any) => {
+    const scoresDiff = b.popularityScore - a.popularityScore;
+    if (Math.abs(scoresDiff) > 0.5) return scoresDiff;
+    
+    const distA = calculateDistance(startLat, startLng, a.lat, a.lon);
+    const distB = calculateDistance(startLat, startLng, b.lat, b.lon);
+    return distA - distB;
+  });
+  
+  // Distribute places across days
+  const allDayPlaces = [];
+  const usedPlaces = new Set();
+  
+  for (let day = 1; day <= numberOfDays; day++) {
+    console.log(`\n=== Planning Day ${day} ===`);
+    
+    // Get available candidates for this day (not used before)
+    const availableCandidates = sortedCandidates.filter(place => !usedPlaces.has(place.name));
+    
+    if (availableCandidates.length === 0) {
+      console.log(`No more unique places available for day ${day}`);
+      break;
+    }
+    
+    // Calculate optimal stops for this day
+    const dayStops = calculateOptimalStops(timePerDay, availableCandidates, startLat, startLng);
+    
+    // Mark these places as used and add day property
+    dayStops.forEach(place => {
+      usedPlaces.add(place.name);
+      place.day = day;
+    });
+    
+    allDayPlaces.push(...dayStops);
+    console.log(`Day ${day}: ${dayStops.length} places selected`);
+  }
+  
+  console.log(`Total unique places across all days: ${allDayPlaces.length}`);
+  return allDayPlaces;
+}
+
 // Function to calculate optimal number of stops based on total available time
 function calculateOptimalStops(timeMinutes: number, candidatePlaces: any[], startLat: number, startLng: number) {
   if (!candidatePlaces || candidatePlaces.length === 0) return [];
@@ -280,7 +347,7 @@ serve(async (req) => {
   }
 
   try {
-    const { location, goals, timeWindow } = await req.json();
+    const { location, goals, timeWindow, scenario } = await req.json();
     
     console.log('=== GPT-Powered Route Generation Pipeline ===');
     console.log('Location:', location);
@@ -393,6 +460,12 @@ serve(async (req) => {
     }
 
     console.log(`Time available: ${timeMinutes} minutes`);
+
+    // Calculate number of days for multi-day planning
+    const numberOfDays = scenario === 'planning' ? Math.ceil(timeMinutes / 480) : 1; // Assume 8 hours per day
+    const timePerDay = scenario === 'planning' && numberOfDays > 1 ? 480 : timeMinutes; // 8 hours per day for multi-day
+    
+    console.log(`Planning mode: scenario=${scenario}, numberOfDays=${numberOfDays}, timePerDay=${timePerDay} minutes`);
 
     // Use a larger search radius (10km+) to find more popular/famous places
     const radius = Math.min(15000, Math.max(10000, timeMinutes * 15)); // 10-15km range
@@ -583,7 +656,13 @@ serve(async (req) => {
       );
     }
     
-    const optimalStops = calculateOptimalStops(timeMinutes, enrichedCandidates, lat, lng);
+    let optimalStops;
+    if (scenario === 'planning' && numberOfDays > 1) {
+      // For multi-day planning, distribute places across days without repeats
+      optimalStops = distributeAcrossDays(enrichedCandidates, numberOfDays, timePerDay, lat, lng);
+    } else {
+      optimalStops = calculateOptimalStops(timeMinutes, enrichedCandidates, lat, lng);
+    }
     
     console.log(`Selected ${optimalStops.length} optimal stops that fit within ${timeMinutes} minutes`);
 
@@ -602,7 +681,8 @@ serve(async (req) => {
       description: place.description,
       openingHours: place.openingHours,
       ticketPrice: place.ticketPrice,
-      website: place.website
+      website: place.website,
+      day: place.day // Add day property for multi-day planning
     }));
 
     // STEP 4: Calculate walking times and generate map route
