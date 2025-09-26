@@ -353,6 +353,7 @@ serve(async (req) => {
     console.log('Location:', location);
     console.log('Goals:', goals);
     console.log('Time Window:', timeWindow);
+    console.log('Scenario:', scenario);
     console.log('Environment check - OpenAI key available:', !!Deno.env.get('OPENAI_API_KEY'));
     console.log('Environment check - Google API key available:', !!Deno.env.get('GOOGLE_API_KEY'));
 
@@ -656,15 +657,20 @@ serve(async (req) => {
       );
     }
     
+    console.log(`Debug: scenario=${JSON.stringify(scenario)}, numberOfDays=${numberOfDays}, timePerDay=${timePerDay}`);
+    console.log(`Debug: scenario type=${typeof scenario}, comparison result=${scenario === 'planning'}, numberOfDays > 1=${numberOfDays > 1}`);
+    
     let optimalStops;
-    if (scenario === 'planning' && numberOfDays > 1) {
+    if (String(scenario) === 'planning' && numberOfDays > 1) {
       // For multi-day planning, distribute places across days without repeats
+      console.log('✅ Using multi-day distribution logic');
       optimalStops = distributeAcrossDays(enrichedCandidates, numberOfDays, timePerDay, lat, lng);
     } else {
+      console.log(`❌ Using single-day logic. Scenario: ${scenario}, NumberOfDays: ${numberOfDays}`);
       optimalStops = calculateOptimalStops(timeMinutes, enrichedCandidates, lat, lng);
     }
     
-    console.log(`Selected ${optimalStops.length} optimal stops that fit within ${timeMinutes} minutes`);
+    console.log(`Selected ${optimalStops.length} optimal stops`);
 
     // Convert to final format with enriched data
     const finalStops = optimalStops.map(place => ({
