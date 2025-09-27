@@ -396,13 +396,15 @@ serve(async (req) => {
   }
 
   try {
-    const { location, goals, timeWindow, scenario } = await req.json();
+    const { location, goals, timeWindow, scenario, maxPlaces } = await req.json();
     
-    console.log('=== GPT-Powered Route Generation Pipeline ===');
+    console.log('=== TRIPADVISOR API REQUEST ===');
+    console.log('Raw request body:', JSON.stringify({ location, goals, timeWindow, scenario, maxPlaces }));
     console.log('Location:', location);
     console.log('Goals:', goals);
-    console.log('Time Window:', timeWindow);
-    console.log('Scenario:', scenario);
+    console.log('Time Window (input):', timeWindow);
+    console.log('Scenario:', scenario, 'Type:', typeof scenario);
+    console.log('Max Places:', maxPlaces);
     console.log('Environment check - OpenAI key available:', !!Deno.env.get('OPENAI_API_KEY'));
     console.log('Environment check - Google API key available:', !!Deno.env.get('GOOGLE_API_KEY'));
 
@@ -512,10 +514,19 @@ serve(async (req) => {
     console.log(`Time available: ${timeMinutes} minutes`);
 
     // Calculate number of days for multi-day planning
-    const numberOfDays = scenario === 'planning' ? Math.ceil(timeMinutes / 480) : 1; // Assume 8 hours per day
-    const timePerDay = scenario === 'planning' && numberOfDays > 1 ? 480 : timeMinutes; // 8 hours per day for multi-day
+    let numberOfDays = 1;
+    let timePerDay = timeMinutes;
     
-    console.log(`Planning mode: scenario=${scenario}, numberOfDays=${numberOfDays}, timePerDay=${timePerDay} minutes`);
+    if (scenario === 'planning') {
+      // For planning scenario, timeWindow comes as total minutes for all days
+      // Calculate actual number of days based on total time
+      if (timeMinutes >= 480) {
+        numberOfDays = Math.ceil(timeMinutes / 480); // 480 minutes = 8 hours per day
+        timePerDay = 480; // Fixed 8 hours per day
+      }
+    }
+    
+    console.log(`Planning mode: scenario=${scenario}, totalTime=${timeMinutes}, numberOfDays=${numberOfDays}, timePerDay=${timePerDay} minutes`);
 
     // Use a larger search radius (10km+) to find more popular/famous places
     const radius = Math.min(15000, Math.max(10000, timeMinutes * 15)); // 10-15km range
