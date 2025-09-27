@@ -136,6 +136,7 @@ function getPlaceVisitDuration(placeTypes: any[]) {
 // Function to distribute places across multiple days without repeats
 function distributeAcrossDays(candidatePlaces: any[], numberOfDays: number, timePerDay: number, startLat: number, startLng: number) {
   console.log(`=== Distributing places across ${numberOfDays} days ===`);
+  console.log(`Input: ${candidatePlaces.length} candidates, ${numberOfDays} days, ${timePerDay} minutes per day`);
   
   // Calculate popularity score for all places
   const placesWithScores = candidatePlaces.map((place: any) => {
@@ -158,45 +159,85 @@ function distributeAcrossDays(candidatePlaces: any[], numberOfDays: number, time
     };
   });
   
-  // Sort by popularity
+  // Sort by popularity score (highest first)
   const sortedCandidates = placesWithScores.sort((a: any, b: any) => {
-    const scoresDiff = b.popularityScore - a.popularityScore;
-    if (Math.abs(scoresDiff) > 0.5) return scoresDiff;
-    
-    const distA = calculateDistance(startLat, startLng, a.lat, a.lon);
-    const distB = calculateDistance(startLat, startLng, b.lat, b.lon);
-    return distA - distB;
+    return b.popularityScore - a.popularityScore;
   });
   
-  // Distribute places across days
-  const allDayPlaces = [];
-  const usedPlaces = new Set();
+  console.log('Top candidates by popularity:');
+  sortedCandidates.slice(0, 10).forEach((candidate, index) => {
+    console.log(`${index + 1}. ${candidate.name} - Score: ${candidate.popularityScore.toFixed(1)} (Rating: ${candidate.rating}, Reviews: ${candidate.user_ratings_total})`);
+  });
   
-  for (let day = 1; day <= numberOfDays; day++) {
-    console.log(`\n=== Planning Day ${day} ===`);
+  // Initialize arrays for each day
+  const dayPlaces: any[][] = Array.from({ length: numberOfDays }, () => []);
+  const usedPlaceIds = new Set<string>();
+  
+  // Distribute places ensuring no repeats across days
+  for (let day = 0; day < numberOfDays; day++) {
+    console.log(`\n--- Planning Day ${day + 1} ---`);
+    let remainingTime = timePerDay;
+    let lastLat = startLat;
+    let lastLng = startLng;
     
-    // Get available candidates for this day (not used before)
-    const availableCandidates = sortedCandidates.filter(place => !usedPlaces.has(place.name));
-    
-    if (availableCandidates.length === 0) {
-      console.log(`No more unique places available for day ${day}`);
-      break;
+    // Try to add places to this day from remaining candidates
+    for (const candidate of sortedCandidates) {
+      // Skip if place is already used in another day
+      const placeId = candidate.place_id || candidate.name;
+      if (usedPlaceIds.has(placeId)) {
+        continue;
+      }
+      
+      // Calculate time needed for this place
+      const estimatedVisitTime = getPlaceVisitDuration(candidate.types || []);
+      const walkingTime = calculateWalkingTime(
+        lastLat, lastLng,
+        candidate.lat || 0,
+        candidate.lon || 0
+      );
+      const totalTimeNeeded = walkingTime + estimatedVisitTime;
+      
+      console.log(`Candidate: ${candidate.name} - Walk: ${walkingTime}min, Visit: ${estimatedVisitTime}min, Total: ${totalTimeNeeded}min, Remaining: ${remainingTime}min`);
+      
+      // Check if we have enough time
+      if (totalTimeNeeded <= remainingTime) {
+        // Add place to this day
+        const placeForDay = {
+          ...candidate,
+          day: day + 1
+        };
+        dayPlaces[day].push(placeForDay);
+        usedPlaceIds.add(placeId);
+        remainingTime -= totalTimeNeeded;
+        lastLat = candidate.lat || lastLat;
+        lastLng = candidate.lon || lastLng;
+        
+        console.log(`✓ Added to Day ${day + 1}. Remaining time: ${remainingTime}min`);
+        
+        // Limit places per day to avoid overcrowding
+        if (dayPlaces[day].length >= 8) {
+          console.log(`Day ${day + 1} is full (8 places)`);
+          break;
+        }
+      } else {
+        console.log(`❌ Not enough time for ${candidate.name} on Day ${day + 1}`);
+      }
     }
     
-    // Calculate optimal stops for this day
-    const dayStops = calculateOptimalStops(timePerDay, availableCandidates, startLat, startLng);
-    
-    // Mark these places as used and add day property
-    dayStops.forEach(place => {
-      usedPlaces.add(place.name);
-      place.day = day;
-    });
-    
-    allDayPlaces.push(...dayStops);
-    console.log(`Day ${day}: ${dayStops.length} places selected`);
+    console.log(`Day ${day + 1} final: ${dayPlaces[day].length} places, ${remainingTime}min remaining`);
   }
   
+  // Flatten all days into single array
+  const allDayPlaces: any[] = [];
+  dayPlaces.forEach((places, dayIndex) => {
+    console.log(`Day ${dayIndex + 1}: ${places.length} places - ${places.map((p: any) => p.name).join(', ')}`);
+    allDayPlaces.push(...places);
+  });
+  
+  console.log(`=== Final Distribution ===`);
   console.log(`Total unique places across all days: ${allDayPlaces.length}`);
+  console.log(`Used ${usedPlaceIds.size} unique place IDs`);
+  
   return allDayPlaces;
 }
 
@@ -333,6 +374,14 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
             Math.sin(dLon/2) * Math.sin(dLon/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c * 1000; // Distance in meters
+}
+
+// Calculate walking time based on distance
+function calculateWalkingTime(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const distanceMeters = calculateDistance(lat1, lon1, lat2, lon2);
+  // Average walking speed: 5 km/h = 83.33 m/min
+  const walkingTimeMinutes = Math.ceil(distanceMeters / 83.33);
+  return Math.max(walkingTimeMinutes, 5); // Minimum 5 minutes walking time
 }
 
 function estimateWalkingTime(distance: number) {
