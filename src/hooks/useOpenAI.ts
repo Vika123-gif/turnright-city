@@ -92,7 +92,8 @@ export function useOpenAI() {
           location: location,
           goals: goals,
           timeWindow: apiTimeWindow,
-          maxPlaces: actualMaxPlaces
+          maxPlaces: actualMaxPlaces,
+          scenario: scenario  // Add scenario parameter
         }
       });
       
