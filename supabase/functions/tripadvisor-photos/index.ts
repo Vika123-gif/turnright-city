@@ -680,6 +680,7 @@ serve(async (req) => {
         const ticketPrice = generateTicketPriceInfo(details, normalizedType);
         
         const enrichedPlace = {
+          place_id: place.place_id, // Add the missing place_id field
           name: place.name,
           address: place.vicinity || place.formatted_address || 'Address not available',
           lat: place.geometry?.location?.lat,
