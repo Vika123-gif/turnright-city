@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star } from 'lucide-react';
 import BackButton from '@/components/BackButton';
+import AdminAnalytics from '@/components/AdminAnalytics';
 
 interface RouteGeneration {
   id: string;
@@ -308,13 +309,18 @@ const Admin = () => {
         </Card>
       </div>
 
-      <Tabs defaultValue="visitors" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="analytics" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="analytics">Аналитика</TabsTrigger>
           <TabsTrigger value="visitors">Visitors</TabsTrigger>
           <TabsTrigger value="generations">Generations</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
           <TabsTrigger value="purchases">Purchases</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="analytics">
+          <AdminAnalytics />
+        </TabsContent>
         
         <TabsContent value="visitors" className="space-y-4">
           <h2 className="text-xl font-semibold">Visitor Sessions</h2>
