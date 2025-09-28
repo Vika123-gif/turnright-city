@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Unlock from "./pages/Unlock";
 import NotFound from "./pages/NotFound";
+import RouteGenerator from "./components/RouteGenerator";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/unlock" element={<Unlock />} />
+          <Route path="/route" element={<RouteGenerator />} /> {/* Новый маршрут */}
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
