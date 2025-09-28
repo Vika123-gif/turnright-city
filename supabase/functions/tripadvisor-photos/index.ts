@@ -159,8 +159,19 @@ function distributeAcrossDays(candidatePlaces: any[], numberOfDays: number, time
     };
   });
   
+  // Remove duplicates by place_id before sorting
+  const uniquePlaces = placesWithScores.filter((place: any, index: number, array: any[]) => {
+    if (!place.place_id) {
+      console.log(`Skipping place without place_id: ${place.name}`);
+      return false;
+    }
+    return array.findIndex((p: any) => p.place_id === place.place_id) === index;
+  });
+  
+  console.log(`Filtered ${placesWithScores.length} down to ${uniquePlaces.length} unique places`);
+  
   // Sort by popularity score (highest first)
-  const sortedCandidates = placesWithScores.sort((a: any, b: any) => {
+  const sortedCandidates = uniquePlaces.sort((a: any, b: any) => {
     return b.popularityScore - a.popularityScore;
   });
   
@@ -182,9 +193,15 @@ function distributeAcrossDays(candidatePlaces: any[], numberOfDays: number, time
     
     // Try to add places to this day from remaining candidates
     for (const candidate of sortedCandidates) {
+      // Skip if place doesn't have place_id
+      if (!candidate.place_id) {
+        console.log(`Skipping place without place_id: ${candidate.name}`);
+        continue;
+      }
+      
       // Skip if place is already used in another day
-      const placeId = candidate.place_id || candidate.name;
-      if (usedPlaceIds.has(placeId)) {
+      if (usedPlaceIds.has(candidate.place_id)) {
+        console.log(`Skipping already used place: ${candidate.name} (${candidate.place_id})`);
         continue;
       }
       
@@ -207,7 +224,7 @@ function distributeAcrossDays(candidatePlaces: any[], numberOfDays: number, time
           day: day + 1
         };
         dayPlaces[day].push(placeForDay);
-        usedPlaceIds.add(placeId);
+        usedPlaceIds.add(candidate.place_id);
         remainingTime -= totalTimeNeeded;
         lastLat = candidate.lat || lastLat;
         lastLng = candidate.lon || lastLng;
@@ -227,11 +244,21 @@ function distributeAcrossDays(candidatePlaces: any[], numberOfDays: number, time
     console.log(`Day ${day + 1} final: ${dayPlaces[day].length} places, ${remainingTime}min remaining`);
   }
   
-  // Flatten all days into single array
+  // Flatten all days into single array with duplicate check
   const allDayPlaces: any[] = [];
+  const finalUsedIds = new Set<string>();
+  
   dayPlaces.forEach((places, dayIndex) => {
     console.log(`Day ${dayIndex + 1}: ${places.length} places - ${places.map((p: any) => p.name).join(', ')}`);
-    allDayPlaces.push(...places);
+    
+    places.forEach((place: any) => {
+      if (place.place_id && !finalUsedIds.has(place.place_id)) {
+        allDayPlaces.push(place);
+        finalUsedIds.add(place.place_id);
+      } else {
+        console.warn(`Duplicate detected in final output: ${place.name} (${place.place_id})`);
+      }
+    });
   });
   
   console.log(`=== Final Distribution ===`);
@@ -686,6 +713,20 @@ serve(async (req) => {
     }
 
     console.log(`Enriched ${enrichedCandidates.length} candidates`);
+    
+    // DEBUG: Check candidates for duplicates before distribution
+    console.log('=== CHECKING CANDIDATES FOR DUPLICATES ===');
+    const candidateIds = enrichedCandidates.map((c: any) => c.place_id);
+    const uniqueIds = new Set(candidateIds);
+    console.log(`Total candidates: ${enrichedCandidates.length}, Unique place_ids: ${uniqueIds.size}`);
+    if (candidateIds.length !== uniqueIds.size) {
+      console.warn('DUPLICATE PLACE_IDS DETECTED IN INPUT!');
+      const duplicates = candidateIds.filter((id, index) => candidateIds.indexOf(id) !== index);
+      console.log('Duplicate place_ids:', duplicates);
+    }
+    enrichedCandidates.forEach((candidate: any, index: number) => {
+      console.log(`${index + 1}. ${candidate.name} (${candidate.place_id})`);
+    });
 
     // STEP 3: Calculate optimal stops based on time constraints
     console.log('=== Calculating optimal stops based on time constraints ===');
