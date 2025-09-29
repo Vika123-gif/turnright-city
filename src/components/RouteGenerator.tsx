@@ -10,7 +10,7 @@ const RouteGenerator: React.FC = () => {
   // Функция для записи клика с отладкой
   const handleClick = async (buttonType: string) => {
     console.log(`Попытка записать клик: ${buttonType}`);
-    const { error } = await supabase.from('button_clicks').insert({ button_type: buttonType });
+    const { error } = await (supabase as any).from('button_clicks').insert({ button_type: buttonType });
     if (error) {
       console.error('Ошибка записи клика:', error.message);
     } else {
@@ -66,7 +66,7 @@ const RouteGenerator: React.FC = () => {
       <div className="flex space-x-2">
         <Button onClick={() => handleClick('No specific end point')}>No specific end point</Button>
         <Button onClick={() => handleClick('Circle route back to start')}>Circle route back to start</Button>
-        <Button onClick={() => handleClick('I''ll specify end point')}>I'll specify end point</Button>
+        <Button onClick={() => handleClick('I\'ll specify end point')}>I'll specify end point</Button>
       </div>
 
       {/* Шаг 5 */}

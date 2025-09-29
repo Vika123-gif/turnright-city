@@ -51,6 +51,9 @@ interface AnalyticsData {
     purchasesByDay: { date: string; count: number }[];
     clicksByDay: { date: string; count: number }[];
   };
+  
+  // All button clicks data
+  allButtonClicks: any[];
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C'];
@@ -74,14 +77,16 @@ const AdminAnalytics: React.FC = () => {
         { data: purchases },
         { data: feedback },
         { data: visitorSessions },
-        { data: locationExits }
+        { data: locationExits },
+        { data: buttonClicks }
       ] = await Promise.all([
         supabase.from('route_generations').select('*'),
         supabase.from('buy_button_clicks').select('*'),
         supabase.from('route_purchases').select('*'),
         supabase.from('user_feedback').select('*'),
         supabase.from('visitor_sessions').select('*'),
-        supabase.from('location_exits').select('*')
+        supabase.from('location_exits').select('*'),
+        (supabase as any).from('button_clicks').select('*')
       ]);
 
       // Process analytics data
@@ -91,7 +96,8 @@ const AdminAnalytics: React.FC = () => {
         purchases: purchases || [],
         feedback: feedback || [],
         visitorSessions: visitorSessions || [],
-        locationExits: locationExits || []
+        locationExits: locationExits || [],
+        buttonClicks: buttonClicks || []
       });
 
       setAnalytics(analyticsData);
@@ -103,12 +109,12 @@ const AdminAnalytics: React.FC = () => {
   };
 
   const processAnalyticsData = (data: any): AnalyticsData => {
-    const { routeGenerations, buyButtonClicks, purchases, feedback, visitorSessions, locationExits } = data;
+    const { routeGenerations, buyButtonClicks, purchases, feedback, visitorSessions, locationExits, buttonClicks } = data;
 
     // Button clicks analytics
-    const buttonClicks = {
+    const buttonClicksAnalytics = {
       buyButtonClicks: buyButtonClicks.length,
-      totalClicks: buyButtonClicks.length, // Can be extended with other button types
+      totalClicks: buyButtonClicks.length + buttonClicks.length,
       conversionRate: buyButtonClicks.length > 0 ? (purchases.length / buyButtonClicks.length) * 100 : 0
     };
 
@@ -194,7 +200,7 @@ const AdminAnalytics: React.FC = () => {
     }));
 
     return {
-      buttonClicks,
+      buttonClicks: buttonClicksAnalytics,
       locations,
       goals,
       timeWindows,
@@ -203,7 +209,8 @@ const AdminAnalytics: React.FC = () => {
         generationsByDay,
         purchasesByDay,
         clicksByDay
-      }
+      },
+      allButtonClicks: buttonClicks
     };
   };
 
@@ -268,13 +275,60 @@ const AdminAnalytics: React.FC = () => {
       </div>
 
       <Tabs defaultValue="locations" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="buttons">Кнопки</TabsTrigger>
           <TabsTrigger value="locations">Города</TabsTrigger>
           <TabsTrigger value="goals">Категории</TabsTrigger>
           <TabsTrigger value="timewindows">Время</TabsTrigger>
           <TabsTrigger value="journey">Воронка</TabsTrigger>
           <TabsTrigger value="temporal">Динамика</TabsTrigger>
         </TabsList>
+
+        {/* Button Clicks Analytics */}
+        <TabsContent value="buttons" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Клики по кнопкам</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={Object.entries(
+                  analytics.allButtonClicks.reduce((acc: Record<string, number>, click: any) => {
+                    acc[click.button_type] = (acc[click.button_type] || 0) + 1;
+                    return acc;
+                  }, {})
+                ).map(([button_type, count]) => ({ button_type, count })).sort((a, b) => (b as any).count - (a as any).count)}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="button_type" angle={-45} textAnchor="end" height={100} />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#8884d8" name="Клики" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.entries(
+              analytics.allButtonClicks.reduce((acc: Record<string, number>, click: any) => {
+                acc[click.button_type] = (acc[click.button_type] || 0) + 1;
+                return acc;
+              }, {})
+            ).sort((a, b) => (b[1] as number) - (a[1] as number)).slice(0, 12).map(([buttonType, count]) => (
+              <Card key={buttonType}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{buttonType}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{count as number}</div>
+                  <div className="text-xs text-gray-500">
+                    {analytics.allButtonClicks.length > 0 ? (((count as number) / analytics.allButtonClicks.length) * 100).toFixed(1) : 0}% от всех кликов
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
 
         {/* Locations Analytics */}
         <TabsContent value="locations" className="space-y-4">
