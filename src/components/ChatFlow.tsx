@@ -3,6 +3,7 @@ import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useDatabase } from "@/hooks/useDatabase";
+import { useButtonTracking } from "@/hooks/useButtonTracking";
 import { createClient } from "@supabase/supabase-js";
 import BackButton from "./BackButton";
 import ChatBot from "./ChatBot";
@@ -48,6 +49,7 @@ export default function ChatFlow() {
   const { searchPlacesByName } = useGooglePlaces();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
   const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, saveUserRoute, getSavedRoutes, testConnection } = useDatabase();
+  const { trackButtonClick } = useButtonTracking();
 
   // Use hardcoded Supabase client for testing
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -318,12 +320,14 @@ export default function ChatFlow() {
     console.log("=== DEBUG: Regenerate called ===");
     console.log("Current goals before regenerate:", goals);
     console.log("Current regeneration count:", regenerationCount);
+    trackButtonClick('regenerate_route');
     setStep("generating");
     fetchPlacesWithGoals(goals, true); // Pass true to indicate this is a regeneration
   }
 
   function reset() {
     console.log("=== DEBUG: Reset called ===");
+    trackButtonClick('reset_conversation');
     setLocation("");
     setCoordinates("");
     setTimeWindow(null);

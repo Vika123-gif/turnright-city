@@ -11,6 +11,7 @@ import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
+import { useButtonTracking } from "@/hooks/useButtonTracking";
 
 const CATEGORIES = [
   "Restaurants", "Cafés", "Bars", "Viewpoints", "Parks", "Museums",
@@ -87,6 +88,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   const [destinationInput, setDestinationInput] = useState("");
   const [locationInput, setLocationInput] = useState("");
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+  const { trackButtonClick } = useButtonTracking();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customMinutes, setCustomMinutes] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -216,6 +218,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   };
 
   const handleScenarioSelect = (scenario: Scenario) => {
+    trackButtonClick(`scenario_${scenario}`);
     setSelectedScenario(scenario);
     setCollectedData(prev => ({ ...prev, scenario }));
     
@@ -236,8 +239,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
   const handleCitySubmit = () => {
     if (userInput.trim() && selectedDays) {
+      trackButtonClick('city_submit');
       addUserMessage(`🏙️ ${userInput} for ${selectedDays} day${selectedDays !== "1" ? "s" : ""}`);
-      setCollectedData(prev => ({ 
+      setCollectedData(prev => ({
         ...prev, 
         city: userInput, 
         days: parseInt(selectedDays) 
@@ -252,6 +256,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   };
 
   const handleAccommodationSelect = (hasAccommodation: boolean) => {
+    trackButtonClick(`accommodation_${hasAccommodation ? 'yes' : 'no'}`);
     setHasAccommodation(hasAccommodation);
     setCollectedData(prev => ({ ...prev, hasAccommodation }));
     
@@ -306,6 +311,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   };
 
   const handleLocationSubmit = (location: string) => {
+    trackButtonClick('location_submit');
     const updatedData = { ...collectedData, location };
     setCollectedData(updatedData);
     console.log('Location set in collectedData:', updatedData);
@@ -327,6 +333,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   };
 
   const handleDestinationSelect = (type: "none" | "circle" | "specific") => {
+    trackButtonClick(`destination_${type}`);
     setDestinationType(type);
     setCollectedData(prev => ({ ...prev, destinationType: type }));
     
@@ -532,6 +539,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
   const handleAccommodationSubmit = () => {
     if (userInput.trim()) {
+      trackButtonClick('accommodation_submit');
       addUserMessage(`🏨 ${userInput}`);
       setCollectedData(prev => ({ ...prev, accommodation: userInput }));
       setUserInput("");
@@ -541,6 +549,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
   const handleDestinationSubmit = () => {
     if (destinationInput.trim()) {
+      trackButtonClick('destination_submit');
       addUserMessage(`📍 ${destinationInput}`);
       setCollectedData(prev => ({ ...prev, destination: destinationInput }));
       setDestinationInput("");

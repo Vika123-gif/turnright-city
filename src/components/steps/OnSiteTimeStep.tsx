@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Button from "../Button";
+import { useButtonTracking } from "@/hooks/useButtonTracking";
 
 const TIME_OPTIONS = ["3 hours", "6 hours", "Full day"];
 const TIME_TO_MINUTES = { "3 hours": 180, "6 hours": 360, "Full day": 600 }; // Full day = 10 hours
@@ -13,8 +14,10 @@ const OnSiteTimeStep: React.FC<Props> = ({ onNext, value }) => {
   const [selectedTime, setSelectedTime] = useState<string | null>(
     value ? Object.keys(TIME_TO_MINUTES).find(key => TIME_TO_MINUTES[key as keyof typeof TIME_TO_MINUTES] === value) || null : null
   );
+  const { trackButtonClick } = useButtonTracking();
 
   const handleTimeSelect = (time: string) => {
+    trackButtonClick(`time_${time}`);
     setSelectedTime(time);
     const timeMinutes = TIME_TO_MINUTES[time as keyof typeof TIME_TO_MINUTES];
     onNext(timeMinutes);

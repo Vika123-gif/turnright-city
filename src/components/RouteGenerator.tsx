@@ -2,20 +2,16 @@ import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button'; // Из ui/
 import { Input } from '@/components/ui/input';   // Из ui/
+import { useButtonTracking } from '@/hooks/useButtonTracking';
 
 const RouteGenerator: React.FC = () => {
   const [locationInput, setLocationInput] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const { trackButtonClick } = useButtonTracking();
 
   // Функция для записи клика с отладкой
   const handleClick = async (buttonType: string) => {
-    console.log(`Попытка записать клик: ${buttonType}`);
-    const { error } = await (supabase as any).from('button_clicks').insert({ button_type: buttonType });
-    if (error) {
-      console.error('Ошибка записи клика:', error.message);
-    } else {
-      console.log(`Клик на ${buttonType} успешно записан`);
-    }
+    await trackButtonClick(buttonType);
   };
 
   // Обработка ввода адреса и отправки

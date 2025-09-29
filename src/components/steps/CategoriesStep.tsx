@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Button from "../Button";
 import { Shuffle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useButtonTracking } from "@/hooks/useButtonTracking";
 
 const CATEGORIES = [
   "Restaurants",
@@ -23,8 +24,10 @@ type Props = {
 
 const CategoriesStep: React.FC<Props> = ({ onNext, value }) => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>(value || []);
+  const { trackButtonClick } = useButtonTracking();
 
   const handleCategoryToggle = (category: string) => {
+    trackButtonClick(`category_${category}`);
     setSelectedCategories(prev => 
       prev.includes(category) 
         ? prev.filter(c => c !== category)
@@ -33,6 +36,7 @@ const CategoriesStep: React.FC<Props> = ({ onNext, value }) => {
   };
 
   const handleSurpriseMe = () => {
+    trackButtonClick('surprise_me_categories');
     const numCategories = Math.floor(Math.random() * 3) + 2; // 2-4 categories
     const availableCategories = [...CATEGORIES];
     const selected = [];
@@ -53,6 +57,7 @@ const CategoriesStep: React.FC<Props> = ({ onNext, value }) => {
   };
 
   const handleGenerateRoute = () => {
+    trackButtonClick('generate_route');
     onNext(selectedCategories);
   };
 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Button from "../Button";
+import { useButtonTracking } from "@/hooks/useButtonTracking";
 
 const DAYS = ["1 day", "2 days", "3 days", "4 days", "5 days", "6 days", "7 days"];
 const DAYS_TO_COUNT = { 
@@ -19,8 +20,10 @@ const PlanningTimeStep: React.FC<Props> = ({ onNext, value }) => {
   const [customDays, setCustomDays] = useState(
     value && !Object.values(DAYS_TO_COUNT).includes(value) ? value.toString() : ""
   );
+  const { trackButtonClick } = useButtonTracking();
 
   const handleDaysSelect = (days: string) => {
+    trackButtonClick(`planning_days_${days}`);
     setSelectedDays(days);
     if (days !== "Other") {
       const daysCount = DAYS_TO_COUNT[days as keyof typeof DAYS_TO_COUNT];
@@ -30,6 +33,7 @@ const PlanningTimeStep: React.FC<Props> = ({ onNext, value }) => {
 
   const handleCustomDaysSubmit = () => {
     if (customDays) {
+      trackButtonClick(`planning_custom_days_${customDays}`);
       const daysCount = parseInt(customDays);
       onNext(daysCount);
     }
