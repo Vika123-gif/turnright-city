@@ -95,7 +95,7 @@ const CategoriesStep: React.FC<Props> = ({ onNext, value }) => {
         disabled={!isFormValid}
         className="w-full h-12 font-semibold"
       >
-        Generate route
+        Continue
       </Button>
     </div>
   );
