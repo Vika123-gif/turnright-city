@@ -3,6 +3,7 @@ import { X, ExternalLink } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { type LLMPlace } from '@/hooks/useOpenAI';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 interface Props {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface Props {
 const MapModal: React.FC<Props> = ({ isOpen, onClose, places, origin }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const { trackButtonClick } = useAnalytics();
 
   useEffect(() => {
     if (!isOpen || !mapContainer.current) return;
@@ -100,6 +102,7 @@ const MapModal: React.FC<Props> = ({ isOpen, onClose, places, origin }) => {
               href={generateGoogleMapsUrl()}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackButtonClick("click_open_in_google_maps", "Open in Google Maps")}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             >
               <ExternalLink className="w-4 h-4" />

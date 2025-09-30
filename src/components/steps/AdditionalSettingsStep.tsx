@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Button from "../Button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 const ADDITIONAL_SETTINGS = [
   "Barrier-free",
@@ -17,6 +18,7 @@ type Props = {
 
 const AdditionalSettingsStep: React.FC<Props> = ({ onNext, value, buttonText = "Generate Route" }) => {
   const [additionalSettings, setAdditionalSettings] = useState<string[]>(value || []);
+  const { trackButtonClick } = useAnalytics();
 
   const handleSettingToggle = (setting: string) => {
     setAdditionalSettings(prev =>
@@ -27,6 +29,9 @@ const AdditionalSettingsStep: React.FC<Props> = ({ onNext, value, buttonText = "
   };
 
   const handleSubmit = () => {
+    if (buttonText === "Generate Route") {
+      trackButtonClick("click_generate_route", "Generate route");
+    }
     onNext(additionalSettings);
   };
 

@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 type Props = {
   places: LLMPlace[];
@@ -47,12 +48,15 @@ const RoutePreviewStep: React.FC<Props> = ({
   const [currentDay, setCurrentDay] = useState(1);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { trackButtonClick } = useAnalytics();
   
   const { user } = useAuth();
 
   // Open specific day route in Google Maps
   function handleOpenDayInGoogleMaps(dayPlaces: LLMPlace[]) {
     if (!dayPlaces || dayPlaces.length === 0) return;
+    
+    trackButtonClick("click_open_in_google_maps", "Open in Google Maps");
     
     // Build waypoints from day places with coordinates
     const waypoints = dayPlaces
@@ -72,6 +76,8 @@ const RoutePreviewStep: React.FC<Props> = ({
       console.error('Cannot save route: no places available');
       return;
     }
+
+    trackButtonClick("click_download_route", "Download route");
 
     // Check if user is authenticated for saving to database
     const canSaveToDatabase = user && user.id;

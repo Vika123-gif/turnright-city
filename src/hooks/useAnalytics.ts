@@ -80,6 +80,13 @@ export const useAnalytics = () => {
     });
   };
 
+  const trackButtonClick = (eventName: string, buttonText: string) => {
+    trackEvent(eventName, {
+      event_category: 'Travel Guide',
+      event_label: buttonText,
+    });
+  };
+
   return {
     trackEvent,
     trackRouteGeneration,
@@ -87,5 +94,6 @@ export const useAnalytics = () => {
     trackRoutePurchase,
     trackRouteRating,
     trackTextFeedback,
+    trackButtonClick,
   };
 };
