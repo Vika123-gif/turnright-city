@@ -97,7 +97,7 @@ const DetailedMapStep: React.FC<Props> = ({
       {/* Interactive Map */}
       {places && places.length > 0 && (
         <div className="mb-6">
-          <Map places={places} className="h-[300px] w-full rounded-lg" />
+          <Map places={places} origin={origin} className="h-[300px] w-full rounded-lg" />
         </div>
       )}
       
