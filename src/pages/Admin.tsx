@@ -60,6 +60,22 @@ interface VisitorSession {
   referrer: string | null;
 }
 
+interface SavedRoute {
+  id: string;
+  route_name: string;
+  location: string;
+  scenario: string;
+  goals: string[];
+  days: number;
+  total_places: number;
+  total_walking_time: number;
+  places: any;
+  map_url: string | null;
+  created_at: string;
+  user_session_id: string;
+  user_id: string | null;
+}
+
 const Admin = () => {
   const navigate = useNavigate();
   const [routeGenerations, setRouteGenerations] = useState<RouteGeneration[]>([]);
@@ -67,6 +83,7 @@ const Admin = () => {
   const [purchases, setPurchases] = useState<RoutePurchase[]>([]);
   const [buyButtonClicks, setBuyButtonClicks] = useState<BuyButtonClick[]>([]);
   const [visitorSessions, setVisitorSessions] = useState<VisitorSession[]>([]);
+  const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -137,11 +154,24 @@ const Admin = () => {
       }
       console.log('Fetched visitor sessions:', visitorData);
 
+      // Fetch saved routes
+      const { data: savedRoutesData, error: savedRoutesError } = await supabase
+        .from('saved_routes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (savedRoutesError) {
+        console.error('Error fetching saved routes:', savedRoutesError);
+        throw savedRoutesError;
+      }
+      console.log('Fetched saved routes:', savedRoutesData);
+
       setRouteGenerations(generations || []);
       setFeedback(feedbackData || []);
       setPurchases(purchaseData || []);
       setBuyButtonClicks(buyClickData || []);
       setVisitorSessions(visitorData || []);
+      setSavedRoutes(savedRoutesData || []);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -310,8 +340,9 @@ const Admin = () => {
       </div>
 
       <Tabs defaultValue="analytics" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="analytics">Аналитика</TabsTrigger>
+          <TabsTrigger value="savedRoutes">Saved Routes</TabsTrigger>
           <TabsTrigger value="visitors">Visitors</TabsTrigger>
           <TabsTrigger value="generations">Generations</TabsTrigger>
           <TabsTrigger value="feedback">Feedback</TabsTrigger>
@@ -320,6 +351,98 @@ const Admin = () => {
         
         <TabsContent value="analytics">
           <AdminAnalytics />
+        </TabsContent>
+        
+        <TabsContent value="savedRoutes" className="space-y-4">
+          <h2 className="text-xl font-semibold">Saved Routes</h2>
+          {savedRoutes.length === 0 ? (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-gray-500">No saved routes yet.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            savedRoutes.map((route) => (
+              <Card key={route.id}>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    {route.route_name}
+                    <Badge variant="outline">{route.scenario}</Badge>
+                  </CardTitle>
+                  <div className="text-sm text-gray-500">
+                    Created: {new Date(route.created_at).toLocaleString()}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <strong>Location:</strong> {route.location}
+                      </div>
+                      <div>
+                        <strong>Scenario:</strong> {route.scenario === 'circle' ? 'Circle Route' : 'Planning'}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <strong>Days:</strong> {route.days}
+                      </div>
+                      <div>
+                        <strong>Total Places:</strong> {route.total_places}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <strong>Total Walking Time:</strong> {route.total_walking_time} min
+                      </div>
+                      <div>
+                        <strong>User ID:</strong> {route.user_id || 'Anonymous'}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <strong>Goals Selected:</strong>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {route.goals?.map((goal, idx) => (
+                          <Badge key={idx} variant="secondary">{goal}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <strong>Session ID:</strong> {route.user_session_id}
+                    </div>
+                    
+                    {route.places && (
+                      <div>
+                        <strong>Places Details:</strong>
+                        <div className="mt-2 max-h-40 overflow-y-auto bg-gray-50 p-3 rounded">
+                          <pre className="text-xs">
+                            {JSON.stringify(route.places, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {route.map_url && (
+                      <div>
+                        <a
+                          href={route.map_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline text-sm"
+                        >
+                          View Route on Map →
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </TabsContent>
         
         <TabsContent value="visitors" className="space-y-4">
