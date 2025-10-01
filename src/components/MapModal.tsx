@@ -37,20 +37,107 @@ const MapModal: React.FC<Props> = ({ isOpen, onClose, places, origin }) => {
     const markers: mapboxgl.Marker[] = [];
     const bounds = new mapboxgl.LngLatBounds();
 
+    // Add origin marker (start point) if available
+    const addOriginMarker = async () => {
+      if (!origin) return;
+
+      let originCoords = null;
+
+      // Check if origin is coordinates (lat,lng format)
+      const coordMatch = origin.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+      if (coordMatch) {
+        const lat = parseFloat(coordMatch[1]);
+        const lng = parseFloat(coordMatch[2]);
+        originCoords = { lat, lng };
+      } else {
+        // Origin is a location name, try to geocode it
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(origin)}&format=json&limit=1&accept-language=en`
+          );
+          const data = await response.json();
+          if (data.length > 0) {
+            originCoords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+          }
+        } catch (error) {
+          console.error('Error geocoding origin:', error);
+        }
+      }
+
+      if (originCoords) {
+        // Create custom origin marker element (blue)
+        const originMarkerEl = document.createElement('div');
+        originMarkerEl.style.width = '24px';
+        originMarkerEl.style.height = '24px';
+        originMarkerEl.style.borderRadius = '50%';
+        originMarkerEl.style.backgroundColor = '#3B82F6';
+        originMarkerEl.style.border = '3px solid white';
+        originMarkerEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        originMarkerEl.style.display = 'flex';
+        originMarkerEl.style.alignItems = 'center';
+        originMarkerEl.style.justifyContent = 'center';
+        
+        const startIcon = document.createElement('div');
+        startIcon.style.color = 'white';
+        startIcon.style.fontSize = '10px';
+        startIcon.style.fontWeight = 'bold';
+        startIcon.textContent = '●';
+        originMarkerEl.appendChild(startIcon);
+
+        const originMarker = new mapboxgl.Marker(originMarkerEl)
+          .setLngLat([originCoords.lng, originCoords.lat])
+          .setPopup(
+            new mapboxgl.Popup()
+              .setHTML(`
+                <div class="p-2">
+                  <h3 class="font-semibold text-sm text-blue-600">Start Point</h3>
+                  <p class="text-xs text-gray-600">${origin}</p>
+                </div>
+              `)
+          )
+          .addTo(map.current!);
+
+        markers.push(originMarker);
+        bounds.extend([originCoords.lng, originCoords.lat]);
+      }
+    };
+
+    // Add places markers with numbers
     places.forEach((place, index) => {
       if (place.lat && place.lon) {
-        // Create marker
-        const marker = new mapboxgl.Marker({
-          color: '#10B981'
-        })
+        // Create custom marker element with number
+        const markerEl = document.createElement('div');
+        markerEl.style.width = '32px';
+        markerEl.style.height = '32px';
+        markerEl.style.borderRadius = '50%';
+        markerEl.style.backgroundColor = '#10B981';
+        markerEl.style.border = '3px solid white';
+        markerEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        markerEl.style.cursor = 'pointer';
+        markerEl.style.display = 'flex';
+        markerEl.style.alignItems = 'center';
+        markerEl.style.justifyContent = 'center';
+        
+        // Add number overlay
+        const numberEl = document.createElement('div');
+        numberEl.style.color = 'white';
+        numberEl.style.fontSize = '12px';
+        numberEl.style.fontWeight = 'bold';
+        numberEl.textContent = (index + 1).toString();
+        markerEl.appendChild(numberEl);
+
+        const isLastPlace = index === places.length - 1;
+        
+        const marker = new mapboxgl.Marker(markerEl)
           .setLngLat([place.lon, place.lat])
           .setPopup(
             new mapboxgl.Popup()
               .setHTML(`
                 <div class="p-2">
-                  <h3 class="font-semibold text-sm">${place.name}</h3>
+                  <h3 class="font-semibold text-sm">${isLastPlace ? '🏁 ' : ''}${place.name}</h3>
                   <p class="text-xs text-gray-600">${place.address}</p>
-                  ${place.walkingTime ? `<p class="text-xs text-green-600 mt-1">${place.walkingTime}</p>` : ''}
+                  ${place.walkingTime ? `<p class="text-xs text-green-600 mt-1">🚶 ${place.walkingTime}</p>` : ''}
+                  ${isLastPlace ? '<p class="text-xs text-blue-600 mt-1">End Point</p>' : ''}
                 </div>
               `)
           )
@@ -58,6 +145,17 @@ const MapModal: React.FC<Props> = ({ isOpen, onClose, places, origin }) => {
 
         markers.push(marker);
         bounds.extend([place.lon, place.lat]);
+      }
+    });
+
+    // Add origin marker and then fit bounds
+    addOriginMarker().then(() => {
+      // Fit map to show all markers
+      if (markers.length > 0) {
+        map.current!.fitBounds(bounds, {
+          padding: 50,
+          maxZoom: 15
+        });
       }
     });
 
