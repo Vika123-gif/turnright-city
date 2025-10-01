@@ -31,6 +31,8 @@ const AdditionalSettingsStep: React.FC<Props> = ({ onNext, value, buttonText = "
   const handleSubmit = () => {
     if (buttonText === "Generate Route") {
       trackButtonClick("click_generate_route", "Generate route");
+    } else if (buttonText === "Create Trip Plan") {
+      trackButtonClick("click_create_trip_plan", "Create Trip Plan");
     }
     onNext(additionalSettings);
   };
