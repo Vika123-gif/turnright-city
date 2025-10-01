@@ -150,56 +150,33 @@ const RoutePreviewStep: React.FC<Props> = ({
       return [{ day: 1, places: places }];
     }
     
-    // For planning scenario, group by actual days
-    const placesPerDay = 6; // Always 6 places per day for planning
-    const groupedPlaces = [];
-    
+    // For planning scenario, use the day property from the backend
     console.log('=== GROUPING DEBUG ===');
     console.log('Total places:', places.length);
     console.log('Days:', days);
-    console.log('Places per day:', placesPerDay);
-    console.log('Should have:', days * placesPerDay, 'places total');
     
-    // If we don't have enough places, we'll work with what we have
-    // and distribute them across days as evenly as possible
-    let allPlaces = [...places];
+    // Group places by their day property (assigned by backend)
+    const dayGroups: Record<number, LLMPlace[]> = {};
     
-    for (let day = 0; day < days; day++) {
-      const startIndex = day * placesPerDay;
-      let dayPlaces;
-      
-      if (startIndex >= allPlaces.length) {
-        // If we've run out of places, cycle back to the beginning
-        // but try to avoid exact duplicates by shuffling slightly
-        const remainingPlaces = [...places].slice((day % places.length));
-        dayPlaces = remainingPlaces.slice(0, placesPerDay);
-      } else {
-        const endIndex = Math.min(startIndex + placesPerDay, allPlaces.length);
-        dayPlaces = allPlaces.slice(startIndex, endIndex);
-        
-        // If we don't have enough places for this day, add from the beginning
-        while (dayPlaces.length < placesPerDay && places.length > 0) {
-          const additionalPlace = places[dayPlaces.length % places.length];
-          if (!dayPlaces.find(p => p.name === additionalPlace.name)) {
-            dayPlaces.push(additionalPlace);
-          } else {
-            // If all places are already used, stop adding
-            break;
-          }
-        }
+    places.forEach(place => {
+      const placeDay = place.day || 1; // Default to day 1 if not set
+      if (!dayGroups[placeDay]) {
+        dayGroups[placeDay] = [];
       }
-      
-      console.log(`Day ${day + 1}: got ${dayPlaces.length} places`);
-      
-      if (dayPlaces.length > 0) {
-        groupedPlaces.push({
-          day: day + 1,
-          places: dayPlaces
-        });
-      }
-    }
+      dayGroups[placeDay].push(place);
+    });
+    
+    // Convert to array format and sort by day
+    const groupedPlaces = Object.entries(dayGroups)
+      .map(([day, dayPlaces]) => ({
+        day: Number(day),
+        places: dayPlaces
+      }))
+      .sort((a, b) => a.day - b.day);
     
     console.log('Grouped places result:', groupedPlaces);
+    console.log('Places per day:', groupedPlaces.map(g => `Day ${g.day}: ${g.places.length} places`));
+    
     return groupedPlaces;
   };
 
