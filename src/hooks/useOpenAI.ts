@@ -195,6 +195,7 @@ export function useOpenAI() {
           openingHours: place.openingHours,
           ticketPrice: place.ticketPrice,
           website: place.website,
+          day: place.day, // Preserve day assignment from backend
         };
         
         console.log("=== PLACE MAPPING DEBUG ===");
