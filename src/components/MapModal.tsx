@@ -178,13 +178,29 @@ const MapModal: React.FC<Props> = ({ isOpen, onClose, places, origin }) => {
   }, [isOpen, places]);
 
   const generateGoogleMapsUrl = () => {
-    const waypoints = places
+    if (!places.length) return 'https://maps.google.com';
+    
+    const originParam = encodeURIComponent(origin);
+    
+    // Last place is the destination
+    const lastPlace = places[places.length - 1];
+    const destinationParam = lastPlace.lat && lastPlace.lon 
+      ? `${lastPlace.lat},${lastPlace.lon}`
+      : encodeURIComponent(lastPlace.address || lastPlace.name);
+    
+    // All other places are waypoints
+    const waypoints = places.slice(0, -1)
       .filter(place => place.lat && place.lon)
       .map(place => `${place.lat},${place.lon}`)
       .join('|');
     
-    const baseUrl = 'https://www.google.com/maps/dir/';
-    return `${baseUrl}${origin}/${waypoints}`;
+    let routeUrl = `https://www.google.com/maps/dir/?api=1&origin=${originParam}&destination=${destinationParam}&travelmode=walking`;
+    
+    if (waypoints.length > 0) {
+      routeUrl += `&waypoints=${waypoints}`;
+    }
+    
+    return routeUrl;
   };
 
   if (!isOpen) return null;
