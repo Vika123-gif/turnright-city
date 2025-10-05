@@ -503,15 +503,15 @@ serve(async (req) => {
     console.log('Final coordinates validation passed:', { lat, lng });
     const goalToTypesMap = {
       'Parks': ['park'],
-      'Restaurants': ['restaurant', 'cafe', 'bar', 'bakery'],
+      'Restaurants': ['restaurant'],
       'Museums': ['museum', 'art_gallery'],
       'Sightseeing': ['tourist_attraction', 'point_of_interest'],
       'Culture': ['tourist_attraction', 'point_of_interest'],
       'Architectural landmarks': ['tourist_attraction', 'point_of_interest'],
-      'Cafés': ['cafe', 'bakery'],
+      'Cafés': ['cafe'],
       'Bars': ['bar', 'night_club'],
       'Nightlife': ['bar', 'night_club'],
-      'Coworking': ['library', 'cafe'],
+      'Coworking': ['library'],
       'Bakery': ['bakery'],
       'Specialty coffee': ['cafe'],
       'Viewpoints': ['tourist_attraction', 'point_of_interest']
@@ -628,39 +628,74 @@ serve(async (req) => {
           photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photoRef}&key=${googleApiKey}`;
         }
         
-        // Skip hotels and lodging completely
+        // Skip hotels, lodging, shopping centers, and cinemas completely
         const placeTypes = place.types || [];
+        const nameLower = place.name.toLowerCase();
+        
         if (placeTypes.includes('lodging') || placeTypes.includes('hotel') || 
-            place.name.toLowerCase().includes('hotel') || 
-            place.name.toLowerCase().includes('hostel') ||
-            place.name.toLowerCase().includes('inn') ||
-            place.name.toLowerCase().includes('resort') ||
-            place.name.toLowerCase().includes('motel')) {
-          console.log(`Skipping hotel/lodging: ${place.name} - types [${placeTypes.join(', ')}]`);
+            placeTypes.includes('shopping_mall') || placeTypes.includes('shopping_center') ||
+            placeTypes.includes('movie_theater') || placeTypes.includes('stadium') ||
+            nameLower.includes('hotel') || nameLower.includes('hostel') ||
+            nameLower.includes('inn') || nameLower.includes('resort') ||
+            nameLower.includes('motel') || nameLower.includes('mall') ||
+            nameLower.includes('cinema') || nameLower.includes('kino')) {
+          console.log(`Skipping unwanted type: ${place.name} - types [${placeTypes.join(', ')}]`);
           continue;
         }
         
         // Validate place matches user's goals before including
         const normalizedType = normalizeType(placeTypes);
         
-        // Check if this place actually matches the user's selected goals
+        // Check if this place actually matches the user's selected goals with strict filtering
         const matchesGoals = goals.some((goal: any) => {
           const expectedTypes = goalToTypesMap[goal as keyof typeof goalToTypesMap] || [];
-          return expectedTypes.some(expectedType => {
-            // Direct type match
-            if (placeTypes.includes(expectedType)) return true;
-            
-            // Normalized type match for broader categories
-            if (goal === 'Parks' && (placeTypes.includes('park') || normalizedType === 'park')) return true;
-            if (goal === 'Museums' && (placeTypes.includes('museum') || placeTypes.includes('art_gallery') || normalizedType === 'museum')) return true;
-            if (goal === 'Restaurants' && (placeTypes.includes('restaurant') || placeTypes.includes('cafe') || placeTypes.includes('bakery') || normalizedType === 'restaurant')) return true;
-            if (goal === 'Bars' && (placeTypes.includes('bar') || placeTypes.includes('night_club') || normalizedType === 'bar')) return true;
-            if (goal === 'Culture' && (placeTypes.includes('tourist_attraction') || placeTypes.includes('museum') || placeTypes.includes('art_gallery'))) return true;
-            if (goal === 'Viewpoints' && placeTypes.includes('tourist_attraction')) return true;
-            if (goal === 'Architectural landmarks' && (placeTypes.includes('tourist_attraction') || placeTypes.includes('point_of_interest'))) return true;
-            
-            return false;
-          });
+          
+          // Strict matching for specific categories
+          if (goal === 'Bars') {
+            return placeTypes.includes('bar') || placeTypes.includes('night_club');
+          }
+          if (goal === 'Cafés') {
+            return placeTypes.includes('cafe') && !placeTypes.includes('restaurant');
+          }
+          if (goal === 'Restaurants') {
+            return placeTypes.includes('restaurant') && !placeTypes.includes('cafe');
+          }
+          if (goal === 'Museums') {
+            return placeTypes.includes('museum') || placeTypes.includes('art_gallery');
+          }
+          if (goal === 'Parks') {
+            return placeTypes.includes('park');
+          }
+          if (goal === 'Bakery') {
+            return placeTypes.includes('bakery');
+          }
+          if (goal === 'Coworking') {
+            return placeTypes.includes('library') && !placeTypes.includes('museum');
+          }
+          
+          // For Viewpoints and Architectural landmarks, be more specific
+          if (goal === 'Viewpoints') {
+            // Must be tourist_attraction but NOT shopping, cinema, museum, or other excluded types
+            return placeTypes.includes('tourist_attraction') && 
+                   !placeTypes.includes('shopping_mall') &&
+                   !placeTypes.includes('movie_theater') &&
+                   !placeTypes.includes('museum') &&
+                   !placeTypes.includes('restaurant') &&
+                   !placeTypes.includes('cafe') &&
+                   !placeTypes.includes('bar');
+          }
+          if (goal === 'Architectural landmarks') {
+            return (placeTypes.includes('tourist_attraction') || placeTypes.includes('point_of_interest')) &&
+                   !placeTypes.includes('shopping_mall') &&
+                   !placeTypes.includes('movie_theater') &&
+                   !placeTypes.includes('museum') &&
+                   !placeTypes.includes('restaurant') &&
+                   !placeTypes.includes('cafe') &&
+                   !placeTypes.includes('bar');
+          }
+          
+          // Default to checking expected types
+          return expectedTypes.some(expectedType => placeTypes.includes(expectedType));
         });
         
         // Skip places that don't match user's goals
