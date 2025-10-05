@@ -180,7 +180,11 @@ const MapModal: React.FC<Props> = ({ isOpen, onClose, places, origin }) => {
   const generateGoogleMapsUrl = () => {
     if (!places.length) return 'https://maps.google.com';
     
-    const originParam = encodeURIComponent(origin);
+    // Check if origin is coordinates (lat,lng format)
+    const coordMatch = origin.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+    const originParam = coordMatch 
+      ? `${coordMatch[1]},${coordMatch[2]}` // Use coordinates directly
+      : encodeURIComponent(origin); // Encode location name
     
     // Last place is the destination
     const lastPlace = places[places.length - 1];
