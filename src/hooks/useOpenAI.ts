@@ -35,6 +35,9 @@ export function useOpenAI() {
 
   async function getLLMPlaces({
     location,
+    origin,
+    destination,
+    destinationType,
     goals,
     timeWindow,
     userPrompt,
@@ -43,6 +46,9 @@ export function useOpenAI() {
     scenario = "planning"
   }: {
     location: string;
+    origin?: string;
+    destination?: string;
+    destinationType?: "none" | "circle" | "specific";
     goals: string[];
     timeWindow: number; // Number of days for planning, minutes for onsite
     userPrompt: string;
@@ -90,6 +96,9 @@ export function useOpenAI() {
       const { data: tripAdvisorData, error } = await supabase.functions.invoke('tripadvisor-photos', {
         body: { 
           location: location,
+          origin: origin || location,
+          destination: destination,
+          destinationType: destinationType || "none",
           goals: goals,
           timeWindow: apiTimeWindow,
           maxPlaces: actualMaxPlaces,

@@ -423,11 +423,14 @@ serve(async (req) => {
   }
 
   try {
-    const { location, goals, timeWindow, scenario, maxPlaces } = await req.json();
+    const { location, origin, destination, destinationType, goals, timeWindow, scenario, maxPlaces } = await req.json();
     
     console.log('=== TRIPADVISOR API REQUEST ===');
-    console.log('Raw request body:', JSON.stringify({ location, goals, timeWindow, scenario, maxPlaces }));
+    console.log('Raw request body:', JSON.stringify({ location, origin, destination, destinationType, goals, timeWindow, scenario, maxPlaces }));
     console.log('Location:', location);
+    console.log('Origin:', origin);
+    console.log('Destination:', destination);
+    console.log('Destination Type:', destinationType);
     console.log('Goals:', goals);
     console.log('Time Window (input):', timeWindow);
     console.log('Scenario:', scenario, 'Type:', typeof scenario);
@@ -463,16 +466,17 @@ serve(async (req) => {
       );
     }
 
-    // Extract coordinates from location input
+    // Extract coordinates from origin (the actual starting point)
+    const originLocation = origin || location;
     let lat, lng;
-    if (typeof location === 'object' && location.lat && location.lon) {
-      lat = location.lat;
-      lng = location.lon;
-      console.log('Using provided coordinates:', { lat, lng });
+    if (typeof originLocation === 'object' && originLocation.lat && originLocation.lon) {
+      lat = originLocation.lat;
+      lng = originLocation.lon;
+      console.log('Using provided origin coordinates:', { lat, lng });
     } else {
-      // Geocode string location
-      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${googleApiKey}`;
-      console.log('Geocoding URL:', geocodeUrl);
+      // Geocode string origin location
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(originLocation)}&key=${googleApiKey}`;
+      console.log('Geocoding origin URL:', geocodeUrl);
       const geocodeResponse = await fetch(geocodeUrl);
       const geocodeData = await geocodeResponse.json();
       
@@ -480,17 +484,17 @@ serve(async (req) => {
       
       if (!geocodeData.results || geocodeData.results.length === 0) {
         console.error('Geocoding failed:', geocodeData);
-        throw new Error(`Could not geocode location: ${location}. Status: ${geocodeData.status}`);
+        throw new Error(`Could not geocode origin location: ${originLocation}. Status: ${geocodeData.status}`);
       }
       
       lat = geocodeData.results[0].geometry.location.lat;
       lng = geocodeData.results[0].geometry.location.lng;
-      console.log(`Geocoded ${location} to:`, { lat, lng });
+      console.log(`Geocoded origin ${originLocation} to:`, { lat, lng });
       
       // Validate that we got valid coordinates
       if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
         console.error('Invalid coordinates from geocoding:', { lat, lng });
-        throw new Error(`Failed to get valid coordinates for location: ${location}`);
+        throw new Error(`Failed to get valid coordinates for origin location: ${originLocation}`);
       }
     }
 
@@ -673,22 +677,24 @@ serve(async (req) => {
             return placeTypes.includes('library') && !placeTypes.includes('museum');
           }
           
-          // For Viewpoints and Architectural landmarks, be more specific
+          // For Viewpoints and Architectural landmarks, be EXTREMELY specific
           if (goal === 'Viewpoints') {
-            // Must be tourist_attraction but NOT shopping, cinema, museum, or other excluded types
-            return placeTypes.includes('tourist_attraction') && 
-                   !placeTypes.includes('shopping_mall') &&
-                   !placeTypes.includes('movie_theater') &&
-                   !placeTypes.includes('museum') &&
-                   !placeTypes.includes('restaurant') &&
-                   !placeTypes.includes('cafe') &&
-                   !placeTypes.includes('bar');
+            // Must be tourist_attraction
+            // MUST NOT have: museum, restaurant, cafe, bar, shopping, cinema types
+            const hasRequiredType = placeTypes.includes('tourist_attraction');
+            const hasDisqualifyingType = placeTypes.some((t: string) => 
+              ['shopping_mall', 'movie_theater', 'museum', 'restaurant', 'cafe', 'bar', 'night_club', 'lodging', 'art_gallery'].includes(t)
+            );
+            return hasRequiredType && !hasDisqualifyingType;
           }
           if (goal === 'Architectural landmarks') {
-            return (placeTypes.includes('tourist_attraction') || placeTypes.includes('point_of_interest')) &&
-                   !placeTypes.includes('shopping_mall') &&
-                   !placeTypes.includes('movie_theater') &&
-                   !placeTypes.includes('museum') &&
+            // ONLY actual architectural monuments, castles, historic buildings
+            // MUST NOT have: museum, restaurant, cafe, bar, shopping, cinema types
+            const hasRequiredType = placeTypes.includes('tourist_attraction') || placeTypes.includes('point_of_interest');
+            const hasDisqualifyingType = placeTypes.some((t: string) => 
+              ['shopping_mall', 'movie_theater', 'museum', 'restaurant', 'cafe', 'bar', 'night_club', 'lodging', 'art_gallery'].includes(t)
+            );
+            return hasRequiredType && !hasDisqualifyingType;
                    !placeTypes.includes('restaurant') &&
                    !placeTypes.includes('cafe') &&
                    !placeTypes.includes('bar');

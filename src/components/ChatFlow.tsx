@@ -32,6 +32,9 @@ export default function ChatFlow() {
   const [timeWindow, setTimeWindow] = useState<number | null>(null);
   const [scenario, setScenario] = useState<"onsite" | "planning">("onsite");
   const [goals, setGoals] = useState<string[]>([]);
+  const [origin, setOrigin] = useState<string>("");
+  const [destination, setDestination] = useState<string>("");
+  const [destinationType, setDestinationType] = useState<"none" | "circle" | "specific">("none");
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
   const [selectedDayPlaces, setSelectedDayPlaces] = useState<LLMPlace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -189,6 +192,9 @@ export default function ChatFlow() {
       
       const response: LLMPlace[] = await getLLMPlaces({
         location: locationForSearch,
+        origin: origin || locationForSearch,
+        destination: destination,
+        destinationType: destinationType,
         goals: goalsToUse,
         timeWindow: timeWindow || 60, // Pass as number (minutes), default to 1 hour
         userPrompt,
@@ -556,16 +562,25 @@ export default function ChatFlow() {
     // Handle onsite scenario
     if (data.scenario === "onsite" && data.location && data.timeMinutes && data.categories) {
       setLocation(data.location);
+      setOrigin(data.location);
+      setDestination(data.destination || "");
+      setDestinationType(data.destinationType || "none");
       setTimeWindow(data.timeMinutes);
       setGoals(data.categories);
       setChatVisible(false);
       setStep("generating");
+      
+      console.log("=== Starting route with ===");
+      console.log("Origin:", data.location);
+      console.log("Destination:", data.destination);
+      console.log("Destination Type:", data.destinationType);
       
       // Start generating places
       fetchPlacesWithGoals(data.categories);
     } else if (data.scenario === "planning" && data.city && data.days && data.categories) {
       // Handle planning scenario
       setLocation(data.city);
+      setOrigin(data.city);
       setTimeWindow(data.days);
       setGoals(data.categories);
       setChatVisible(false);
