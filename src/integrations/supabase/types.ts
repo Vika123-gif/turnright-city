@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      button_clicks: {
+        Row: {
+          button_type: string
+          clicked_at: string | null
+          id: number
+        }
+        Insert: {
+          button_type: string
+          clicked_at?: string | null
+          id?: number
+        }
+        Update: {
+          button_type?: string
+          clicked_at?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
       buy_button_clicks: {
         Row: {
           clicked_at: string
