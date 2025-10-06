@@ -563,10 +563,13 @@ serve(async (req) => {
     const radius = Math.min(15000, Math.max(10000, timeMinutes * 15)); // 10-15km range
     
     console.log(`Search parameters: radius=${radius}m (${(radius/1000).toFixed(1)}km), timeAvailable=${timeMinutes}min`);
+    console.log('=== USER GOALS ===');
+    console.log('Goals received from client:', goals);
 
     // Get unique types for search
     const allTypes = goals.flatMap((goal: any) => goalToTypesMap[goal as keyof typeof goalToTypesMap] || ['point_of_interest']);
     const uniqueTypes = [...new Set(allTypes)];
+    console.log('Mapped types for search:', uniqueTypes);
 
     // Helper function to normalize Google Places types
     const normalizeType = (googleTypes: any[]) => {
@@ -654,27 +657,43 @@ serve(async (req) => {
         const matchesGoals = goals.some((goal: any) => {
           const expectedTypes = goalToTypesMap[goal as keyof typeof goalToTypesMap] || [];
           
+          console.log(`Checking ${place.name} against goal "${goal}" - types: [${placeTypes.join(', ')}]`);
+          
           // Strict matching for specific categories
           if (goal === 'Bars') {
-            return placeTypes.includes('bar') || placeTypes.includes('night_club');
+            const matches = placeTypes.includes('bar') || placeTypes.includes('night_club');
+            console.log(`  Bars check: ${matches}`);
+            return matches;
           }
           if (goal === 'Cafés') {
-            return placeTypes.includes('cafe') && !placeTypes.includes('restaurant');
+            const matches = placeTypes.includes('cafe') && !placeTypes.includes('restaurant');
+            console.log(`  Cafés check: ${matches}`);
+            return matches;
           }
           if (goal === 'Restaurants') {
-            return placeTypes.includes('restaurant') && !placeTypes.includes('cafe');
+            const matches = placeTypes.includes('restaurant') && !placeTypes.includes('cafe');
+            console.log(`  Restaurants check: ${matches}`);
+            return matches;
           }
           if (goal === 'Museums') {
-            return placeTypes.includes('museum') || placeTypes.includes('art_gallery');
+            const matches = placeTypes.includes('museum') || placeTypes.includes('art_gallery');
+            console.log(`  Museums check: ${matches}`);
+            return matches;
           }
           if (goal === 'Parks') {
-            return placeTypes.includes('park');
+            const matches = placeTypes.includes('park');
+            console.log(`  Parks check: ${matches}`);
+            return matches;
           }
           if (goal === 'Bakery') {
-            return placeTypes.includes('bakery');
+            const matches = placeTypes.includes('bakery');
+            console.log(`  Bakery check: ${matches}`);
+            return matches;
           }
           if (goal === 'Coworking') {
-            return placeTypes.includes('library') && !placeTypes.includes('museum');
+            const matches = placeTypes.includes('library') && !placeTypes.includes('museum');
+            console.log(`  Coworking check: ${matches}`);
+            return matches;
           }
           
           // For Viewpoints and Architectural landmarks, be EXTREMELY specific
@@ -685,7 +704,9 @@ serve(async (req) => {
             const hasDisqualifyingType = placeTypes.some((t: string) => 
               ['shopping_mall', 'movie_theater', 'museum', 'restaurant', 'cafe', 'bar', 'night_club', 'lodging', 'art_gallery'].includes(t)
             );
-            return hasRequiredType && !hasDisqualifyingType;
+            const matches = hasRequiredType && !hasDisqualifyingType;
+            console.log(`  Viewpoints check: hasRequired=${hasRequiredType}, hasDisqualifying=${hasDisqualifyingType}, matches=${matches}`);
+            return matches;
           }
           if (goal === 'Architectural landmarks') {
             // ONLY actual architectural monuments, castles, historic buildings
@@ -694,20 +715,23 @@ serve(async (req) => {
             const hasDisqualifyingType = placeTypes.some((t: string) => 
               ['shopping_mall', 'movie_theater', 'museum', 'restaurant', 'cafe', 'bar', 'night_club', 'lodging', 'art_gallery'].includes(t)
             );
-            return hasRequiredType && !hasDisqualifyingType;
-                   !placeTypes.includes('restaurant') &&
-                   !placeTypes.includes('cafe') &&
-                   !placeTypes.includes('bar');
+            const matches = hasRequiredType && !hasDisqualifyingType;
+            console.log(`  Architectural landmarks check: hasRequired=${hasRequiredType}, hasDisqualifying=${hasDisqualifyingType}, matches=${matches}`);
+            return matches;
           }
           
           // Default to checking expected types
-          return expectedTypes.some(expectedType => placeTypes.includes(expectedType));
+          const matches = expectedTypes.some(expectedType => placeTypes.includes(expectedType));
+          console.log(`  Default check against expected types [${expectedTypes.join(', ')}]: ${matches}`);
+          return matches;
         });
         
         // Skip places that don't match user's goals
         if (!matchesGoals) {
-          console.log(`Skipping ${place.name} - types [${placeTypes.join(', ')}] don't match goals [${goals.join(', ')}]`);
+          console.log(`❌ SKIPPING ${place.name} - doesn't match goals [${goals.join(', ')}]`);
           continue;
+        } else {
+          console.log(`✅ KEEPING ${place.name} - matches goals`);
         }
         
         // Generate description with interesting facts

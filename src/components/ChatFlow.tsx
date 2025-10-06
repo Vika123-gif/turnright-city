@@ -33,6 +33,7 @@ export default function ChatFlow() {
   const [scenario, setScenario] = useState<"onsite" | "planning">("onsite");
   const [goals, setGoals] = useState<string[]>([]);
   const [origin, setOrigin] = useState<string>("");
+  const [originCoordinates, setOriginCoordinates] = useState<string>(""); // Store original coordinates
   const [destination, setDestination] = useState<string>("");
   const [destinationType, setDestinationType] = useState<"none" | "circle" | "specific">("none");
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
@@ -190,9 +191,16 @@ export default function ChatFlow() {
       
       const currentRegenerationCount = isRegeneration ? regenerationCount : 0;
       
+      // Use original coordinates if available, otherwise use locationForSearch
+      const originToUse = originCoordinates || origin || locationForSearch;
+      console.log("=== Route Generation Origin ===");
+      console.log("Using origin:", originToUse);
+      console.log("Original coordinates stored:", originCoordinates);
+      console.log("City name for search:", locationForSearch);
+      
       const response: LLMPlace[] = await getLLMPlaces({
         location: locationForSearch,
-        origin: origin || locationForSearch,
+        origin: originToUse, // Use coordinates if available
         destination: destination,
         destinationType: destinationType,
         goals: goalsToUse,
@@ -336,6 +344,7 @@ export default function ChatFlow() {
     trackButtonClick('reset_conversation');
     setLocation("");
     setCoordinates("");
+    setOriginCoordinates(""); // Clear original coordinates
     setTimeWindow(null);
     setGoals([]);
     setPlaces(null);
@@ -563,6 +572,11 @@ export default function ChatFlow() {
     if (data.scenario === "onsite" && data.location && data.timeMinutes && data.categories) {
       setLocation(data.location);
       setOrigin(data.location);
+      // Store coordinates if location is in coordinate format
+      if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(data.location)) {
+        setOriginCoordinates(data.location);
+        console.log("Stored origin coordinates:", data.location);
+      }
       setDestination(data.destination || "");
       setDestinationType(data.destinationType || "none");
       setTimeWindow(data.timeMinutes);
@@ -572,6 +586,7 @@ export default function ChatFlow() {
       
       console.log("=== Starting route with ===");
       console.log("Origin:", data.location);
+      console.log("Origin Coordinates:", /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(data.location) ? data.location : "none");
       console.log("Destination:", data.destination);
       console.log("Destination Type:", data.destinationType);
       
