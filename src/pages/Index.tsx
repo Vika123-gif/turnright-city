@@ -30,6 +30,13 @@ const Index = () => {
             TurnRight.city
           </h1>
           <div className="flex items-center gap-4">
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => navigate('/route')}
+            >
+              Open Route
+            </Button>
             {user ? (
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-600 hidden sm:inline">
