@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Button from "../Button";
 import Map from "../Map";
 import RouteFeedback from "../RouteFeedback";
@@ -20,6 +21,7 @@ const DetailedMapStep: React.FC<Props> = ({
   origin,
   onFeedbackSubmit,
 }) => {
+  const navigate = useNavigate();
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   const handleFeedbackSubmit = async (feedback: string) => {
@@ -90,8 +92,16 @@ const DetailedMapStep: React.FC<Props> = ({
 
   return (
     <div className="chat-card text-left">
-      <div className="font-semibold text-lg mb-4 flex items-center gap-2">
-        🗺️ Your Route Map & Details
+      <div className="flex items-center justify-between mb-4">
+        <div className="font-semibold text-lg flex items-center gap-2">
+          🗺️ Your Route Map & Details
+        </div>
+        <button
+          onClick={() => navigate('/route')}
+          className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-colors"
+        >
+          Open Route
+        </button>
       </div>
       
       {/* Interactive Map */}
