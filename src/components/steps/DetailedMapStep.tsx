@@ -62,20 +62,15 @@ const DetailedMapStep: React.FC<Props> = ({
 
     const originParam = encodeURIComponent(startLocation);
     
-    // Get destination (last place)
+    // Get destination (last place) - prioritize name over coordinates for better display
     const lastPlace = destinations[destinations.length - 1];
-    const destinationParam = lastPlace.lat && lastPlace.lon 
-      ? `${lastPlace.lat},${lastPlace.lon}`
-      : encodeURIComponent(lastPlace.address || lastPlace.name);
+    const destinationParam = encodeURIComponent(lastPlace.name || lastPlace.address || `${lastPlace.lat},${lastPlace.lon}`);
 
     console.log('Origin:', originParam, 'Destination:', destinationParam);
 
-    // Get waypoints (all places except the last one)
+    // Get waypoints (all places except the last one) - use names for better display
     const waypoints = destinations.slice(0, -1).map(place => {
-      if (place.lat && place.lon) {
-        return `${place.lat},${place.lon}`;
-      }
-      return encodeURIComponent(place.address || place.name);
+      return encodeURIComponent(place.name || place.address || `${place.lat},${place.lon}`);
     });
 
     console.log('Waypoints:', waypoints);
