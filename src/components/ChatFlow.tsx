@@ -300,7 +300,13 @@ export default function ChatFlow() {
       console.log("=== DEBUG: Places with photos and coordinates ===");
       console.log("Places with photos:", placesWithPhotos);
       
-      setPlaces(placesWithPhotos);
+      // Optimize route order using nearest-neighbor algorithm
+      const { optimizeRouteOrder } = await import("@/lib/routeOptimization");
+      const optimizedPlaces = optimizeRouteOrder(placesWithPhotos, originToUse);
+      console.log("=== DEBUG: Route optimized for minimal travel ===");
+      console.log("Optimized places:", optimizedPlaces.map(p => p.name));
+      
+      setPlaces(optimizedPlaces);
       
       // Update regeneration count if this was a regeneration
       if (isRegeneration) {

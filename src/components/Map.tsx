@@ -182,6 +182,12 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
           .addTo(map.current!);
       });
 
+      // Close the loop: add starting point at the end to create circular route
+      if (startCoords && routeCoordinates.length > 1) {
+        routeCoordinates.push([startCoords.lng, startCoords.lat]);
+        console.log('Added return to start point to create circular route');
+      }
+
       // Add route line if we have coordinates
       if (routeCoordinates.length > 1) {
         console.log('=== ROUTE DEBUG ===');
