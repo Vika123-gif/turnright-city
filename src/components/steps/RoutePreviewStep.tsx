@@ -282,6 +282,17 @@ const RoutePreviewStep: React.FC<Props> = ({
             </div>
           )}
 
+          {/* Interactive Map Preview */}
+          {places && places.length > 0 && (
+            <div className="mb-4">
+              <Map 
+                places={currentDayData?.places || places} 
+                origin={location}
+                className="h-[400px] w-full rounded-lg border-2 border-primary/20 shadow-lg" 
+              />
+            </div>
+          )}
+
           {/* Route Content - Full Height */}
           {places && places.length > 0 && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col">
