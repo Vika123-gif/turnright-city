@@ -99,10 +99,19 @@ const DetailedMapStep: React.FC<Props> = ({
         </button>
       </div>
       
-      {/* Interactive Map */}
+      {/* Interactive Map with Route Preview */}
       {places && places.length > 0 && (
         <div className="mb-6">
-          <Map places={places} origin={origin} className="h-[300px] w-full rounded-lg" />
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+            <h4 className="font-semibold text-blue-900 mb-1 flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Route Preview
+            </h4>
+            <p className="text-blue-700 text-xs">
+              View your walking route on the map below
+            </p>
+          </div>
+          <Map places={places} origin={origin} className="h-[500px] w-full rounded-lg border-2 border-primary/20 shadow-lg" />
         </div>
       )}
       
