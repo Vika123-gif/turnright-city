@@ -48,6 +48,7 @@ const RoutePreviewStep: React.FC<Props> = ({
   const [currentDay, setCurrentDay] = useState(1);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showMap, setShowMap] = useState(true);
   const { trackButtonClick } = useAnalytics();
   
   const { user } = useAuth();
@@ -230,6 +231,45 @@ const RoutePreviewStep: React.FC<Props> = ({
       <div className="font-semibold text-lg mb-3 flex items-center gap-2">
         📍 Your {scenario === "planning" ? `${days}-day trip itinerary` : "custom route"}
       </div>
+
+      {/* Selected Categories Display */}
+      {goals && goals.length > 0 && (
+        <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+          <div className="text-xs font-semibold text-gray-700 mb-2">Your Selected Categories:</div>
+          <div className="flex flex-wrap gap-2">
+            {goals.map((goal, index) => {
+              const goalEmojis: Record<string, string> = {
+                restaurants: '🍽️',
+                coffee: '☕',
+                work: '💼',
+                museums: '🏛️',
+                parks: '🌳',
+                monuments: '🏰'
+              };
+              const goalLabels: Record<string, string> = {
+                restaurants: 'Restaurants',
+                coffee: 'Coffee & Cafes',
+                work: 'Work Spaces',
+                museums: 'Museums',
+                parks: 'Parks',
+                monuments: 'Monuments'
+              };
+              return (
+                <span 
+                  key={index}
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full text-xs font-medium text-gray-700 border border-blue-300 shadow-sm"
+                >
+                  <span>{goalEmojis[goal] || '📍'}</span>
+                  <span>{goalLabels[goal] || goal}</span>
+                </span>
+              );
+            })}
+          </div>
+          <div className="text-xs text-gray-600 mt-2 italic">
+            ℹ️ The route may include similar venues based on availability
+          </div>
+        </div>
+      )}
       
       {error && (
         <div className="text-red-500 mb-3">{error}</div>
@@ -282,14 +322,29 @@ const RoutePreviewStep: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Interactive Map Preview */}
+          {/* Interactive Map Preview - Collapsible on Mobile */}
           {places && places.length > 0 && (
             <div className="mb-4">
-              <Map 
-                places={currentDayData?.places || places} 
-                origin={location}
-                className="h-[400px] w-full rounded-lg border-2 border-primary/20 shadow-lg" 
-              />
+              <button
+                onClick={() => setShowMap(!showMap)}
+                className="w-full mb-2 px-4 py-2 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white rounded-lg font-medium flex items-center justify-between hover:opacity-90 transition-opacity"
+              >
+                <span className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Route Map Preview
+                </span>
+                <span className="text-sm">{showMap ? '▼ Hide' : '▶ Show'}</span>
+              </button>
+              
+              {showMap && (
+                <div className="touch-pan-y">
+                  <Map 
+                    places={currentDayData?.places || places} 
+                    origin={location}
+                    className="h-[250px] md:h-[400px] w-full rounded-lg border-2 border-primary/20 shadow-lg" 
+                  />
+                </div>
+              )}
             </div>
           )}
 
