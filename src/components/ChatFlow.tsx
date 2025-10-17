@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 import BackButton from "./BackButton";
 import ChatBot from "./ChatBot";
 import GPTStep from "./steps/GPTStep";
+import RouteSummaryStep from "./steps/RouteSummaryStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
 import DetailedMapStep from "./steps/DetailedMapStep";
@@ -21,6 +22,7 @@ const supabaseAnonKey =
 type Step =
   | "chat"
   | "generating"
+  | "summary"
   | "results"
   | "purchase"
   | "detailed-map";
@@ -326,7 +328,7 @@ export default function ChatFlow() {
         console.error("Failed to save route generation to database");
       }
       
-      setStep("detailed-map");
+      setStep("summary");
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
@@ -376,8 +378,11 @@ export default function ChatFlow() {
         setChatVisible(true);
         setIsRouteGenerated(false);
         break;
-      case "detailed-map":
+      case "summary":
         setStep("generating");
+        break;
+      case "detailed-map":
+        setStep("summary");
         break;
       case "purchase":
         setStep("detailed-map");
@@ -681,6 +686,19 @@ export default function ChatFlow() {
                 userSessionId={userSessionId}
                 goals={goals || []}
                 onShowDayMap={handleShowDayMap}
+              />
+            </>
+          )}
+
+          {step === "summary" && (
+            <>
+              <div className="absolute top-4 left-4">
+                <BackButton onClick={goBack} />
+              </div>
+              <RouteSummaryStep
+                timeWindow={timeWindow}
+                goals={goals}
+                onContinue={() => setStep("detailed-map")}
               />
             </>
           )}
