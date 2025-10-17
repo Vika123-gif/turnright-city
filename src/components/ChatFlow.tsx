@@ -23,7 +23,6 @@ type Step =
   | "chat"
   | "generating"
   | "summary"
-  | "results"
   | "purchase"
   | "detailed-map";
 
@@ -390,9 +389,6 @@ export default function ChatFlow() {
       case "purchase":
         setStep("detailed-map");
         break;
-      case "results":
-        setStep("generating");
-        break;
       default:
         setStep("chat");
         setChatVisible(true);
@@ -664,31 +660,12 @@ export default function ChatFlow() {
               <GPTStep
                 places={places || []}
                 loading={generating}
-                onDone={() => setStep("results")}
+                onDone={() => {
+                  console.log("=== GPTStep onDone called ===");
+                  // Don't change step here, let fetchPlacesWithGoals handle it
+                }}
                 error={error}
                 onStartNew={reset}
-              />
-            </>
-          )}
-
-          {step === "results" && (
-            <>
-              <div className="absolute top-4 left-4">
-                <BackButton onClick={goBack} />
-              </div>
-              <RoutePreviewStep
-                places={places || []}
-                onRegenerate={regenerate}
-                onBuy={handleBuyRoute}
-                purchasing={paying}
-                error={error}
-                location={location}
-                onTrackBuyClick={handleBuyButtonClick}
-                days={timeWindow || 1}
-                scenario={scenario}
-                userSessionId={userSessionId}
-                goals={goals || []}
-                onShowDayMap={handleShowDayMap}
               />
             </>
           )}
@@ -741,7 +718,7 @@ export default function ChatFlow() {
                 origin={location}
                 onBack={() => {
                   setSelectedDayPlaces(null); // Reset selected day places when going back
-                  setStep("results");
+                  setStep("summary");
                 }}
                 onReset={reset}
                 onFeedbackSubmit={handleTextFeedback}
