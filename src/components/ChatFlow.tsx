@@ -328,11 +328,14 @@ export default function ChatFlow() {
         console.error("Failed to save route generation to database");
       }
       
+      console.log("=== SETTING STEP TO SUMMARY ===");
+      console.log("Time window:", timeWindow);
+      console.log("Goals:", goalsToUse);
       setStep("summary");
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
-      setStep("detailed-map");
+      setStep("summary"); // Show summary even if there's an error
     } finally {
       setGenerating(false);
     }
@@ -698,8 +701,14 @@ export default function ChatFlow() {
               <RouteSummaryStep
                 timeWindow={timeWindow}
                 goals={goals}
-                onContinue={() => setStep("detailed-map")}
+                onContinue={() => {
+                  console.log("=== Let's Go button clicked ===");
+                  setStep("detailed-map");
+                }}
               />
+              {console.log("=== SUMMARY STEP RENDERED ===")}
+              {console.log("Time window:", timeWindow)}
+              {console.log("Goals:", goals)}
             </>
           )}
 
