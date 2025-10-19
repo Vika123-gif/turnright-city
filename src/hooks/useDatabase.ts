@@ -377,14 +377,20 @@ export const useDatabase = () => {
     places: LLMPlace[],
     totalWalkingTime: number,
     mapUrl: string | null,
-    userId: string  // Changed from userSessionId to userId for authenticated users
+    userId: string | null = null  // Now accepts user_id
   ) => {
     try {
       console.log('=== SAVE USER ROUTE ATTEMPT ===');
       console.log('Connection test before insert...');
       await testConnection();
       
+      // Require authentication for saved routes
+      if (!userId) {
+        throw new Error('Authentication required to save routes');
+      }
+      
       const insertData = {
+        user_id: userId,  // Now properly set from authenticated user
         user_session_id: generateSessionId(), // Keep for backward compatibility
         route_name: routeName,
         location,
