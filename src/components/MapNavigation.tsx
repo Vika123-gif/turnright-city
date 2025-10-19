@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { MapPin, Clock, Info, ArrowLeft } from "lucide-react";
 import Button from "./Button";
+import CategoryBadge from "./CategoryBadge";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import {
   Dialog,
@@ -48,6 +49,18 @@ const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
               <div className="font-bold text-xl text-gray-900 mb-2">
                 {`${i + 1}. ${place.name}`}
               </div>
+              
+              {/* Category Badge */}
+              {place.goalMatched && (
+                <div className="mb-2">
+                  <CategoryBadge 
+                    category={place.goalMatched} 
+                    size="md" 
+                    showCoolScore={true}
+                    coolScore={place.coolScore || 0}
+                  />
+                </div>
+              )}
               
               {/* Instruction to search for the place name */}
               <div className="text-gray-700 text-base flex items-center gap-2 mb-2">

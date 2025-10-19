@@ -20,9 +20,18 @@ const Start = () => {
           />
         </div>
 
+        {/* Hero image below the logo */}
+        <div className="flex justify-center">
+          <img 
+            src="/png.png" 
+            alt="TurnRight hero" 
+            className="mt-4 w-full rounded-lg"
+          />
+        </div>
+
         {/* Tagline */}
         <h1 className="text-xl text-foreground font-medium leading-relaxed">
-          Your AI city guide: smart walking routes in seconds.
+          Your AI city guide - discover new places in seconds, share and save your adventures!
         </h1>
 
         {/* Action Button */}

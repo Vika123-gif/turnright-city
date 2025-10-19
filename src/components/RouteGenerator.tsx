@@ -7,6 +7,8 @@ import { useButtonTracking } from '@/hooks/useButtonTracking';
 const RouteGenerator: React.FC = () => {
   const [locationInput, setLocationInput] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [showRoute, setShowRoute] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const { trackButtonClick } = useButtonTracking();
 
   // Функция для записи клика с отладкой
@@ -34,9 +36,17 @@ const RouteGenerator: React.FC = () => {
   const handleGenerateRoute = async () => {
     await handleClick('generate route');
     // Здесь можно добавить логику генерации
+    setShowPreview(true); // После генерации показываем превью экран
   };
 
-  return (
+  // Derived display values for preview
+  const selectedCategories = selectedOptions;
+  const subtitle = selectedCategories && selectedCategories.length > 0
+    ? `${selectedCategories.join(' + ')} = A day to remember.`
+    : 'Your AI city loop is ready.';
+  const totalDuration: string | null = null; // Replace with computed duration when available
+
+  const FormUI: React.FC = () => (
     <div className="p-6 space-y-4">
       {/* Шаг 1 */}
       <Button onClick={() => handleClick("I'm already here")}>I'm already here</Button>
@@ -104,6 +114,44 @@ const RouteGenerator: React.FC = () => {
         <Button onClick={() => handleClick('generate again')}>Generate again</Button>
         <Button onClick={() => handleClick('start new dialog')}>Start new dialog</Button>
       </div>
+    </div>
+  );
+
+  const RouteDetails: React.FC = () => (
+    <div className="p-6 space-y-4">
+      {/* Keep your existing detailed route view here (map, list, etc.) */}
+      {/* Не меняем логику данных/карт */}
+      <div className="text-sm text-muted-foreground">Route details will appear here.</div>
+    </div>
+  );
+
+  return (
+    <div className="p-6 space-y-4">
+      {!showPreview && !showRoute && <FormUI />}
+
+      {showPreview && !showRoute && (
+        <div className="flex flex-col items-center justify-center text-center min-h-[60vh] p-8">
+          <h2 className="text-2xl font-semibold">Your route is ready 🎉</h2>
+          <p className="mt-2 text-muted-foreground">{subtitle}</p>
+          {totalDuration && (
+            <p className="mt-1 text-sm text-muted-foreground">{`Total time: ${totalDuration}`}</p>
+          )}
+          {selectedCategories && selectedCategories.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2 justify-center">
+              {selectedCategories.map((cat) => (
+                <span key={cat} className="px-3 py-1 text-sm bg-emerald-50 text-emerald-700 rounded-full">
+                  {cat}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="mt-6">
+            <Button onClick={() => setShowRoute(true)}>Show My Route</Button>
+          </div>
+        </div>
+      )}
+
+      {showRoute && <RouteDetails />}
     </div>
   );
 };

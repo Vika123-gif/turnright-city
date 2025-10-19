@@ -258,7 +258,9 @@ export default function ChatFlow() {
                 lon: foundPlace.coordinates ? foundPlace.coordinates[0] : place.lon,
                 walkingTime: foundPlace.walkingTime || place.walkingTime,
                 // Ensure we always have a usable address - prioritize Google Places
-                address: foundPlace.address || place.address || place.name
+                address: foundPlace.address || place.address || place.name,
+                rating: (foundPlace as any).rating || (place as any).rating,
+                openingHours: (foundPlace as any).openingHours || place.openingHours
               };
               
               console.log("Final enriched place:", {
@@ -605,7 +607,8 @@ export default function ChatFlow() {
     } else if (data.scenario === "planning" && data.city && data.days && data.categories) {
       // Handle planning scenario
       setLocation(data.city);
-      setOrigin(data.city);
+      // Use accommodation address if provided, otherwise fall back to city center
+      setOrigin(data.accommodation || data.city);
       setTimeWindow(data.days);
       setGoals(data.categories);
       setChatVisible(false);
@@ -624,13 +627,9 @@ export default function ChatFlow() {
     console.log("Current selectedDayPlaces:", selectedDayPlaces);
     console.log("Current location:", location);
     
-    const placesToShow = selectedDayPlaces || places;
-    if (placesToShow && placesToShow.length > 0 && location) {
-      setChatVisible(false);
-      setStep("detailed-map");
-    } else {
-      console.error("Cannot show map - missing places or location");
-    }
+    // Allow showing the map immediately; DetailedMapStep will handle empty states gracefully
+    setChatVisible(false);
+    setStep("detailed-map");
   };
 
   const handleShowDayMap = (dayPlaces: LLMPlace[]) => {
@@ -708,7 +707,7 @@ export default function ChatFlow() {
             </>
           )}
 
-          {step === "detailed-map" && places && (
+          {step === "detailed-map" && (
             <>
               <div className="absolute top-4 left-4">
                 <BackButton onClick={goBack} />

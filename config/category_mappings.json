@@ -1,0 +1,44 @@
+{
+  "Viewpoints": {
+    "typesAllow": ["tourist_attraction","natural_feature","park","point_of_interest","establishment"],
+    "keywords": ["viewpoint","observation deck","lookout","panorama","terrace","tower","scenic","widok","taras","punkt widokowy","mirador","belvedere","belvédère"],
+    "osm": ["tourism=viewpoint","historic=monument","man_made=tower"]
+  },
+  "Specialty coffee": {
+    "typesAllow": ["cafe","restaurant"],
+    "keywords": ["specialty","roastery","third wave","single-origin","V60","pour over","aeropress","brew bar","flat white","palarnia","kawa speciality"]
+  },
+  "Coworking": {
+    "typesAllow": ["point_of_interest","establishment"],
+    "keywords": ["cowork","co-working","shared office","hot desk","day pass","flex office","biuro coworking","biura serwisowane","przestrzeń coworking","work hub","Workin","WeWork","Mindspace","Regus","Spaces","Brain Embassy","HubHub","Business Link","New Work"],
+    "osm": ["amenity=coworking_space","office=coworking"]
+  },
+  "Bakery": {
+    "typesAllow": ["bakery"],
+    "keywords": ["bakery","boulangerie","piekarnia","panadería","ベーカリー","面包房"]
+  },
+  "Restaurants": {
+    "typesAllow": ["restaurant"],
+    "keywords": ["restaurant","restauracja","restaurante","レストラン","餐厅"]
+  },
+  "Bars": {
+    "typesAllow": ["bar","night_club"],
+    "keywords": ["bar","pub","cocktail","wine","beer","bar","pub","koktajl","wino","piwo"]
+  },
+  "Museums": {
+    "typesAllow": ["museum","art_gallery"],
+    "keywords": ["museum","gallery","muzeum","galeria","museo","美術館","博物馆"]
+  },
+  "Parks": {
+    "typesAllow": ["park"],
+    "keywords": ["park","garden","park","ogród","parque","公園","公园"]
+  },
+  "Cafés": {
+    "typesAllow": ["cafe"],
+    "keywords": ["cafe","coffee","kawiarnia","café","咖啡","コーヒー"]
+  },
+  "Architectural landmarks": {
+    "typesAllow": ["tourist_attraction","point_of_interest"],
+    "keywords": ["architecture","landmark","monument","architektura","zabytek","arquitectura","建筑","建築"]
+  }
+}

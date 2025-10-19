@@ -9,10 +9,14 @@ import LocationStep from "./steps/LocationStep";
 import AdditionalSettingsStep from "./steps/AdditionalSettingsStep";
 import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
+import DetailedMapStep from "./steps/DetailedMapStep";
+import RouteSummaryStep from "./steps/RouteSummaryStep";
+import { RateLimitModal } from "./RateLimitModal";
 import { useOpenAI, type LLMPlace } from "@/hooks/useOpenAI";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { useButtonTracking } from "@/hooks/useButtonTracking";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { useComprehensiveTracking } from "@/hooks/useComprehensiveTracking";
 
 const CATEGORIES = [
   "Restaurants", "Cafés", "Bars", "Viewpoints", "Parks", "Museums",
@@ -25,16 +29,16 @@ const TIME_TO_MINUTES = { "3h": 180, "6h": 360, "Half-day": 240, "Day": 480 };
 const DAYS_OPTIONS = ["1", "2", "3", "4", "5", "6", "7"];
 
 const ADDITIONAL_SETTINGS = [
-  "Barrier-free",
-  "More greenery", 
-  "Avoid bad air",
-  "Safety"
+  "Mobility-friendly → Easy routes without stairs or steep paths.",
+  "Avoid bad air → Avoid busy or polluted streets.",
+  "Safety first →  Safer, well-lit, and comfortable zones."
 ];
 
 type Scenario = "onsite" | "planning";
 type ChatStep = 
   | "welcome" 
   | "scenario_fork"
+  | "travel_type"
   // Scenario A (onsite) steps
   | "location" 
   | "time" 
@@ -43,8 +47,10 @@ type ChatStep =
   | "interests" 
   | "additional_settings"
   | "generating"
+  | "summary"
   | "route_preview"
   | "route_results"
+  | "detailed-map"
   // Scenario B (planning) steps  
   | "city_dates"
   | "accommodation"
@@ -89,8 +95,10 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   const [destinationInput, setDestinationInput] = useState("");
   const [locationInput, setLocationInput] = useState("");
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+  const [travelType, setTravelType] = useState<string | null>(null);
   const { trackButtonClick: trackButtonClickDB } = useButtonTracking();
   const { trackButtonClick } = useAnalytics();
+  const { trackRouteGeneration, trackFormSubmit, trackButtonClick: trackComprehensive } = useComprehensiveTracking();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customMinutes, setCustomMinutes] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -118,6 +126,19 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   const [places, setPlaces] = useState<LLMPlace[] | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [routeTimeData, setRouteTimeData] = useState<{
+    requestedMinutes?: number;
+    computedMinutes?: number;
+    totalWalkingTime?: number;
+    totalExploringTime?: number;
+  } | null>(null);
+
+  // Rate limiting states
+  const [showRateLimitModal, setShowRateLimitModal] = useState(false);
+  const [rateLimitInfo, setRateLimitInfo] = useState<{
+    attemptsUsed: number;
+    resetAt?: string;
+  } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { getLLMPlaces } = useOpenAI();
@@ -135,15 +156,15 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     // Initialize with welcome message
     addBotMessage("👋 Hi! I'm TurnRight, your personal city guide.");
     setTimeout(() => {
-      addBotMessage("Are you already in the city or planning a trip?");
-      setCurrentStep("scenario_fork");
+      addBotMessage("Choose your travel type.");
+      setCurrentStep("travel_type");
     }, 1000);
   }, []);
 
   // Step navigation mapping
   const stepFlow = {
-    onsite: ["scenario_fork", "location", "time", "destination", "destination_input", "interests", "additional_settings"],
-    planning: ["scenario_fork", "city_dates", "accommodation", "accommodation_input", "trip_interests", "trip_settings"]
+    onsite: ["travel_type", "scenario_fork", "location", "time", "destination", "destination_input", "interests", "additional_settings"],
+    planning: ["travel_type", "scenario_fork", "city_dates", "accommodation", "accommodation_input", "trip_interests", "trip_settings"]
   };
 
   const handleGoBack = () => {
@@ -163,6 +184,10 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     } else if (currentStep === "accommodation_input" && hasAccommodation) {
       // Special case: go back from accommodation_input to accommodation
       setCurrentStep("accommodation");
+      setMessages(prev => prev.slice(0, -1));
+    } else if (currentStep === "travel_type") {
+      // Go back to welcome from the first step
+      setCurrentStep("welcome");
       setMessages(prev => prev.slice(0, -1));
     }
   };
@@ -242,10 +267,12 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   const handleCitySubmit = () => {
     if (userInput.trim() && selectedDays) {
       trackButtonClickDB('city_submit');
-      addUserMessage(`🏙️ ${userInput} for ${selectedDays} day${selectedDays !== "1" ? "s" : ""}`);
+      // Normalize city: strip trailing "for N day(s)" or similar suffixes
+      const cityOnly = userInput.replace(/\s+for\s+\d+\s+days?/i, '').trim();
+      addUserMessage(`🏙️ ${cityOnly} for ${selectedDays} day${selectedDays !== "1" ? "s" : ""}`);
       setCollectedData(prev => ({
-        ...prev, 
-        city: userInput, 
+        ...prev,
+        city: cityOnly,
         days: parseInt(selectedDays) 
       }));
       setUserInput("");
@@ -314,6 +341,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
   const handleLocationSubmit = (location: string) => {
     trackButtonClickDB('location_submit');
+    trackFormSubmit('location_input', { location }, 'ChatBot');
+    
     const updatedData = { ...collectedData, location };
     setCollectedData(updatedData);
     console.log('Location set in collectedData:', updatedData);
@@ -326,6 +355,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   };
 
   const handleTimeSelect = (timeMinutes: number) => {
+    trackFormSubmit('time_selection', { timeMinutes }, 'ChatBot');
+    
     addUserMessage(`⏰ ${timeMinutes} minutes`);
     setCollectedData(prev => ({ ...prev, timeMinutes }));
     setTimeout(() => {
@@ -372,6 +403,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   };
 
   const handleInterestsSubmit = (categories: string[]) => {
+    trackButtonClickDB('interests_submit');
+    trackFormSubmit('interests_selection', { categories, categoriesCount: categories.length }, 'ChatBot');
+    
     addUserMessage(`🎯 ${categories.join(", ")}`);
     const updatedData = { ...collectedData, categories };
     setCollectedData(updatedData);
@@ -400,22 +434,39 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     setGenerating(true);
     setError(null);
     
+    const generationStartTime = new Date();
+    
     try {
       console.log("=== DEBUG: Starting route generation ===");
       console.log("Data:", data);
       console.log("Scenario:", data.scenario);
+
+      // Track route generation start
+      const routeGenerationId = await trackRouteGeneration({
+        scenario: data.scenario,
+        location: data.location || data.city || "",
+        timeWindow: data.timeMinutes || (data.days ? data.days * 480 : undefined),
+        goals: data.categories || [],
+        additionalSettings: data.additionalSettings || [],
+        destinationType: data.destinationType,
+        destination: data.destination,
+        days: data.days,
+        generationStartedAt: generationStartTime
+      });
       
       let location: string;
       let timeWindow: number;
       let categories: string[] = [];
       let userPrompt: string;
+      let originForApi: any = undefined;
       
       if (data.scenario === "planning") {
-        // Planning scenario: use city and days
+        // Planning scenario: use city and days; hook will convert days → minutes
         location = data.city || "";
-        timeWindow = data.days || 1;
+        const days = data.days || 1;
+        timeWindow = days; // keep as days; conversion happens in useOpenAI
         categories = data.categories || [];
-        userPrompt = `Generate a ${timeWindow}-day trip plan for ${location} with interests: ${categories.join(", ")}`;
+        userPrompt = `Generate a ${days}-day trip plan for ${location} with interests: ${categories.join(", ")}`;
         
         console.log("Planning scenario - City:", location);
         console.log("Planning scenario - Days:", timeWindow);
@@ -426,6 +477,15 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         timeWindow = data.timeMinutes || 180;
         categories = data.categories || [];
         userPrompt = `Generate a route for ${timeWindow} minutes in ${location} with interests: ${categories.join(", ")}`;
+        // If user provided coords like "lat,lon", pass as origin object for backend
+        const m = typeof location === 'string' ? location.trim().match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/) : null;
+        if (m) {
+          const olat = parseFloat(m[1]);
+          const olon = parseFloat(m[2]);
+          if (!Number.isNaN(olat) && !Number.isNaN(olon)) {
+            originForApi = { lat: olat, lon: olon };
+          }
+        }
         
         console.log("Onsite scenario - Location:", location);
         console.log("Onsite scenario - Time minutes:", timeWindow);
@@ -438,17 +498,23 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         goals: categories,
         timeWindow: timeWindow,
         userPrompt: userPrompt,
-        scenario: data.scenario
+        scenario: data.scenario,
+        origin: originForApi
       });
       console.log("=== DEBUG: LLM Response ===", response);
       
-      if (!response || response.length === 0) {
+      if (!response || !response.places || response.places.length === 0) {
         throw new Error("No places found for your criteria. Try different settings.");
+      }
+      
+      // Store time data from backend
+      if (response.timeData) {
+        setRouteTimeData(response.timeData);
       }
       
       // Enrich places with photos and coordinates
       const placesWithPhotos: LLMPlace[] = await Promise.all(
-        response.map(async (place, index) => {
+        response.places.map(async (place, index) => {
           try {
             // Get Google Places data
             const googlePlacesResponse = await searchPlacesByName({
@@ -509,14 +575,34 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       
       console.log("=== DEBUG: Places with photos and descriptions ===", placesWithPhotos);
       
+      // Track route generation completion
+      const generationEndTime = new Date();
+      const generationDuration = generationEndTime.getTime() - generationStartTime.getTime();
+      
+      console.log("=== DEBUG: Route generation completed ===");
+      console.log("Places:", placesWithPhotos);
+      console.log("Generation duration:", generationDuration, "ms");
+      
       setPlaces(placesWithPhotos);
       
-      // Store places and transition to preview step
+      // Store places and transition to summary step first
       setPlaces(placesWithPhotos);
-      setCurrentStep("route_preview");
+      setCurrentStep("summary");
       
     } catch (e: any) {
       console.error("=== DEBUG: Error in generateRoute ===", e);
+      
+      // Handle rate limiting error
+      if (e.message === "RATE_LIMIT_EXCEEDED") {
+        setRateLimitInfo({
+          attemptsUsed: 3,
+          resetAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        });
+        setShowRateLimitModal(true);
+        setCurrentStep("route_preview");
+        return;
+      }
+      
       setError(e.message || "Could not generate route.");
       addBotMessage("❌ Sorry, I couldn't generate a route. Please try again with different settings.");
       setCurrentStep("route_preview");
@@ -643,9 +729,49 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       </div>
 
       {/* Current Step Component */}
+      {currentStep === "travel_type" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <div className="relative py-4">
+            <div className="text-sm font-semibold text-gray-700 mb-3 text-center">Travel type</div>
+            {/* Checkbox-style list (single-select behavior) */}
+            <div className="space-y-3">
+              {['With family','Business','Couple / Romantic','Solo','With friends'].map((label) => {
+                const active = travelType === label;
+                return (
+                  <label
+                    key={label}
+                    className={`flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 transition-all duration-200 ${active ? 'border-[hsl(var(--primary))] bg-green-50' : 'border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50'}`}
+                    onClick={() => setTravelType(label)}
+                  >
+                    <span className={`h-5 w-5 rounded-full border-2 flex-shrink-0 ${active ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]' : 'border-gray-300'}`} />
+                    <span className="text-sm font-medium text-gray-700">{label}</span>
+                  </label>
+                );
+              })}
+            </div>
+            {/* Next button: full width below the list */}
+            <div className="mt-4">
+              <button
+                onClick={() => {
+                  setCollectedData(prev => ({ ...prev, travelType }));
+                  setCurrentStep("scenario_fork");
+                }}
+                disabled={!travelType}
+                className={`w-full py-3 rounded-2xl text-sm font-semibold ${
+                  travelType ? 'bg-[hsl(var(--primary))] text-white hover:bg-[hsl(var(--primary))]/90' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >Next</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {currentStep === "scenario_fork" && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
           <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between mb-2">
+              <BackButton onClick={handleGoBack} />
+            </div>
             <button
               onClick={() => {
                 trackButtonClick("click_im_already_here", "I'm already here");
@@ -931,6 +1057,25 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         </div>
       )}
 
+      {currentStep === "summary" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <RouteSummaryStep
+            timeWindow={collectedData.scenario === "planning" ? (collectedData.days || null) : (collectedData.timeMinutes || null)}
+            goals={collectedData.categories || []}
+            places={places || []}
+            travelType={travelType || (collectedData as any).travelType}
+            prefs={(collectedData.additionalSettings || additionalSettings) as string[]}
+            scenario={collectedData.scenario}
+            days={collectedData.days}
+            requestedMinutes={routeTimeData?.requestedMinutes}
+            computedMinutes={routeTimeData?.computedMinutes}
+            totalWalkingTime={routeTimeData?.totalWalkingTime}
+            totalExploringTime={routeTimeData?.totalExploringTime}
+            onContinue={() => setCurrentStep("detailed-map")}
+          />
+        </div>
+      )}
+
       {currentStep === "route_preview" && places && places.length > 0 && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
           <RoutePreviewStep
@@ -955,6 +1100,29 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         </div>
       )}
 
+      {currentStep === "detailed-map" && (
+        <div className="p-0 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+          <DetailedMapStep
+            places={places || []}
+            origin={collectedData.location || collectedData.city || ''}
+            destination={(collectedData.destinationType === 'circle')
+              ? (collectedData.location || collectedData.city || '')
+              : (collectedData.destinationType === 'specific' ? (collectedData.destination || '') : undefined)}
+            scenario={collectedData.scenario}
+            days={collectedData.days}
+            onBack={() => setCurrentStep("summary")}
+            onReset={() => {
+              // Reset all collected data and go back to chat
+              setCollectedData({} as any);
+              setCurrentStep("welcome" as any);
+              setPlaces(null);
+              setError(null);
+            }}
+            onFeedbackSubmit={() => {}}
+          />
+        </div>
+      )}
+
       {currentStep === "route_results" && places && places.length > 0 && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
           <div className="flex flex-col gap-3">
@@ -974,6 +1142,14 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
           </div>
         </div>
       )}
+
+      {/* Rate Limit Modal */}
+      <RateLimitModal
+        isOpen={showRateLimitModal}
+        onClose={() => setShowRateLimitModal(false)}
+        attemptsUsed={rateLimitInfo?.attemptsUsed || 3}
+        resetAt={rateLimitInfo?.resetAt}
+      />
     </div>
   );
 };

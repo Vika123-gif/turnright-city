@@ -13,11 +13,27 @@ export type LLMPlace = {
   lon?: number;
   coordinates?: [number, number]; // [lng, lat] from Mapbox
   photoUrl?: string; // Google Places photo URL
+  photoUrls?: string[]; // Multiple photos
   description?: string; // Interesting facts and useful information
   openingHours?: string[]; // Opening hours for each day
   ticketPrice?: string; // Ticket price information
   website?: string; // Official website
   day?: number; // Optional day property for multi-day planning
+  rating?: number; // Optional rating from Google Places
+  goalMatched?: string; // Primary category/goal this place matches
+  coolScore?: number; // Optional AI coolness score
+};
+
+export type RouteTimeData = {
+  requestedMinutes?: number;
+  computedMinutes?: number;
+  totalWalkingTime?: number;
+  totalExploringTime?: number;
+};
+
+export type LLMResponse = {
+  places: LLMPlace[];
+  timeData?: RouteTimeData;
 };
 
 // OpenAI descriptions are now generated through edge function
@@ -55,7 +71,7 @@ export function useOpenAI() {
     regenerationAttempt?: number;
     maxPlaces?: number;
     scenario?: "onsite" | "planning";
-  }): Promise<LLMPlace[]> {
+  }): Promise<LLMResponse> {
     
     console.log("=== DEBUG: TripAdvisor-only route generation ===");
     console.log("Location received in hook:", location);
@@ -91,6 +107,14 @@ export function useOpenAI() {
     console.log("API timeWindow (minutes):", apiTimeWindow);
     
     try {
+      // Generate session ID for rate limiting
+      const sessionId = localStorage.getItem('turnright_session_id') || 
+        (() => {
+          const newSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem('turnright_session_id', newSessionId);
+          return newSessionId;
+        })();
+
       // Call TripAdvisor function directly for route generation
       const { supabase } = await import("@/integrations/supabase/client");
       const { data: tripAdvisorData, error } = await supabase.functions.invoke('tripadvisor-photos', {
@@ -102,13 +126,29 @@ export function useOpenAI() {
           goals: goals,
           timeWindow: apiTimeWindow,
           maxPlaces: actualMaxPlaces,
-          scenario: scenario  // Add scenario parameter
+          scenario: scenario,  // planning | onsite
+          strict: true,
+          minPerGoal: scenario === 'planning' ? 1 : 2,
+          debugMode: true,
+          localeHint: 'en',
+          sessionId: sessionId // Add session ID for rate limiting
         }
       });
       
       if (error) {
         console.error("TripAdvisor API error:", error);
+        
+        // Check if it's a rate limiting error
+        if (error.message?.includes('RATE_LIMIT_EXCEEDED') || error.status === 429) {
+          throw new Error("RATE_LIMIT_EXCEEDED");
+        }
+        
         throw new Error("Failed to fetch places from TripAdvisor: " + error.message);
+      }
+      
+      // Check for rate limiting in response data
+      if (tripAdvisorData?.error === 'RATE_LIMIT_EXCEEDED') {
+        throw new Error("RATE_LIMIT_EXCEEDED");
       }
       
       if (!tripAdvisorData?.success || !Array.isArray(tripAdvisorData.places)) {
@@ -200,11 +240,15 @@ export function useOpenAI() {
           lon: lon,
           coordinates: coordinates,
           photoUrl: place.photoUrl || place.photo_url,
+          photoUrls: Array.isArray(place.photoUrls) ? place.photoUrls : undefined,
           description: generatedDescription || `A popular ${place.type || 'destination'} that offers a unique local experience.`,
           openingHours: place.openingHours,
           ticketPrice: place.ticketPrice,
           website: place.website,
           day: place.day, // Preserve day assignment from backend
+          rating: typeof place.rating === 'number' ? place.rating : undefined,
+          goalMatched: place.goalMatched,
+          coolScore: typeof place.coolScore === 'number' ? place.coolScore : undefined,
         };
         
         console.log("=== PLACE MAPPING DEBUG ===");
@@ -259,7 +303,18 @@ export function useOpenAI() {
         });
       }
       
-      return places;
+      // Extract time data from backend response
+      const timeData: RouteTimeData = {
+        requestedMinutes: tripAdvisorData.requestedMinutes,
+        computedMinutes: tripAdvisorData.computedMinutes,
+        totalWalkingTime: tripAdvisorData.totalWalkingTime,
+        totalExploringTime: tripAdvisorData.totalExploringTime,
+      };
+      
+      return {
+        places,
+        timeData
+      };
       
     } catch (err) {
       console.error("=== DEBUG: TripAdvisor Error ===", err);

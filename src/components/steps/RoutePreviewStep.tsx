@@ -5,6 +5,7 @@ import type { LLMPlace } from "@/hooks/useOpenAI";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import Map from "../Map";
+import CategoryBadge from "../CategoryBadge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -232,44 +233,7 @@ const RoutePreviewStep: React.FC<Props> = ({
         📍 Your {scenario === "planning" ? `${days}-day trip itinerary` : "custom route"}
       </div>
 
-      {/* Selected Categories Display */}
-      {goals && goals.length > 0 && (
-        <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-          <div className="text-xs font-semibold text-gray-700 mb-2">Your Selected Categories:</div>
-          <div className="flex flex-wrap gap-2">
-            {goals.map((goal, index) => {
-              const goalEmojis: Record<string, string> = {
-                restaurants: '🍽️',
-                coffee: '☕',
-                work: '💼',
-                museums: '🏛️',
-                parks: '🌳',
-                monuments: '🏰'
-              };
-              const goalLabels: Record<string, string> = {
-                restaurants: 'Restaurants',
-                coffee: 'Coffee & Cafes',
-                work: 'Work Spaces',
-                museums: 'Museums',
-                parks: 'Parks',
-                monuments: 'Monuments'
-              };
-              return (
-                <span 
-                  key={index}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full text-xs font-medium text-gray-700 border border-blue-300 shadow-sm"
-                >
-                  <span>{goalEmojis[goal] || '📍'}</span>
-                  <span>{goalLabels[goal] || goal}</span>
-                </span>
-              );
-            })}
-          </div>
-          <div className="text-xs text-gray-600 mt-2 italic">
-            ℹ️ The route may include similar venues based on availability
-          </div>
-        </div>
-      )}
+      {/* Removed selected categories banner per request */}
       
       {error && (
         <div className="text-red-500 mb-3">{error}</div>
@@ -341,6 +305,7 @@ const RoutePreviewStep: React.FC<Props> = ({
                   <Map 
                     places={currentDayData?.places || places} 
                     origin={location}
+                    destinationType={"none"}
                     className="h-[250px] md:h-[400px] w-full rounded-lg border-2 border-primary/20 shadow-lg" 
                   />
                 </div>
@@ -404,6 +369,19 @@ const RoutePreviewStep: React.FC<Props> = ({
                         <div className="font-semibold text-sm mb-1">
                           {`${i + 1}. ${p.name}`}
                         </div>
+                        
+                        {/* Category Badge */}
+                        {p.goalMatched && (
+                          <div className="mb-2">
+                            <CategoryBadge 
+                              category={p.goalMatched} 
+                              size="sm" 
+                              showCoolScore={true}
+                              coolScore={p.coolScore || 0}
+                            />
+                          </div>
+                        )}
+                        
                         <div className="text-gray-600 text-xs flex items-center gap-1 mb-1">
                           <MapPin className="w-3 h-3" />
                           {p.address}
@@ -416,7 +394,7 @@ const RoutePreviewStep: React.FC<Props> = ({
                           {p.type && <span>{p.type}</span>}
                         </div>
                         {p.description && (
-                          <div className="text-xs mt-1 text-gray-700 bg-white p-2 rounded leading-relaxed">
+                          <div className="text-xs mt-1 text-gray-700 bg-white p-2 rounded leading-relaxed whitespace-normal break-words">
                             {p.description}
                           </div>
                         )}

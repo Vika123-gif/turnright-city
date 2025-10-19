@@ -8,9 +8,11 @@ type MapProps = {
   places: LLMPlace[];
   className?: string;
   origin?: string;
+  destinationType?: 'none' | 'circle' | 'specific';
+  destination?: string;
 };
 
-const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
+const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationType = 'none', destination }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const userMarker = useRef<mapboxgl.Marker | null>(null);
@@ -37,15 +39,36 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
     
     mapboxgl.accessToken = mapboxToken;
     
-    // Default Lisbon center coordinates
+    // Default Lisbon center coordinates (fallback)
     const defaultCenter: [number, number] = [-9.1393, 38.7223]; // [lng, lat] for Mapbox
     
-    console.log('Initializing map with places:', places);
+    // Calculate center from places or use origin
+    let mapCenter: [number, number] = defaultCenter;
+    
+    if (places.length > 0) {
+      // Use the first place as the center
+      const firstPlace = places[0];
+      if (firstPlace.lat && firstPlace.lon) {
+        mapCenter = [firstPlace.lon, firstPlace.lat]; // Mapbox uses [lng, lat]
+        console.log('Centering map on first place:', firstPlace.name, mapCenter);
+      }
+    } else if (origin) {
+      // Try to parse origin coordinates
+      const coordMatch = origin.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+      if (coordMatch) {
+        const lat = parseFloat(coordMatch[1]);
+        const lng = parseFloat(coordMatch[2]);
+        mapCenter = [lng, lat];
+        console.log('Centering map on origin coordinates:', mapCenter);
+      }
+    }
+    
+    console.log('Map center:', mapCenter);
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: defaultCenter,
+      center: mapCenter,
       zoom: 13,
     });
 
@@ -127,8 +150,8 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
 
       // Add markers for each place and collect coordinates for route
       places.forEach((place, index) => {
-        const coords = place.coordinates 
-          ? { lat: place.coordinates[1], lng: place.coordinates[0] }
+        const coords = (place.lat && place.lon) 
+          ? { lat: place.lat, lng: place.lon }
           : fallbackCoords;
         
         console.log(`Adding marker ${index + 1} for ${place.name} at`, coords);
@@ -156,15 +179,14 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
         numberEl.textContent = (index + 1).toString();
         markerEl.appendChild(numberEl);
 
-        // Create popup content
+        // Create popup content - simplified to show only photo and name
         const popupContent = `
-          <div style="padding: 8px; min-width: 200px; max-width: 300px;">
-            ${place.photoUrl ? `<img src="${place.photoUrl}" alt="${place.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" onerror="this.style.display='none'">` : ''}
-            <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #008457;">${place.name}</h3>
-            <p style="margin: 0 0 4px 0; font-size: 14px; color: #666;">${place.address}</p>
-            <p style="margin: 0; font-size: 12px; color: #888;">🚶 ${place.walkingTime} min walk</p>
-            ${place.type ? `<p style="margin: 4px 0 0 0; font-size: 12px; color: #008457;">Type: ${place.type}</p>` : ''}
-            ${place.reason ? `<p style="margin: 4px 0 0 0; font-size: 12px; font-style: italic;">${place.reason}</p>` : ''}
+          <div style="padding: 8px; min-width: 200px; max-width: 250px;">
+            ${place.photoUrl ? `<img src="${place.photoUrl}" alt="${place.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" onerror="this.style.display='none'">` : 
+              `<div style="width: 100%; height: 120px; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">
+                <div style="color: #3b82f6; font-size: 24px;">📍</div>
+              </div>`}
+            <h3 style="margin: 0; font-weight: bold; color: #008457; font-size: 16px; text-align: center;">${place.name}</h3>
           </div>
         `;
 
@@ -182,8 +204,103 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
           .addTo(map.current!);
       });
 
-      // Close the loop: add starting point at the end to create circular route
-      if (startCoords && routeCoordinates.length > 1) {
+      // Add End marker if destination is specified and different from origin
+      if (destinationType === 'specific' && destination) {
+        console.log('Processing destination:', destination);
+        
+        let destCoords = null;
+        // Check if destination is coordinates (lat,lng format)
+        const coordMatch = destination.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+        if (coordMatch) {
+          const lat = parseFloat(coordMatch[1]);
+          const lng = parseFloat(coordMatch[2]);
+          destCoords = { lat, lng };
+          console.log('Destination is coordinates:', destCoords);
+        } else {
+          // Destination is a location name, try to geocode it
+          try {
+            console.log('Geocoding destination location:', destination);
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1&accept-language=en`
+            );
+            const data = await response.json();
+            if (data.length > 0) {
+              destCoords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+              console.log('Geocoded destination to:', destCoords);
+            }
+          } catch (error) {
+            console.error('Error geocoding destination:', error);
+          }
+        }
+
+        if (destCoords) {
+          // Add destination marker
+          const destMarkerEl = document.createElement('div');
+          destMarkerEl.style.width = '24px';
+          destMarkerEl.style.height = '24px';
+          destMarkerEl.style.borderRadius = '50%';
+          destMarkerEl.style.backgroundColor = '#DC2626'; // Red color for end
+          destMarkerEl.style.border = '3px solid white';
+          destMarkerEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+          destMarkerEl.style.display = 'flex';
+          destMarkerEl.style.alignItems = 'center';
+          destMarkerEl.style.justifyContent = 'center';
+          
+          const endIcon = document.createElement('div');
+          endIcon.style.color = 'white';
+          endIcon.style.fontSize = '10px';
+          endIcon.style.fontWeight = 'bold';
+          endIcon.textContent = 'E';
+          destMarkerEl.appendChild(endIcon);
+
+          const destPopup = new mapboxgl.Popup({ offset: 15 }).setHTML(
+            `<div style="padding: 8px;"><strong>End: ${destination}</strong></div>`
+          );
+
+          new mapboxgl.Marker(destMarkerEl)
+            .setLngLat([destCoords.lng, destCoords.lat])
+            .setPopup(destPopup)
+            .addTo(map.current!);
+          
+          console.log('Added End marker at:', destCoords);
+        }
+      }
+
+      // Fit map to show all markers if we have multiple places
+      if (places.length > 1) {
+        const bounds = new mapboxgl.LngLatBounds();
+        
+        // Add all place coordinates to bounds
+        places.forEach(place => {
+          if (place.lat && place.lon) {
+            bounds.extend([place.lon, place.lat]);
+          }
+        });
+        
+        // Add origin if available
+        if (originCoords) {
+          bounds.extend([originCoords.lng, originCoords.lat]);
+        }
+        
+        // Add destination if available
+        if (destinationType === 'specific' && destination) {
+          const coordMatch = destination.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+          if (coordMatch) {
+            const lat = parseFloat(coordMatch[1]);
+            const lng = parseFloat(coordMatch[2]);
+            bounds.extend([lng, lat]);
+          }
+        }
+        
+        // Only fit bounds if we have at least 2 points
+        if (bounds.getNorth() !== bounds.getSouth() || bounds.getEast() !== bounds.getWest()) {
+          map.current!.fitBounds(bounds, { padding: 80 });
+          console.log('Fitted map to show all markers');
+        }
+      }
+
+      // Close the loop only when requested: add start point at the end to create circular route
+      if (destinationType === 'circle' && startCoords && routeCoordinates.length > 1) {
         routeCoordinates.push([startCoords.lng, startCoords.lat]);
         console.log('Added return to start point to create circular route');
       }
@@ -268,106 +385,20 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin }) => {
           }
         };
 
-        // Wait for map to be fully loaded
-        if (map.current!.isStyleLoaded()) {
-          console.log('Map style already loaded, creating route immediately...');
-          const directionsSuccess = await getWalkingRoute();
-          
-          if (!directionsSuccess) {
-            console.log('Using fallback: simple LineString route');
-            console.log('Fallback route coordinates:', routeCoordinates);
-            
-            // Add simple route source (fallback)
-            map.current!.addSource('route', {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                  type: 'LineString',
-                  coordinates: routeCoordinates
-                }
-              }
-            });
-            console.log('Added fallback route source');
-
-            // Add simple route layer (fallback)
-            map.current!.addLayer({
-              id: 'route-line',
-              type: 'line',
-              source: 'route',
-              layout: {
-                'line-join': 'round',
-                'line-cap': 'round'
-              },
-              paint: {
-                'line-color': '#FF6B6B',
-                'line-width': 5,
-                'line-opacity': 0.9
-              }
-            });
-            console.log('Added fallback route layer');
-            
-            // Fit map to show all points (fallback)
-            const bounds = new mapboxgl.LngLatBounds();
-            routeCoordinates.forEach(coord => bounds.extend(coord));
-            map.current!.fitBounds(bounds, { padding: 50 });
-            console.log('Fitted map to fallback route bounds');
-          }
-        } else {
-          map.current!.on('load', async () => {
-            console.log('Map loaded, creating route...');
-            if (!map.current!.getSource('route')) {
-              // Try Directions API first
-              const directionsSuccess = await getWalkingRoute();
-              
-              // Fallback: simple LineString if Directions API fails
-              if (!directionsSuccess) {
-                console.log('Using fallback: simple LineString route');
-                console.log('Fallback route coordinates:', routeCoordinates);
-                
-                // Add simple route source (fallback)
-                map.current!.addSource('route', {
-                  type: 'geojson',
-                  data: {
-                    type: 'Feature',
-                    properties: {},
-                    geometry: {
-                      type: 'LineString',
-                      coordinates: routeCoordinates
-                    }
-                  }
-                });
-                console.log('Added fallback route source');
-
-                // Add simple route layer (fallback)
-                map.current!.addLayer({
-                  id: 'route-line',
-                  type: 'line',
-                  source: 'route',
-                  layout: {
-                    'line-join': 'round',
-                    'line-cap': 'round'
-                  },
-                  paint: {
-                    'line-color': '#FF6B6B',
-                    'line-width': 5,
-                    'line-opacity': 0.9
-                  }
-                });
-                console.log('Added fallback route layer');
-                
-                // Fit map to show all points (fallback)
-                const bounds = new mapboxgl.LngLatBounds();
-                routeCoordinates.forEach(coord => bounds.extend(coord));
-                map.current!.fitBounds(bounds, { padding: 50 });
-                console.log('Fitted map to fallback route bounds');
-              }
+        // Wait for map to be fully loaded, then only use Directions API (no fallback straight lines)
+        const createOnlyDirections = async () => {
+          const tryCreate = async () => {
+            if (map.current!.isStyleLoaded()) {
+              await getWalkingRoute();
             } else {
-              console.log('Route source already exists, skipping creation');
+              map.current!.once('load', async () => {
+                await getWalkingRoute();
+              });
             }
-          });
-        }
+          };
+          await tryCreate();
+        };
+        await createOnlyDirections();
         
         setRouteCreated(true);
         console.log('=== END ROUTE DEBUG ===');

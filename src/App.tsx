@@ -8,6 +8,7 @@ import Start from "./pages/Start";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
+import Analytics from "./pages/Analytics";
 import Unlock from "./pages/Unlock";
 import NotFound from "./pages/NotFound";
 import RouteGenerator from "./components/RouteGenerator";
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/chat" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/unlock" element={<Unlock />} />
           <Route path="/route" element={<RouteGenerator />} /> {/* Новый маршрут */}
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

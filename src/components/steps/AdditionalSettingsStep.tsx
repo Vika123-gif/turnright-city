@@ -4,10 +4,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAnalytics } from "@/hooks/useAnalytics";
 
 const ADDITIONAL_SETTINGS = [
-  "Barrier-free",
-  "More greenery", 
-  "Avoid bad air",
-  "Safety"
+  "Mobility-friendly → Easy routes without stairs or steep paths.",
+  "Avoid bad air → Avoid busy or polluted streets.",
+  "Safety first →  Safer, well-lit, and comfortable zones."
 ];
 
 type Props = {
@@ -41,7 +40,10 @@ const AdditionalSettingsStep: React.FC<Props> = ({ onNext, value, buttonText = "
     <div className="space-y-4 mt-4">
       <div className="space-y-3">
         {ADDITIONAL_SETTINGS.map((setting) => (
-          <label key={setting} className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]">
+          <label
+            key={setting}
+            className="flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50 transition-all duration-200 hover:scale-[1.02]"
+          >
             <Checkbox
               checked={additionalSettings.includes(setting)}
               onCheckedChange={() => handleSettingToggle(setting)}
@@ -50,10 +52,7 @@ const AdditionalSettingsStep: React.FC<Props> = ({ onNext, value, buttonText = "
           </label>
         ))}
       </div>
-      <Button
-        onClick={handleSubmit}
-        className="w-full h-12 font-semibold"
-      >
+      <Button onClick={handleSubmit} className="w-full h-12 font-semibold">
         {buttonText}
       </Button>
     </div>
