@@ -18,6 +18,46 @@ serve(async (req) => {
       throw new Error('Google Places API key not configured')
     }
 
+    // Input validation
+    const { location, placeName, placeType, goals, timeWindow, searchMode } = requestBody
+    
+    // Validate location (required for all requests)
+    if (!location || typeof location !== 'string' || location.length > 200 || location.length < 2) {
+      throw new Error('Invalid location parameter: must be 2-200 characters')
+    }
+    
+    // Validate based on search mode
+    if (searchMode === 'by_name') {
+      if (!placeName || typeof placeName !== 'string' || placeName.length > 200) {
+        throw new Error('Invalid placeName parameter: must be string up to 200 characters')
+      }
+      if (placeType && (typeof placeType !== 'string' || placeType.length > 100)) {
+        throw new Error('Invalid placeType parameter')
+      }
+    } else {
+      // Nearby search validation
+      if (!Array.isArray(goals) || goals.length === 0 || goals.length > 20) {
+        throw new Error('Invalid goals parameter: must be array with 1-20 items')
+      }
+      for (const goal of goals) {
+        if (typeof goal !== 'string' || goal.length > 100) {
+          throw new Error('Invalid goal in goals array')
+        }
+      }
+      if (timeWindow && (typeof timeWindow !== 'string' || timeWindow.length > 50)) {
+        throw new Error('Invalid timeWindow parameter')
+      }
+    }
+    
+    // Validate all string inputs contain only safe characters
+    const safePattern = /^[a-zA-Z0-9\s\-.,áéíóúàèìòùâêîôûãõñçüäöß]+$/
+    if (!safePattern.test(location)) {
+      throw new Error('Location contains invalid characters')
+    }
+    if (placeName && !safePattern.test(placeName)) {
+      throw new Error('Place name contains invalid characters')
+    }
+
     // Check if this is a search by name request
     if (requestBody.searchMode === 'by_name') {
       return await handlePlaceNameSearch(requestBody)

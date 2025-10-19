@@ -17,12 +17,12 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",
-        "x-debug-create-payment": "v3"
+        "x-debug-create-payment": "v4"
       }
     });
   }
 
-  // Stripe secret key from Supabase secrets (must be set in Supabase dashboard)
+  // Stripe secret key from Supabase secrets
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!stripeKey) {
     return new Response(JSON.stringify({
@@ -32,7 +32,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",
-        "x-debug-create-payment": "v3"
+        "x-debug-create-payment": "v4"
       }
     });
   }
@@ -42,24 +42,48 @@ serve(async (req) => {
   });
 
   try {
-    // Optionally parse request body (not used but required for POST)
-    let body = {};
-    if (req.method === "POST") {
-      try {
-        body = await req.json();
-      } catch (_) {
-        // ignore parse errors, allow empty body
-      }
+    // Verify user is authenticated
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({
+        error: "Authentication required"
+      }), {
+        status: 401,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "x-debug-create-payment": "v4"
+        }
+      });
     }
 
-    // Determine if user is authenticated via Authorization header
-    let userEmail = "guest@example.com";
-    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      // Optionally, you could look up a user if you want (not required for guest flow)
-      // This assumes you do NOT require a logged-in user.
-      // (you can add logic for a real user if you enable auth in the future)
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
+    // Verify JWT token
+    const verifyResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        Authorization: authHeader,
+        apikey: supabaseServiceKey
+      }
+    });
+
+    if (!verifyResponse.ok) {
+      return new Response(JSON.stringify({
+        error: "Invalid authentication token"
+      }), {
+        status: 401,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "x-debug-create-payment": "v4"
+        }
+      });
     }
+
+    const user = await verifyResponse.json();
+    const userEmail = user.email || "user@example.com";
 
     // Determine the origin for Stripe redirect URLs
     const origin = req.headers.get("origin") ?? "http://localhost:3000";
@@ -90,7 +114,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",
-        "x-debug-create-payment": "v3"
+        "x-debug-create-payment": "v4"
       }
     });
   } catch (error) {
@@ -101,7 +125,7 @@ serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/json",
-        "x-debug-create-payment": "v3"
+        "x-debug-create-payment": "v4"
       }
     });
   }

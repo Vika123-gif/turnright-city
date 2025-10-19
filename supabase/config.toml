@@ -6,8 +6,5 @@ verify_jwt = false
 [functions.mapbox-geocoding]
 verify_jwt = false
 
-[functions.create-payment]
-verify_jwt = false
-
 [functions.tripadvisor-photos]
 verify_jwt = false

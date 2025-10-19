@@ -14,6 +14,24 @@ serve(async (req) => {
 
   try {
     const { placeName, location } = await req.json();
+    
+    // Input validation
+    if (!placeName || typeof placeName !== 'string' || placeName.length > 200 || placeName.length < 2) {
+      throw new Error('Invalid placeName parameter: must be 2-200 characters');
+    }
+    if (!location || typeof location !== 'string' || location.length > 200 || location.length < 2) {
+      throw new Error('Invalid location parameter: must be 2-200 characters');
+    }
+    
+    // Validate safe characters only
+    const safePattern = /^[a-zA-Z0-9\s\-.,áéíóúàèìòùâêîôûãõñçüäöß]+$/;
+    if (!safePattern.test(placeName)) {
+      throw new Error('Place name contains invalid characters');
+    }
+    if (!safePattern.test(location)) {
+      throw new Error('Location contains invalid characters');
+    }
+    
     const mapboxApiKey = Deno.env.get('MAPBOX_API_KEY');
 
     console.log('=== MAPBOX GEOCODING DEBUG ===');
