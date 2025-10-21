@@ -265,6 +265,68 @@ const Admin = () => {
     }
   };
 
+  const resetAllCredits = async () => {
+    try {
+      console.log('=== ADMIN: Resetting all user credits ===');
+      
+      // First, let's get all user IDs from the database
+      const { data: allUsers, error: fetchError } = await supabase
+        .from('user_credits')
+        .select('user_id, email');
+
+      if (fetchError) {
+        console.error('Error fetching users:', fetchError);
+        alert('❌ Error fetching users: ' + fetchError.message);
+        return;
+      }
+
+      console.log('Found users:', allUsers);
+
+      if (!allUsers || allUsers.length === 0) {
+        alert('ℹ️ No users found in the database.');
+        return;
+      }
+
+      // Reset credits for each user individually
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const user of allUsers) {
+        const { data, error } = await supabase
+          .from('user_credits')
+          .update({ 
+            generations_used: 0,
+            purchased_generations: 0,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.user_id)
+          .select();
+
+        if (error) {
+          console.error(`Error resetting credits for ${user.email}:`, error);
+          errorCount++;
+        } else {
+          console.log(`Credits reset for ${user.email}:`, data);
+          successCount++;
+        }
+      }
+
+      // Clear localStorage
+      localStorage.removeItem('turnright_user_actions');
+      
+      // Force refresh the page to update all user interfaces
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+      alert(`✅ Credits reset completed!\n\n✅ Successfully reset: ${successCount} users\n❌ Errors: ${errorCount} users\n\nAll users now have fresh free credits!\n\nPage will refresh in 2 seconds...`);
+      
+    } catch (err) {
+      console.error('Exception in resetAllCredits:', err);
+      alert('❌ Exception: ' + err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -324,6 +386,16 @@ const Admin = () => {
           >
             <Download className="h-4 w-4" />
             Export TXT
+          </Button>
+          <Button 
+            onClick={() => {
+              localStorage.removeItem('turnright_user_actions');
+              resetAllCredits();
+            }} 
+            variant="outline"
+            className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+          >
+            Reset All Credits
           </Button>
           <Button onClick={testDatabaseInsert} variant="outline">
             Test Database Insert

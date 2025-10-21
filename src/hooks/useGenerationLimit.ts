@@ -115,7 +115,7 @@ export function useGenerationLimit() {
   };
 
   const canGenerate = () => {
-    const totalAvailable = FREE_GENERATIONS + purchasedGenerations;
+    const totalAvailable = getTotalGenerations();
     console.log("=== DEBUG: canGenerate check ===");
     console.log("generationCount:", generationCount);
     console.log("Total available:", totalAvailable);
@@ -125,14 +125,14 @@ export function useGenerationLimit() {
   };
 
   const getRemainingGenerations = () => {
-    const totalAvailable = FREE_GENERATIONS + purchasedGenerations;
+    const totalAvailable = getTotalGenerations();
     const remaining = Math.max(0, totalAvailable - generationCount);
     return remaining;
   };
   
   const getTotalGenerations = () => {
-    // Always show the same total format: 2 free + purchased
-    return FREE_GENERATIONS + purchasedGenerations;
+    // If user has purchased credits, show 3 total, otherwise show 2 total
+    return purchasedGenerations > 0 ? 3 : FREE_GENERATIONS;
   };
 
   const handlePurchase = () => {
