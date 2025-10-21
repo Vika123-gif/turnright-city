@@ -143,8 +143,7 @@ export function useGenerationLimit() {
     setShowOptionsModal(false);
     
     // Add user email to Stripe URL for webhook identification
-    // TODO: Replace with your actual Stripe Payment Link from Stripe Dashboard
-    const stripeUrl = `https://buy.stripe.com/test_XXXXXXXX${user?.email ? `?prefilled_email=${encodeURIComponent(user.email)}` : ''}`;
+    const stripeUrl = `https://buy.stripe.com/test_9B65kF1jB4ga7em4oJaR200${user?.email ? `?prefilled_email=${encodeURIComponent(user.email)}` : ''}`;
     console.log("Stripe URL:", stripeUrl);
     
     // Check if we're on mobile
