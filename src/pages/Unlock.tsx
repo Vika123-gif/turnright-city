@@ -22,7 +22,7 @@ export default function Unlock() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-background/80 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md text-center">
         <CardHeader>
           <div className="flex justify-center mb-4">

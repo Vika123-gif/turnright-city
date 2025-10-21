@@ -32,7 +32,7 @@ const Index = () => {
   // Show loading while checking authentication
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F3FCF8] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
@@ -47,7 +47,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F3FCF8] flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header with user info and credits */}
       <header className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200 p-4">
         <div className="max-w-6xl mx-auto flex justify-between items-center">

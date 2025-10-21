@@ -53,7 +53,7 @@ const Start = () => {
   }, [user, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-8">
         {/* Logo */}
         <div className="flex justify-center">
