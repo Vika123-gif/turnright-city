@@ -17,6 +17,8 @@ import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { useButtonTracking } from "@/hooks/useButtonTracking";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useComprehensiveTracking } from "@/hooks/useComprehensiveTracking";
+import { useGenerationLimit } from "@/hooks/useGenerationLimit";
+import GenerationOptionsModal from "./GenerationOptionsModal";
 
 const CATEGORIES = [
   "Restaurants", "Cafés", "Bars", "Viewpoints", "Parks", "Museums",
@@ -99,6 +101,14 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   const { trackButtonClick: trackButtonClickDB } = useButtonTracking();
   const { trackButtonClick } = useAnalytics();
   const { trackRouteGeneration, trackFormSubmit, trackButtonClick: trackComprehensive } = useComprehensiveTracking();
+  const { 
+    canGenerate, 
+    incrementGeneration, 
+    showOptionsModal, 
+    closeOptionsModal, 
+    giveFeedback, 
+    purchaseGenerations 
+  } = useGenerationLimit();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customMinutes, setCustomMinutes] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -422,6 +432,19 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     setCollectedData(finalData);
     console.log('Final data being sent:', finalData);
     
+    // Check generation limit before starting
+    if (!canGenerate()) {
+      // This will show the options modal
+      incrementGeneration();
+      return;
+    }
+    
+    // Increment generation count
+    const canProceed = incrementGeneration();
+    if (!canProceed) {
+      return; // Options modal will be shown
+    }
+    
     // Start route generation
     setTimeout(() => {
       addBotMessage(`🚀 Perfect! Let me create your personalized ${selectedScenario === "planning" ? "trip plan" : "route"}...`);
@@ -668,7 +691,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col max-h-screen">
+    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col max-h-screen">
       {/* Header */}
       {isRouteGenerated && (
         <div className="flex justify-between items-center p-4 bg-white/80 backdrop-blur-sm border-b border-gray-100 shadow-sm">
@@ -1101,7 +1124,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "detailed-map" && (
-        <div className="p-0 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+        <div className="p-0 p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
           <DetailedMapStep
             places={places || []}
             origin={collectedData.location || collectedData.city || ''}
@@ -1149,6 +1172,23 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         onClose={() => setShowRateLimitModal(false)}
         attemptsUsed={rateLimitInfo?.attemptsUsed || 3}
         resetAt={rateLimitInfo?.resetAt}
+      />
+
+      {/* Generation Options Modal */}
+      <GenerationOptionsModal
+        isOpen={showOptionsModal}
+        onClose={closeOptionsModal}
+        onGiveFeedback={(feedback) => {
+          console.log('User feedback:', feedback);
+          giveFeedback();
+          // After giving feedback, they can generate again
+          setTimeout(() => {
+            addBotMessage(`🚀 Perfect! Let me create your personalized ${selectedScenario === "planning" ? "trip plan" : "route"}...`);
+            setCurrentStep("generating");
+            generateRoute(collectedData);
+          }, 1000);
+        }}
+        onPurchase={purchaseGenerations}
       />
     </div>
   );

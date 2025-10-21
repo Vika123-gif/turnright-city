@@ -144,7 +144,7 @@ const MapNavigation: React.FC<Props> = ({ places, onBack, location }) => {
               
               {selectedPlace.reason && (
                 <div className="p-3 bg-blue-50 rounded-lg">
-                  <DialogDescription className="text-sm text-blue-700 font-medium">
+                  <DialogDescription className="text-sm text-green-700 font-medium">
                     Why this place?
                   </DialogDescription>
                   <p className="text-sm text-gray-700 mt-1">{selectedPlace.reason}</p>
