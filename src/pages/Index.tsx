@@ -47,9 +47,9 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header with user info and credits */}
-      <header className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200 p-4">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+      {/* Header with user info and credits - Fixed at top */}
+      <header className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200 p-4 flex-shrink-0">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           {/* Logo */}
           <div className="flex items-center">
@@ -93,11 +93,9 @@ const Index = () => {
         </div>
       </header>
       
-      {/* Main content */}
-      <div className="flex-1 overflow-auto">
-        <div className="w-full max-w-4xl mx-auto py-4 px-4">
-          <ChatFlow />
-        </div>
+      {/* Main content - Fills remaining space */}
+      <div className="flex-1 overflow-hidden w-full">
+        <ChatFlow />
       </div>
     </div>
   );
