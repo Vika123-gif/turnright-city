@@ -397,6 +397,56 @@ const Admin = () => {
           >
             Reset All Credits
           </Button>
+          <Button 
+            onClick={async () => {
+              try {
+                const { data, error } = await supabase
+                  .rpc('get_or_create_user_credits', {
+                    p_user_id: '038f383a-6930-476e-af12-22380c67e19e',
+                    p_email: 'turnright.ai@gmail.com'
+                  });
+                
+                if (error) {
+                  alert('❌ Error: ' + error.message);
+                } else {
+                  alert(`✅ Current credits for turnright.ai@gmail.com:\n\nUsed: ${data.generations_used}\nFree: ${data.free_generations}\nPurchased: ${data.purchased_generations}\n\nTotal available: ${data.free_generations + data.purchased_generations}`);
+                }
+              } catch (err) {
+                alert('❌ Exception: ' + err);
+              }
+            }} 
+            variant="outline"
+            className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+          >
+            Check Credits
+          </Button>
+          <Button 
+            onClick={async () => {
+              try {
+                // Manually add 3 purchased credits
+                const { data, error } = await supabase
+                  .from('user_credits')
+                  .update({ 
+                    purchased_generations: 3,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('user_id', '038f383a-6930-476e-af12-22380c67e19e')
+                  .select();
+                
+                if (error) {
+                  alert('❌ Error: ' + error.message);
+                } else {
+                  alert('✅ Manually added 3 purchased credits!\n\nRefresh the page to see changes.');
+                }
+              } catch (err) {
+                alert('❌ Exception: ' + err);
+              }
+            }} 
+            variant="outline"
+            className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+          >
+            Add Credits
+          </Button>
           <Button onClick={testDatabaseInsert} variant="outline">
             Test Database Insert
           </Button>
