@@ -61,8 +61,8 @@ const PlacesCarousel: React.FC<Props> = ({ places, className }) => {
                 />
               )}
               {p.description && (
-                <p className="text-xs text-gray-700 whitespace-normal break-words leading-relaxed">
-                  {p.description}
+                <p className="text-xs text-gray-700 whitespace-normal break-words leading-relaxed line-clamp-3">
+                  {p.description.length > 120 ? p.description.substring(0, 120) + '...' : p.description}
                 </p>
               )}
               <div className="text-xs text-gray-600 space-y-1">

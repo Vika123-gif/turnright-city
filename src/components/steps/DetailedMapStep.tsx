@@ -117,32 +117,269 @@ const DetailedMapStep: React.FC<Props> = ({
     }, 'DetailedMapStep');
 
     const title = "TurnRight Route";
-    const rows = currentDayPlaces.map((p, i) => `
-      <tr>
-        <td style="padding:6px 8px; border-bottom:1px solid #eee; color:#666;">${i + 1}</td>
-        <td style="padding:6px 8px; border-bottom:1px solid #eee; font-weight:600;">${p.name}</td>
-        <td style="padding:6px 8px; border-bottom:1px solid #eee; color:#666;">${p.goalMatched || ''}</td>
-        <td style="padding:6px 8px; border-bottom:1px solid #eee; color:#666;">${typeof p.rating === 'number' ? `★ ${p.rating}` : ''}</td>
-        <td style="padding:6px 8px; border-bottom:1px solid #eee; color:#666;">${(p as any).walkingTimeFromPrevious || (p as any).walkingTime || ''}</td>
-      </tr>
-    `).join("");
-    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>${title}</title></head>
-      <body style="font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; padding:16px;">
-        <h2 style="margin:0 0 12px 0;">${title}</h2>
-        <div style="margin-bottom:12px; font-size:14px; color:#555;">Origin: ${origin || '—'}</div>
-        <table cellspacing="0" cellpadding="0" style="width:100%; border-collapse:collapse; font-size:14px;">
-          <thead>
-            <tr>
-              <th style="text-align:left; padding:6px 8px; border-bottom:2px solid #333; color:#333;">#</th>
-              <th style="text-align:left; padding:6px 8px; border-bottom:2px solid #333; color:#333;">Place</th>
-              <th style="text-align:left; padding:6px 8px; border-bottom:2px solid #333; color:#333;">Category</th>
-              <th style="text-align:left; padding:6px 8px; border-bottom:2px solid #333; color:#333;">Rating</th>
-              <th style="text-align:left; padding:6px 8px; border-bottom:2px solid #333; color:#333;">Walk from prev</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </body></html>`;
+    const currentDate = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    // Calculate total walking time
+    const totalWalkingTime = legs.reduce((sum, leg) => sum + leg.walkMin, 0) + firstLeg.walkMin;
+    const totalVisitTime = currentDayPlaces.reduce((sum, place) => sum + (place.visitDuration || 30), 0);
+    
+    // Generate place cards with images and descriptions
+    const placeCards = currentDayPlaces.map((place, i) => {
+      const photoUrl = Array.isArray(place.photoUrls) && place.photoUrls.length > 0 
+        ? place.photoUrls[0] 
+        : place.photoUrl;
+      
+      const description = place.description || 'A wonderful place to visit on your route';
+      const rating = typeof place.rating === 'number' ? place.rating.toFixed(1) : 'N/A';
+      const walkingTime = i === 0 ? firstLeg.walkMin : legs[i].walkMin;
+      const arrivalTime = arrivals[i];
+      
+      return `
+        <div class="place-card">
+          <div class="place-image">
+            ${photoUrl ? 
+              `<img src="${photoUrl}" alt="${place.name}" style="width:100%; height:200px; object-fit:cover; border-radius:8px 8px 0 0;">` :
+              `<div style="width:100%; height:200px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); display:flex; align-items:center; justify-content:center; color:white; font-size:24px; border-radius:8px 8px 0 0;">📍</div>`
+            }
+            <div class="place-number">${i + 1}</div>
+          </div>
+          <div class="place-content">
+            <h3 class="place-name">${place.name}</h3>
+            ${place.goalMatched ? `<div class="place-category">${place.goalMatched}</div>` : ''}
+            <div class="place-rating">⭐ ${rating}</div>
+            <p class="place-description">${description}</p>
+            <div class="place-info">
+              <div class="info-item">🕐 Arrive: ${arrivalTime}</div>
+              <div class="info-item">🚶 Walk: ${walkingTime} min</div>
+              ${place.visitDuration ? `<div class="info-item">⏱️ Visit: ${place.visitDuration} min</div>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>${title}</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    
+    .header .subtitle {
+      font-size: 1.2em;
+      opacity: 0.9;
+      margin-bottom: 20px;
+    }
+    
+    .route-info {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    
+    .info-badge {
+      background: rgba(255,255,255,0.2);
+      padding: 10px 20px;
+      border-radius: 25px;
+      font-size: 0.9em;
+    }
+    
+    .content {
+      padding: 40px;
+    }
+    
+    .places-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 30px;
+      margin-top: 30px;
+    }
+    
+    .place-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .place-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    }
+    
+    .place-image {
+      position: relative;
+    }
+    
+    .place-number {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: rgba(102, 126, 234, 0.9);
+      color: white;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    
+    .place-content {
+      padding: 25px;
+    }
+    
+    .place-name {
+      font-size: 1.4em;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #2d3748;
+    }
+    
+    .place-category {
+      display: inline-block;
+      background: #e2e8f0;
+      color: #4a5568;
+      padding: 5px 12px;
+      border-radius: 15px;
+      font-size: 0.85em;
+      margin-bottom: 10px;
+    }
+    
+    .place-rating {
+      font-size: 1.1em;
+      color: #f6ad55;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+    
+    .place-description {
+      color: #718096;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    
+    .place-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .info-item {
+      font-size: 0.9em;
+      color: #4a5568;
+      padding: 5px 0;
+    }
+    
+    .footer {
+      background: #f7fafc;
+      padding: 30px;
+      text-align: center;
+      color: #718096;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .footer .logo {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+    
+    @media (max-width: 768px) {
+      .places-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .route-info {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .header h1 {
+        font-size: 2em;
+      }
+      
+      .content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🗺️ ${title}</h1>
+      <div class="subtitle">Your personalized travel itinerary</div>
+      <div class="route-info">
+        <div class="info-badge">📍 ${origin || 'Starting point'}</div>
+        <div class="info-badge">🚶 ${totalWalkingTime} min walking</div>
+        <div class="info-badge">⏱️ ${totalVisitTime} min visiting</div>
+        <div class="info-badge">📅 ${currentDate}</div>
+      </div>
+    </div>
+    
+    <div class="content">
+      <h2 style="text-align: center; margin-bottom: 20px; color: #2d3748;">Your Route Stops</h2>
+      <div class="places-grid">
+        ${placeCards}
+      </div>
+    </div>
+    
+    <div class="footer">
+      <div class="logo">TurnRight.city</div>
+      <p>Generated on ${currentDate} • Your personal travel companion</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -154,6 +391,64 @@ const DetailedMapStep: React.FC<Props> = ({
     URL.revokeObjectURL(url);
   };
   
+  const handleSaveText = () => {
+    // Track save route action
+    trackRouteAction('save', {
+      placesCount: currentDayPlaces.length,
+      origin,
+      destination,
+      routeName: "TurnRight Route",
+      format: 'text'
+    }, 'DetailedMapStep');
+
+    const title = "TurnRight Route";
+    const currentDate = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    // Calculate total walking time
+    const totalWalkingTime = legs.reduce((sum, leg) => sum + leg.walkMin, 0) + firstLeg.walkMin;
+    const totalVisitTime = currentDayPlaces.reduce((sum, place) => sum + (place.visitDuration || 30), 0);
+    
+    let text = `🗺️ ${title}\n`;
+    text += `Generated on ${currentDate}\n`;
+    text += `📍 Starting point: ${origin || 'Not specified'}\n`;
+    text += `🚶 Total walking time: ${totalWalkingTime} minutes\n`;
+    text += `⏱️ Total visiting time: ${totalVisitTime} minutes\n\n`;
+    text += `Your Route Stops:\n`;
+    text += `${'='.repeat(50)}\n\n`;
+    
+    currentDayPlaces.forEach((place, i) => {
+      const walkingTime = i === 0 ? firstLeg.walkMin : legs[i].walkMin;
+      const arrivalTime = arrivals[i];
+      const rating = typeof place.rating === 'number' ? place.rating.toFixed(1) : 'N/A';
+      const description = place.description || 'A wonderful place to visit on your route';
+      
+      text += `${i + 1}. ${place.name}\n`;
+      if (place.goalMatched) text += `   Category: ${place.goalMatched}\n`;
+      text += `   Rating: ⭐ ${rating}\n`;
+      text += `   Arrival time: ${arrivalTime}\n`;
+      text += `   Walking time: ${walkingTime} min\n`;
+      if (place.visitDuration) text += `   Visit duration: ${place.visitDuration} min\n`;
+      text += `   Description: ${description}\n\n`;
+    });
+    
+    text += `${'='.repeat(50)}\n`;
+    text += `Generated by TurnRight.city\n`;
+    text += `Your personal travel companion\n`;
+
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `turnright_route_${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleFeedbackSubmit = async (feedback: string) => {
     if (!onFeedbackSubmit) return;
@@ -268,7 +563,7 @@ const DetailedMapStep: React.FC<Props> = ({
   });
 
   return (
-    <div className="chat-card text-left">
+    <div className="w-full h-full flex flex-col text-left p-4">
       <div className="flex items-center justify-between mb-3">
         <button 
           className="text-sm text-gray-600 hover:text-gray-800" 
@@ -414,14 +709,18 @@ const DetailedMapStep: React.FC<Props> = ({
       </div>
 
       {/* Map */}
-      <Map places={currentDayPlaces} origin={origin} destinationType={destination ? 'specific' : 'circle'} destination={destination} className="h-[65vh] w-full rounded-lg border-2 border-primary/20 shadow-lg" />
+      <Map places={currentDayPlaces} origin={origin} destinationType={destination ? 'specific' : 'circle'} destination={destination} className="flex-1 min-h-0 w-full rounded-lg border-2 border-primary/20 shadow-lg" />
 
       {/* Action bar */}
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex gap-2 flex-shrink-0">
         <button 
           className="flex-1 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90" 
           onClick={handleSaveHtml}
-        >Save route</button>
+        >Save as HTML</button>
+        <button 
+          className="flex-1 border px-4 py-2 rounded-md text-sm hover:bg-gray-50" 
+          onClick={handleSaveText}
+        >Save as Text</button>
         <button 
           className="flex-1 border px-4 py-2 rounded-md text-sm hover:bg-gray-50" 
           onClick={() => {

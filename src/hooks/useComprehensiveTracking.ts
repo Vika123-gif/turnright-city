@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
+import { useLocalTracking } from './useLocalTracking';
 
 export interface UserInteraction {
   interactionType: 'button_click' | 'form_submit' | 'page_view' | 'route_action' | 'navigation' | 'error';
@@ -34,6 +36,8 @@ export interface RouteGenerationDetails {
 }
 
 export const useComprehensiveTracking = () => {
+  const { user } = useAuth();
+  const localTracking = useLocalTracking();
   const [userSessionId, setUserSessionId] = useState<string>('');
   const [isTrackingEnabled, setIsTrackingEnabled] = useState(true);
 
@@ -59,15 +63,15 @@ export const useComprehensiveTracking = () => {
 
     try {
       const interactionData = {
-        user_session_id: userSessionId,
-        interaction_type: interaction.interactionType,
-        interaction_name: interaction.interactionName,
-        page_path: interaction.pagePath || window.location.pathname,
-        component_name: interaction.componentName,
-        interaction_data: interaction.interactionData || {},
+        user_id: user?.id || null,
+        user_email: user?.email || null,
+        session_id: userSessionId,
+        action_type: interaction.interactionType,
+        action_name: interaction.interactionName,
+        page_url: interaction.pagePath || window.location.pathname,
         user_agent: navigator.userAgent,
-        referrer: document.referrer || null,
-        timestamp: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
 
       const { error } = await supabase
@@ -91,83 +95,41 @@ export const useComprehensiveTracking = () => {
     componentName?: string,
     additionalData?: Record<string, any>
   ) => {
-    await trackInteraction({
-      interactionType: 'button_click',
-      interactionName: buttonType,
+    // Use local tracking instead of database
+    localTracking.trackButtonClick(buttonType, {
+      buttonText,
       componentName,
-      interactionData: {
-        buttonText,
-        ...additionalData
-      }
+      ...additionalData
     });
 
-    // Also save to button_clicks table for backward compatibility
-    try {
-      const { error } = await supabase
-        .from('button_clicks')
-        .insert({
-          user_session_id: userSessionId,
-          button_type: buttonType,
-          button_text: buttonText,
-          component_name: componentName,
-          page_path: window.location.pathname,
-          additional_data: additionalData || {},
-          clicked_at: new Date().toISOString()
-        });
-
-      if (error) {
-        console.error('Error tracking button click:', error);
-      }
-    } catch (error) {
-      console.error('Exception tracking button click:', error);
-    }
+    console.log('📊 Button click tracked locally:', {
+      buttonType,
+      buttonText,
+      componentName,
+      additionalData
+    });
   };
 
   // Track route generation details
   const trackRouteGeneration = async (details: RouteGenerationDetails) => {
     if (!isTrackingEnabled || !userSessionId) return;
 
-    try {
-      const routeData = {
-        user_session_id: userSessionId,
-        scenario: details.scenario,
-        location: details.location,
-        time_window: details.timeWindow,
-        goals: details.goals,
-        additional_settings: details.additionalSettings || [],
-        destination_type: details.destinationType,
-        destination: details.destination,
-        days: details.days,
-        generation_started_at: details.generationStartedAt.toISOString(),
-        generation_completed_at: details.generationCompletedAt?.toISOString(),
-        generation_duration_ms: details.generationDurationMs,
-        api_calls_made: details.apiCallsMade || 0,
-        api_errors: details.apiErrors || [],
-        places_found: details.placesFound || 0,
-        places_returned: details.placesReturned || 0,
-        total_walking_time: details.totalWalkingTime || 0,
-        total_visit_time: details.totalVisitTime || 0,
-        route_optimization_applied: details.routeOptimizationApplied || false,
-        debug_info: details.debugInfo || {}
-      };
+    // Use local tracking instead of database
+    localTracking.trackRouteGeneration({
+      scenario: details.scenario,
+      location: details.location,
+      timeWindow: details.timeWindow,
+      goals: details.goals,
+      days: details.days,
+      placesFound: details.placesFound || 0,
+      generationDurationMs: details.generationDurationMs,
+      apiCallsMade: details.apiCallsMade || 0,
+      apiErrors: details.apiErrors || [],
+      debugInfo: details.debugInfo || {}
+    });
 
-      const { data, error } = await supabase
-        .from('route_generation_details')
-        .insert(routeData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error tracking route generation:', error);
-        return null;
-      } else {
-        console.log('Route generation tracked:', data.id);
-        return data;
-      }
-    } catch (error) {
-      console.error('Exception tracking route generation:', error);
-      return null;
-    }
+    console.log('📊 Route generation tracked locally:', details);
+    return { id: 'local_' + Date.now() };
   };
 
   // Track page view
@@ -237,11 +199,33 @@ export const useComprehensiveTracking = () => {
     routeData?: Record<string, any>,
     componentName?: string
   ) => {
-    await trackInteraction({
-      interactionType: 'route_action',
-      interactionName: actionType,
-      componentName,
-      interactionData: routeData
+    // Use local tracking instead of database
+    if (actionType === 'comment') {
+      localTracking.trackComment({
+        commentText: routeData?.commentText || routeData?.comment,
+        rating: routeData?.rating,
+        ...routeData
+      });
+    } else if (actionType === 'save') {
+      localTracking.trackSaveRoute({
+        format: routeData?.format || 'html',
+        ...routeData
+      });
+    } else {
+      localTracking.trackAction({
+        actionType: 'route_action',
+        actionName: actionType,
+        data: {
+          componentName,
+          ...routeData
+        }
+      });
+    }
+
+    console.log('📊 Route action tracked locally:', {
+      actionType,
+      routeData,
+      componentName
     });
   };
 
@@ -270,6 +254,11 @@ export const useComprehensiveTracking = () => {
     trackError,
     trackFormSubmit,
     trackRouteAction,
-    setTrackingEnabled
+    setTrackingEnabled,
+    // Export local tracking functions
+    exportActions: localTracking.exportActions,
+    clearActions: localTracking.clearActions,
+    getActionsCount: localTracking.getActionsCount,
+    getActionsByType: localTracking.getActionsByType
   };
 };

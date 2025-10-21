@@ -106,8 +106,14 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     incrementGeneration, 
     showOptionsModal, 
     closeOptionsModal, 
-    giveFeedback, 
-    purchaseGenerations 
+    handlePurchase,
+    generationCount,
+    purchasedGenerations,
+    resetGenerationCount,
+    getRemainingGenerations,
+    getTotalGenerations,
+    refreshCredits,
+    FREE_GENERATIONS
   } = useGenerationLimit();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customMinutes, setCustomMinutes] = useState("");
@@ -203,9 +209,10 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   };
 
   const startNewDialog = () => {
+    console.log("=== DEBUG: startNewDialog called ===");
     // Reset all states
     setMessages([]);
-    setCurrentStep("welcome");
+    setCurrentStep("travel_type"); // Go to travel type selection instead of welcome
     setSelectedScenario(null);
     setSelectedTime(null);
     setCustomMinutes("");
@@ -224,12 +231,16 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     setDestinationInput("");
     setLocationInput("");
     
+    // Reload credits from database to show updated count
+    refreshCredits();
+    console.log("=== DEBUG: UI reset in startNewDialog, credits reloaded from database ===");
+    
     // Restart with welcome message
     setTimeout(() => {
       addBotMessage("👋 Hi! I'm TurnRight, your personal city guide.");
       setTimeout(() => {
-        addBotMessage("Are you already in the city or planning a trip?");
-        setCurrentStep("scenario_fork");
+        addBotMessage("Choose your travel type.");
+        setCurrentStep("travel_type");
       }, 1000);
     }, 100);
   };
@@ -428,22 +439,33 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   };
 
   const handleAdditionalSettingsSubmit = async (settings: string[]) => {
+    console.log("=== DEBUG: handleAdditionalSettingsSubmit called ===");
+    console.log("Settings:", settings);
+    console.log("Current generation count:", generationCount);
+    console.log("Can generate:", canGenerate());
+    
     const finalData = { ...collectedData, additionalSettings: settings };
     setCollectedData(finalData);
     console.log('Final data being sent:', finalData);
     
     // Check generation limit before starting
     if (!canGenerate()) {
+      console.log("=== DEBUG: Generation limit reached, showing options modal ===");
       // This will show the options modal
       incrementGeneration();
       return;
     }
     
+    console.log("=== DEBUG: Proceeding with route generation ===");
+    
     // Increment generation count
     const canProceed = incrementGeneration();
     if (!canProceed) {
+      console.log("=== DEBUG: incrementGeneration returned false ===");
       return; // Options modal will be shown
     }
+    
+    console.log("=== DEBUG: Starting route generation ===");
     
     // Start route generation
     setTimeout(() => {
@@ -454,6 +476,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   };
 
   const generateRoute = async (data: any) => {
+    console.log("=== DEBUG: generateRoute function called ===");
     setGenerating(true);
     setError(null);
     
@@ -464,18 +487,27 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       console.log("Data:", data);
       console.log("Scenario:", data.scenario);
 
-      // Track route generation start
-      const routeGenerationId = await trackRouteGeneration({
-        scenario: data.scenario,
-        location: data.location || data.city || "",
-        timeWindow: data.timeMinutes || (data.days ? data.days * 480 : undefined),
-        goals: data.categories || [],
-        additionalSettings: data.additionalSettings || [],
-        destinationType: data.destinationType,
-        destination: data.destination,
-        days: data.days,
-        generationStartedAt: generationStartTime
-      });
+      // Track route generation start (with error handling)
+      try {
+        console.log("=== DEBUG: Calling trackRouteGeneration ===");
+        const routeGenerationId = await trackRouteGeneration({
+          scenario: data.scenario,
+          location: data.location || data.city || "",
+          timeWindow: data.timeMinutes || (data.days ? data.days * 480 : undefined),
+          goals: data.categories || [],
+          additionalSettings: data.additionalSettings || [],
+          destinationType: data.destinationType,
+          destination: data.destination,
+          days: data.days,
+          generationStartedAt: generationStartTime
+        });
+        console.log("=== DEBUG: trackRouteGeneration completed ===", routeGenerationId);
+      } catch (trackError) {
+        console.error("=== DEBUG: trackRouteGeneration failed ===", trackError);
+        // Continue with route generation even if tracking fails
+      }
+      
+      console.log("=== DEBUG: After tracking, continuing with route generation ===");
       
       let location: string;
       let timeWindow: number;
@@ -516,7 +548,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       }
       
       // Get LLM places
-      const response = await getLLMPlaces({
+      console.log("=== DEBUG: About to call getLLMPlaces ===");
+      console.log("Parameters:", {
         location,
         goals: categories,
         timeWindow: timeWindow,
@@ -524,6 +557,24 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         scenario: data.scenario,
         origin: originForApi
       });
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Route generation timed out after 30 seconds")), 30000)
+      );
+      
+      const response = await Promise.race([
+        getLLMPlaces({
+          location,
+          goals: categories,
+          timeWindow: timeWindow,
+          userPrompt: userPrompt,
+          scenario: data.scenario,
+          origin: originForApi
+        }),
+        timeoutPromise
+      ]) as any;
+      
       console.log("=== DEBUG: LLM Response ===", response);
       
       if (!response || !response.places || response.places.length === 0) {
@@ -691,8 +742,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   }
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col">
-      {/* Header - Fixed at top of chat */}
+    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col overflow-hidden">
+      {/* Header */}
       {isRouteGenerated && (
         <div className="flex justify-between items-center p-4 bg-white/80 backdrop-blur-sm border-b border-gray-100 shadow-sm flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -711,8 +762,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         </div>
       )}
       
-      {/* Chat Messages - Scrollable area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
         {messages.map((message, index) => (
           <div
             key={message.id}
@@ -1135,11 +1186,15 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             days={collectedData.days}
             onBack={() => setCurrentStep("summary")}
             onReset={() => {
+              console.log("=== DEBUG: Start Again button clicked ===");
               // Reset all collected data and go back to chat
               setCollectedData({} as any);
-              setCurrentStep("welcome" as any);
+              setCurrentStep("travel_type" as any); // Go back to travel type selection
               setPlaces(null);
               setError(null);
+              // Reload credits from database to show updated count
+              refreshCredits();
+              console.log("=== DEBUG: UI reset, credits reloaded from database ===");
             }}
             onFeedbackSubmit={() => {}}
           />
@@ -1178,17 +1233,10 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       <GenerationOptionsModal
         isOpen={showOptionsModal}
         onClose={closeOptionsModal}
-        onGiveFeedback={(feedback) => {
-          console.log('User feedback:', feedback);
-          giveFeedback();
-          // After giving feedback, they can generate again
-          setTimeout(() => {
-            addBotMessage(`🚀 Perfect! Let me create your personalized ${selectedScenario === "planning" ? "trip plan" : "route"}...`);
-            setCurrentStep("generating");
-            generateRoute(collectedData);
-          }, 1000);
+        onPurchase={() => {
+          console.log('=== DEBUG: User clicked purchase ===');
+          handlePurchase();
         }}
-        onPurchase={purchaseGenerations}
       />
     </div>
   );

@@ -28,11 +28,17 @@ const AdditionalSettingsStep: React.FC<Props> = ({ onNext, value, buttonText = "
   };
 
   const handleSubmit = () => {
+    console.log("=== DEBUG: AdditionalSettingsStep button clicked ===");
+    console.log("Button text:", buttonText);
+    console.log("Additional settings:", additionalSettings);
+    
     if (buttonText === "Generate Route") {
       trackButtonClick("click_generate_route", "Generate route");
     } else if (buttonText === "Create Trip Plan") {
       trackButtonClick("click_create_trip_plan", "Create Trip Plan");
     }
+    
+    console.log("=== DEBUG: Calling onNext with settings ===");
     onNext(additionalSettings);
   };
 

@@ -3,14 +3,14 @@ import React, { useEffect } from "react";
 import ChatFlow from "@/components/ChatFlow";
 import { useAuth } from "@/components/AuthProvider";
 import { useGenerationLimit } from "@/hooks/useGenerationLimit";
-import { Zap, User, LogOut } from "lucide-react";
+import { Zap, User, LogOut, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import turnrightLogo from "@/assets/turnright-logo.png";
 import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const { user, signOut, loading } = useAuth();
-  const { getRemainingGenerations, FREE_GENERATIONS } = useGenerationLimit();
+  const { getRemainingGenerations, getTotalGenerations, refreshCredits } = useGenerationLimit();
   const navigate = useNavigate();
 
   // Redirect to start page if not authenticated
@@ -19,6 +19,13 @@ const Index = () => {
       navigate('/');
     }
   }, [user, loading, navigate]);
+
+  // Reload credits when component mounts to ensure fresh data
+  useEffect(() => {
+    if (user) {
+      refreshCredits();
+    }
+  }, [user]);
 
   const handleSignOut = async () => {
     try {
@@ -66,8 +73,17 @@ const Index = () => {
             <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full">
               <Zap className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-700">
-                {getRemainingGenerations()}/{FREE_GENERATIONS} credits
+                {getRemainingGenerations()}/{getTotalGenerations()} credits
               </span>
+              <Button
+                onClick={refreshCredits}
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-blue-100"
+                title="Refresh credits"
+              >
+                <RefreshCw className="h-3 w-3 text-blue-600" />
+              </Button>
             </div>
             
             {/* User email */}

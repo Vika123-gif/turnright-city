@@ -4,7 +4,7 @@ import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useDatabase } from "@/hooks/useDatabase";
 import { useButtonTracking } from "@/hooks/useButtonTracking";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import BackButton from "./BackButton";
 import ChatBot from "./ChatBot";
 import GPTStep from "./steps/GPTStep";
@@ -13,11 +13,6 @@ import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
 import DetailedMapStep from "./steps/DetailedMapStep";
 import RouteRating from "./RouteRating";
-
-// HARDCODED SUPABASE CREDENTIALS FOR TESTING ONLY
-const supabaseUrl = "https://gwwqfoplhhtyjkrhazbt.supabase.co";
-const supabaseAnonKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3d3Fmb3BsaGh0eWprcmhhemJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwMDU5OTQsImV4cCI6MjA2NTU4MTk5NH0.fgFpmEdc3swzKw0xlGYt68a9vM9J2F3fKdT413UNoPk";
 
 type Step =
   | "chat"
@@ -55,9 +50,6 @@ export default function ChatFlow() {
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
   const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, saveUserRoute, getSavedRoutes, testConnection } = useDatabase();
   const { trackButtonClick } = useButtonTracking();
-
-  // Use hardcoded Supabase client for testing
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   // Generate session ID and track visitor on component mount
   useEffect(() => {
@@ -640,7 +632,7 @@ export default function ChatFlow() {
   };
 
   return (
-    <div className="w-full bg-background">
+    <div className="w-full h-full flex flex-col bg-[#F3FCF8] overflow-hidden">
       <ChatBot
         onComplete={handleChatComplete}
         onShowMap={handleShowMap}

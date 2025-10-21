@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star } from 'lucide-react';
+import { Star, Download } from 'lucide-react';
 import BackButton from '@/components/BackButton';
 import AdminAnalytics from '@/components/AdminAnalytics';
+import { useComprehensiveTracking } from '@/hooks/useComprehensiveTracking';
 
 interface RouteGeneration {
   id: string;
@@ -78,6 +79,7 @@ interface SavedRoute {
 
 const Admin = () => {
   const navigate = useNavigate();
+  const { exportActions, getActionsCount, getActionsByType } = useComprehensiveTracking();
   const [routeGenerations, setRouteGenerations] = useState<RouteGeneration[]>([]);
   const [feedback, setFeedback] = useState<UserFeedback[]>([]);
   const [purchases, setPurchases] = useState<RoutePurchase[]>([]);
@@ -298,9 +300,35 @@ const Admin = () => {
       </div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <Button onClick={testDatabaseInsert} variant="outline">
-          Test Database Insert
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => exportActions('json')} 
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export JSON ({getActionsCount()})
+          </Button>
+          <Button 
+            onClick={() => exportActions('csv')} 
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button 
+            onClick={() => exportActions('txt')} 
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export TXT
+          </Button>
+          <Button onClick={testDatabaseInsert} variant="outline">
+            Test Database Insert
+          </Button>
+        </div>
       </div>
       
       {/* Stats Overview */}
