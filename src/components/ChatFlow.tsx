@@ -640,7 +640,7 @@ export default function ChatFlow() {
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-background px-2 py-10">
+    <div className="w-full bg-background">
       <ChatBot
         onComplete={handleChatComplete}
         onShowMap={handleShowMap}

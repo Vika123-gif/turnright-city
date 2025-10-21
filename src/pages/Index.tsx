@@ -94,8 +94,8 @@ const Index = () => {
       </header>
       
       {/* Main content */}
-      <div className="flex-1 flex items-center justify-center p-0 md:py-12">
-        <div className="w-full">
+      <div className="flex-1 overflow-auto">
+        <div className="w-full max-w-4xl mx-auto py-4 px-4">
           <ChatFlow />
         </div>
       </div>
