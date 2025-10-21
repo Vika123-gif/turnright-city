@@ -12,14 +12,17 @@ supabase functions deploy stripe-webhook
 
 ### 2. Set Environment Variables
 
-In your Supabase Dashboard → Edge Functions → stripe-webhook → Settings:
+In your Supabase Dashboard → Project Settings → Edge Functions → Manage secrets:
 
+**Important:** Add these secrets:
 ```
-STRIPE_SECRET_KEY=sk_live_... (your Stripe secret key)
+STRIPE_SECRET_KEY=sk_test_... (your Stripe TEST secret key)
 STRIPE_WEBHOOK_SECRET=whsec_... (you'll get this in step 3)
 SUPABASE_URL=https://gwwqfoplhhtyjkrhazbt.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=... (from Supabase Dashboard → Settings → API)
 ```
+
+**Note:** Use `sk_test_...` for test mode, `sk_live_...` for production.
 
 ### 3. Configure Stripe Webhook
 

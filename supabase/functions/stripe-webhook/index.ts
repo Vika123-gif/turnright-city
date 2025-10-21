@@ -11,10 +11,20 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
   apiVersion: "2023-10-16",
 });
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   // Only allow POST requests
   if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   }
 
   try {
@@ -24,7 +34,7 @@ serve(async (req) => {
 
     if (!signature) {
       console.error("No Stripe signature found");
-      return new Response("No signature", { status: 400 });
+      return new Response("No signature", { status: 400, headers: corsHeaders });
     }
 
     // Verify webhook signature
@@ -37,7 +47,7 @@ serve(async (req) => {
       );
     } catch (err) {
       console.error("Webhook signature verification failed:", err);
-      return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+      return new Response(`Webhook Error: ${err.message}`, { status: 400, headers: corsHeaders });
     }
 
     console.log("Webhook event type:", event.type);
@@ -55,7 +65,7 @@ serve(async (req) => {
       
       if (!customerEmail) {
         console.error("No customer email found in payment session");
-        return new Response("No customer email", { status: 400 });
+        return new Response("No customer email", { status: 400, headers: corsHeaders });
       }
 
       // Create Supabase client with service role key (bypasses RLS)
@@ -66,7 +76,7 @@ serve(async (req) => {
       
       if (authError) {
         console.error("Error fetching users:", authError);
-        return new Response("Error fetching users", { status: 500 });
+        return new Response("Error fetching users", { status: 500, headers: corsHeaders });
       }
 
       const user = authData.users.find(u => u.email === customerEmail);
@@ -74,7 +84,7 @@ serve(async (req) => {
       if (!user) {
         console.error("User not found for email:", customerEmail);
         // Still return 200 to Stripe to avoid retries
-        return new Response("User not found", { status: 200 });
+        return new Response("User not found", { status: 200, headers: corsHeaders });
       }
 
       console.log("Found user:", user.id, user.email);
@@ -88,7 +98,7 @@ serve(async (req) => {
 
       if (creditsError && creditsError.code !== "PGRST116") {
         console.error("Error fetching credits:", creditsError);
-        return new Response("Error fetching credits", { status: 500 });
+        return new Response("Error fetching credits", { status: 500, headers: corsHeaders });
       }
 
       // Calculate new purchased count
@@ -112,7 +122,7 @@ serve(async (req) => {
 
       if (updateError) {
         console.error("Error updating credits:", updateError);
-        return new Response("Error updating credits", { status: 500 });
+        return new Response("Error updating credits", { status: 500, headers: corsHeaders });
       }
 
       // Log the purchase in both tables
@@ -161,7 +171,7 @@ serve(async (req) => {
         total_purchased: newPurchased
       }), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -169,12 +179,12 @@ serve(async (req) => {
     console.log("Webhook event processed (not a payment):", event.type);
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (error) {
     console.error("Webhook error:", error);
-    return new Response(`Webhook Error: ${error.message}`, { status: 500 });
+    return new Response(`Webhook Error: ${error.message}`, { status: 500, headers: corsHeaders });
   }
 });
 
