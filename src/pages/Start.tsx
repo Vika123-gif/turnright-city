@@ -46,10 +46,11 @@ const Start = () => {
   };
 
   // If user is already authenticated, redirect to chat
-  if (user) {
-    navigate('/chat');
-    return null;
-  }
+  React.useEffect(() => {
+    if (user) {
+      navigate('/chat');
+    }
+  }, [user, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted flex flex-col items-center justify-center p-6">
