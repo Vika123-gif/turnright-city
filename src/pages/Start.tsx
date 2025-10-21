@@ -60,7 +60,7 @@ const Start = () => {
           <img 
             src={turnrightLogo} 
             alt="TurnRight Logo" 
-            className="h-16 w-auto"
+            className="h-12 md:h-16 w-auto"
           />
         </div>
 

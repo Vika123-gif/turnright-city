@@ -51,12 +51,12 @@ const Index = () => {
       {/* Header with user info and credits - Fixed at top */}
       <header className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200 p-4 flex-shrink-0">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          {/* Logo */}
+          {/* Logo - Hidden on mobile */}
           <div className="flex items-center">
             <img 
               src={turnrightLogo} 
               alt="TurnRight Logo" 
-              className="h-8 w-auto"
+              className="h-8 w-auto hidden md:block"
             />
           </div>
           

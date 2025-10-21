@@ -146,28 +146,41 @@ export function useGenerationLimit() {
     const stripeUrl = `https://buy.stripe.com/3cI00bgHd9lk48vbv7dMI00${user?.email ? `?prefilled_email=${encodeURIComponent(user.email)}` : ''}`;
     console.log("Stripe URL:", stripeUrl);
     
-    // Open in new window with specific size
-    const windowFeatures = 'width=800,height=700,scrollbars=yes,resizable=yes';
-    const paymentWindow = window.open(stripeUrl, 'StripePayment', windowFeatures);
+    // Check if we're on mobile
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
-    if (!paymentWindow) {
-      console.error("Popup blocked! Please allow popups for this site.");
-      alert("❌ Popup blocked! Please allow popups for this site and try again.");
-      return;
-    }
-    
-    console.log("Opened Stripe in new window");
-    
-    // Try to focus the payment window
-    try {
-      paymentWindow.focus();
-    } catch (e) {
-      console.log("Could not focus payment window:", e);
+    if (isMobile) {
+      // On mobile, open in same window/tab
+      console.log("Mobile device detected, opening Stripe in same window");
+      window.location.href = stripeUrl;
+    } else {
+      // On desktop, open in new window
+      const windowFeatures = 'width=800,height=700,scrollbars=yes,resizable=yes';
+      const paymentWindow = window.open(stripeUrl, 'StripePayment', windowFeatures);
+      
+      if (!paymentWindow) {
+        console.error("Popup blocked! Opening in same window instead.");
+        window.location.href = stripeUrl;
+        return;
+      }
+      
+      console.log("Opened Stripe in new window");
+      
+      // Try to focus the payment window
+      try {
+        paymentWindow.focus();
+      } catch (e) {
+        console.log("Could not focus payment window:", e);
+      }
     }
     
     // Show message after payment window opens
     setTimeout(() => {
-      alert("💳 Payment window opened!\n\nCredits will be added automatically once Stripe confirms the payment.\n\nIt usually takes a few seconds.\n\nUse the Refresh button to check your balance.");
+      if (isMobile) {
+        alert("💳 Redirecting to payment page...\n\nAfter payment, return to this app.\n\nCredits will be added automatically once Stripe confirms the payment.");
+      } else {
+        alert("💳 Payment window opened!\n\nCredits will be added automatically once Stripe confirms the payment.\n\nIt usually takes a few seconds.\n\nUse the Refresh button to check your balance.");
+      }
     }, 1000);
   };
 

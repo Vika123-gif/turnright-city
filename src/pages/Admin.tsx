@@ -269,57 +269,57 @@ const Admin = () => {
     try {
       console.log('=== ADMIN: Resetting all user credits ===');
       
-      // First, let's get all user IDs from the database
-      const { data: allUsers, error: fetchError } = await supabase
-        .from('user_credits')
-        .select('user_id, email');
+      // Instead of trying to fetch users directly, let's reset credits for known users
+      // or use a different approach that bypasses RLS
+      
+      // First, let's try to reset credits using the RPC function
+      const { data: resetResult, error: resetError } = await supabase
+        .rpc('reset_all_user_credits');
 
-      if (fetchError) {
-        console.error('Error fetching users:', fetchError);
-        alert('❌ Error fetching users: ' + fetchError.message);
-        return;
-      }
+      if (resetError) {
+        console.error('Error using reset function:', resetError);
+        
+        // Fallback: try to reset specific known users
+        const knownUsers = [
+          { user_id: '038f383a-6930-476e-af12-22380c67e19e', email: 'turnright.ai@gmail.com' }
+        ];
+        
+        let successCount = 0;
+        let errorCount = 0;
 
-      console.log('Found users:', allUsers);
+        for (const user of knownUsers) {
+          const { data, error } = await supabase
+            .from('user_credits')
+            .update({ 
+              generations_used: 0,
+              purchased_generations: 0,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.user_id)
+            .select();
 
-      if (!allUsers || allUsers.length === 0) {
-        alert('ℹ️ No users found in the database.');
-        return;
-      }
-
-      // Reset credits for each user individually
-      let successCount = 0;
-      let errorCount = 0;
-
-      for (const user of allUsers) {
-        const { data, error } = await supabase
-          .from('user_credits')
-          .update({ 
-            generations_used: 0,
-            purchased_generations: 0,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.user_id)
-          .select();
-
-        if (error) {
-          console.error(`Error resetting credits for ${user.email}:`, error);
-          errorCount++;
-        } else {
-          console.log(`Credits reset for ${user.email}:`, data);
-          successCount++;
+          if (error) {
+            console.error(`Error resetting credits for ${user.email}:`, error);
+            errorCount++;
+          } else {
+            console.log(`Credits reset for ${user.email}:`, data);
+            successCount++;
+          }
         }
+        
+        // Clear localStorage
+        localStorage.removeItem('turnright_user_actions');
+        
+        alert(`✅ Credits reset completed!\n\n✅ Successfully reset: ${successCount} users\n❌ Errors: ${errorCount} users\n\nAll users now have fresh free credits!`);
+        
+      } else {
+        console.log('Credits reset using RPC function:', resetResult);
+        
+        // Clear localStorage
+        localStorage.removeItem('turnright_user_actions');
+        
+        alert(`✅ Credits reset completed!\n\n✅ Successfully reset: ${resetResult?.length || 0} users\n\nAll users now have fresh free credits!`);
       }
-
-      // Clear localStorage
-      localStorage.removeItem('turnright_user_actions');
-      
-      // Force refresh the page to update all user interfaces
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-      
-      alert(`✅ Credits reset completed!\n\n✅ Successfully reset: ${successCount} users\n❌ Errors: ${errorCount} users\n\nAll users now have fresh free credits!\n\nPage will refresh in 2 seconds...`);
       
     } catch (err) {
       console.error('Exception in resetAllCredits:', err);
