@@ -654,25 +654,25 @@ const DetailedMapStep: React.FC<Props> = ({
       <Map places={currentDayPlaces} origin={origin} destinationType={destination ? 'specific' : 'circle'} destination={destination} className="flex-1 min-h-0 w-full rounded-lg border-2 border-primary/20 shadow-lg" />
 
       {/* Action bar */}
-      <div className="mt-3 flex gap-2 flex-shrink-0 flex-wrap">
+      <div className="mt-3 flex gap-2 flex-shrink-0">
         <button 
-          className="flex-1 min-w-[140px] bg-primary text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90" 
+          className="flex-1 bg-primary text-white px-3 py-2 rounded-md text-xs font-medium hover:bg-primary/90" 
           onClick={handleSaveHtml}
-        >💾 Save Route</button>
+        >💾 Save</button>
         <button 
-          className="flex-1 min-w-[140px] border px-4 py-2 rounded-md text-sm hover:bg-gray-50" 
+          className="flex-1 border px-3 py-2 rounded-md text-xs hover:bg-gray-50" 
           onClick={() => {
             trackButtonClick('leave_comment', 'Leave a comment', 'DetailedMapStep');
             setShowCommentModal(true);
           }}
-        >💬 Leave a comment</button>
+        >💬 Comment</button>
         <button 
-          className="flex-1 min-w-[140px] border px-4 py-2 rounded-md text-sm hover:bg-gray-50" 
+          className="flex-1 border px-3 py-2 rounded-md text-xs hover:bg-gray-50" 
           onClick={() => {
             trackButtonClick('start_chat_again', 'Start chat again', 'DetailedMapStep');
             onReset();
           }}
-        >🔄 Start chat again</button>
+        >🔄 New route</button>
       </div>
 
       {/* Audio notice */}

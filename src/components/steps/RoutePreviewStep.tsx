@@ -343,9 +343,9 @@ const RoutePreviewStep: React.FC<Props> = ({
               
               <div className="p-3 pb-20 space-y-3">
                   {(currentDayData?.places || places).map((p, i) => (
-                    <div key={i} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                      {/* Place Image - Slightly larger for better visibility */}
-                      <div className="w-full h-32 overflow-hidden relative">
+                    <div key={i} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col sm:flex-row">
+                      {/* Place Image - Left side on desktop, top on mobile */}
+                      <div className="w-full sm:w-32 h-32 sm:h-auto flex-shrink-0 overflow-hidden relative">
                         {p.photoUrl ? (
                           <img 
                             src={p.photoUrl} 
@@ -358,17 +358,17 @@ const RoutePreviewStep: React.FC<Props> = ({
                             }}
                           />
                         ) : null}
-                        <div className={`w-full h-32 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center ${p.photoUrl ? 'hidden' : ''}`}>
+                        <div className={`w-full h-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center ${p.photoUrl ? 'hidden' : ''}`}>
                           <div className="text-primary text-sm font-medium">📍 {p.name}</div>
                         </div>
                         {/* Place number badge */}
-                        <div className="absolute top-2 left-2 bg-primary text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shadow-md">
+                        <div className="absolute top-2 left-2 bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-md">
                           {i + 1}
                         </div>
                       </div>
                       
-                      {/* Place Info - Better organized with proper spacing */}
-                      <div className="p-3 space-y-2">
+                      {/* Place Info - Right side on desktop, bottom on mobile */}
+                      <div className="flex-1 p-3 space-y-2 min-w-0">
                         {/* Place name - Full visibility */}
                         <div className="font-bold text-base leading-tight break-words pr-1">
                           {p.name}
@@ -412,7 +412,7 @@ const RoutePreviewStep: React.FC<Props> = ({
                         
                         {/* Description - Properly formatted with max height */}
                         {p.description && (
-                          <div className="text-xs text-gray-700 bg-gray-50 p-2 rounded leading-relaxed break-words max-h-20 overflow-y-auto">
+                          <div className="text-xs text-gray-700 bg-gray-50 p-2 rounded leading-relaxed break-words line-clamp-3">
                             {p.description}
                           </div>
                         )}
