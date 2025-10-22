@@ -7,7 +7,6 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  createAccountAndSignIn: (email: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
 }
 
@@ -73,24 +72,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
-  const createAccountAndSignIn = async (email: string) => {
-    // Create account with email and random password
-    const { error } = await supabase.auth.signUp({
-      email,
-      password: Math.random().toString(36).slice(-12), // Generate a random password
-      options: {
-        emailRedirectTo: `${window.location.origin}/chat`,
-      },
-    });
-    return { error };
-  };
-
   const value = {
     user,
     session,
     loading,
     signOut,
-    createAccountAndSignIn,
     signInWithGoogle
   };
 
