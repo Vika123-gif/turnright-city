@@ -197,7 +197,7 @@ const RoutePreviewStep: React.FC<Props> = ({
   });
 
   return (
-    <div className="chat-card text-left min-h-screen overflow-y-auto flex flex-col relative">
+    <div className="text-left min-h-screen overflow-y-auto flex flex-col relative p-4">
       {/* Floating Action Menu */}
       <div className="absolute top-4 right-4 z-50">
         <DropdownMenu>

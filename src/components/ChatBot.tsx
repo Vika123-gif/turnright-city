@@ -1150,27 +1150,25 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "route_preview" && places && places.length > 0 && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
-          <RoutePreviewStep
-            places={places}
-            onRegenerate={handleRegenerate}
-            onBuy={() => {
-              if (onShowMap) {
-                onShowMap();
-              } else {
-                setCurrentStep("complete");
-                onComplete(collectedData);
-              }
-            }}
-            purchasing={false}
-            location={collectedData.location || collectedData.city || ''}
-            days={collectedData.days || 1}
-            scenario={collectedData.scenario}
-            userSessionId="demo-session" // Временная сессия для демо
-            goals={collectedData.categories || []}
-            onStartNew={startNewDialog}
-          />
-        </div>
+        <RoutePreviewStep
+          places={places}
+          onRegenerate={handleRegenerate}
+          onBuy={() => {
+            if (onShowMap) {
+              onShowMap();
+            } else {
+              setCurrentStep("complete");
+              onComplete(collectedData);
+            }
+          }}
+          purchasing={false}
+          location={collectedData.location || collectedData.city || ''}
+          days={collectedData.days || 1}
+          scenario={collectedData.scenario}
+          userSessionId="demo-session" // Временная сессия для демо
+          goals={collectedData.categories || []}
+          onStartNew={startNewDialog}
+        />
       )}
 
       {currentStep === "detailed-map" && (
