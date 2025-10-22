@@ -131,8 +131,8 @@ export function useGenerationLimit() {
   };
   
   const getTotalGenerations = () => {
-    // If user has purchased credits, show 3 total, otherwise show 2 total
-    return purchasedGenerations > 0 ? 3 : FREE_GENERATIONS;
+    // Return free generations + purchased generations
+    return FREE_GENERATIONS + purchasedGenerations;
   };
 
   const handlePurchase = () => {
