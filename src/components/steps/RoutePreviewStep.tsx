@@ -315,7 +315,7 @@ const RoutePreviewStep: React.FC<Props> = ({
 
           {/* Route Content - Full Height */}
           {places && places.length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex-1 flex flex-col">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-4">
               {/* Day Content with individual map link */}
               <div className="bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white p-3">
                 <div className="flex items-center justify-between">
@@ -341,8 +341,7 @@ const RoutePreviewStep: React.FC<Props> = ({
                 </div>
               </div>
               
-              <div className="flex-1 overflow-y-auto">
-                <div className="p-3 space-y-3">
+              <div className="p-3 space-y-3">
                   {(currentDayData?.places || places).map((p, i) => (
                     <div key={i} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                       {/* Place Image - Slightly larger for better visibility */}
@@ -433,7 +432,6 @@ const RoutePreviewStep: React.FC<Props> = ({
                       </div>
                     </div>
                   ))}
-                </div>
               </div>
             </div>
           )}
