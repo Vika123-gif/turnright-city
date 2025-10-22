@@ -2,12 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 
-const FREE_GENERATIONS = 2;
+const FREE_GENERATIONS = 3;
 
 export function useGenerationLimit() {
   const { user } = useAuth();
   const [generationCount, setGenerationCount] = useState<number>(0);
-  const [purchasedGenerations, setPurchasedGenerations] = useState<number>(0);
   const [showOptionsModal, setShowOptionsModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const loadedUserIdRef = useRef<string | null>(null);
@@ -36,7 +35,6 @@ export function useGenerationLimit() {
       } else if (data) {
         console.log("=== DEBUG: Credits loaded from database ===", data);
         setGenerationCount(data.generations_used || 0);
-        setPurchasedGenerations(data.purchased_generations || 0);
       }
     } catch (err) {
       console.error("Exception loading credits:", err);
@@ -59,18 +57,15 @@ export function useGenerationLimit() {
 
   const incrementGeneration = async () => {
     const newCount = generationCount + 1;
-    const totalAvailable = FREE_GENERATIONS + purchasedGenerations;
     
     console.log("=== DEBUG: Incrementing generation count ===");
     console.log("User ID:", user?.id);
     console.log("Current count:", generationCount);
     console.log("New count:", newCount);
     console.log("FREE_GENERATIONS:", FREE_GENERATIONS);
-    console.log("Purchased generations:", purchasedGenerations);
-    console.log("Total available:", totalAvailable);
     
     // Check if user can generate BEFORE incrementing
-    if (newCount > totalAvailable) {
+    if (newCount > FREE_GENERATIONS) {
       console.log("=== DEBUG: User exceeded available generations, showing payment modal ===");
       setShowOptionsModal(true);
       return false;
@@ -131,8 +126,7 @@ export function useGenerationLimit() {
   };
   
   const getTotalGenerations = () => {
-    // Return free generations + purchased generations
-    return FREE_GENERATIONS + purchasedGenerations;
+    return FREE_GENERATIONS;
   };
 
   const handlePurchase = () => {
@@ -184,34 +178,6 @@ export function useGenerationLimit() {
     }, 1000);
   };
 
-  // Function to manually add purchased generations (for testing or after payment confirmation)
-  const addPurchasedGenerations = async (count: number = 3) => {
-    console.log("=== DEBUG: Adding purchased generations ===", count);
-    
-    if (user?.id) {
-      try {
-        const newPurchasedCount = purchasedGenerations + count;
-        const { data, error } = await supabase
-          .from('user_credits')
-          .update({ 
-            purchased_generations: newPurchasedCount,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id)
-          .select();
-
-        if (error) {
-          console.error("Error updating purchased generations:", error);
-        } else {
-          console.log("=== DEBUG: Purchased generations updated in database ===", data);
-          setPurchasedGenerations(newPurchasedCount);
-          await loadCredits(); // Reload to ensure consistency
-        }
-      } catch (err) {
-        console.error("Exception updating purchased generations:", err);
-      }
-    }
-  };
 
   const closeOptionsModal = () => {
     setShowOptionsModal(false);
@@ -220,7 +186,6 @@ export function useGenerationLimit() {
   const resetGenerationCount = async () => {
     console.log("=== DEBUG: Resetting generation count ===");
     setGenerationCount(0);
-    setPurchasedGenerations(0);
     
     // Update database
     if (user?.id) {
@@ -229,7 +194,6 @@ export function useGenerationLimit() {
           .from('user_credits')
           .update({ 
             generations_used: 0,
-            purchased_generations: 0,
             updated_at: new Date().toISOString()
           })
           .eq('user_id', user.id);
@@ -248,7 +212,6 @@ export function useGenerationLimit() {
   // Make functions available globally for testing
   if (typeof window !== 'undefined') {
     (window as any).resetGenerationCount = resetGenerationCount;
-    (window as any).addPurchasedGenerations = addPurchasedGenerations;
   }
 
   // Refresh credits function (exposed for UI button)
@@ -259,7 +222,6 @@ export function useGenerationLimit() {
 
   return {
     generationCount,
-    purchasedGenerations,
     canGenerate,
     incrementGeneration,
     getRemainingGenerations,
@@ -267,7 +229,6 @@ export function useGenerationLimit() {
     showOptionsModal,
     closeOptionsModal,
     handlePurchase,
-    addPurchasedGenerations,
     resetGenerationCount,
     reloadCredits: loadCredits, // Expose reload function
     refreshCredits, // Expose refresh function for UI button

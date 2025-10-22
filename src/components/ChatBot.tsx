@@ -108,7 +108,6 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     closeOptionsModal, 
     handlePurchase,
     generationCount,
-    purchasedGenerations,
     resetGenerationCount,
     getRemainingGenerations,
     getTotalGenerations,

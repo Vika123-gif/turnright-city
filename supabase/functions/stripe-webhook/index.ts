@@ -89,24 +89,8 @@ serve(async (req) => {
 
       console.log("Found user:", user.id, user.email);
 
-      // Get current credits
-      const { data: credits, error: creditsError } = await supabase
-        .from("user_credits")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (creditsError && creditsError.code !== "PGRST116") {
-        console.error("Error fetching credits:", creditsError);
-        return new Response("Error fetching credits", { status: 500, headers: corsHeaders });
-      }
-
-      // Calculate new purchased count
-      const currentPurchased = credits?.purchased_generations || 0;
-      const newPurchased = currentPurchased + 3;
-
-      console.log("Current purchased credits:", currentPurchased);
-      console.log("New purchased credits:", newPurchased);
+      // Reset generations_used to 0 (refill the 3 credits)
+      console.log("Resetting generations_used to 0 (refilling credits)");
 
       // Update credits (upsert to handle first purchase)
       const { error: updateError } = await supabase
@@ -114,7 +98,7 @@ serve(async (req) => {
         .upsert({
           user_id: user.id,
           email: customerEmail,
-          purchased_generations: newPurchased,
+          generations_used: 0,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: "user_id"
@@ -161,14 +145,13 @@ serve(async (req) => {
         console.error("Error logging purchase in user_interactions:", interactionError);
       }
 
-      console.log("✅ Successfully added 3 credits to user:", customerEmail);
+      console.log("✅ Successfully refilled 3 credits for user:", customerEmail);
 
       return new Response(JSON.stringify({ 
         success: true, 
-        message: "Credits added successfully",
+        message: "Credits refilled successfully",
         user_email: customerEmail,
-        credits_added: 3,
-        total_purchased: newPurchased
+        credits_refilled: 3
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
