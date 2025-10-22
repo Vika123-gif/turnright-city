@@ -342,11 +342,11 @@ const RoutePreviewStep: React.FC<Props> = ({
               </div>
               
               <div className="flex-1 overflow-y-auto">
-                <div className="p-3 space-y-2">
+                <div className="p-3 space-y-3">
                   {(currentDayData?.places || places).map((p, i) => (
-                    <div key={i} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                      {/* Compact Place Image */}
-                      <div className="w-full h-24 overflow-hidden">
+                    <div key={i} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                      {/* Place Image - Slightly larger for better visibility */}
+                      <div className="w-full h-32 overflow-hidden relative">
                         {p.photoUrl ? (
                           <img 
                             src={p.photoUrl} 
@@ -359,20 +359,25 @@ const RoutePreviewStep: React.FC<Props> = ({
                             }}
                           />
                         ) : null}
-                        <div className={`w-full h-24 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center ${p.photoUrl ? 'hidden' : ''}`}>
-                          <div className="text-green-600 text-xs font-medium">📍 {p.name}</div>
+                        <div className={`w-full h-32 bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center ${p.photoUrl ? 'hidden' : ''}`}>
+                          <div className="text-primary text-sm font-medium">📍 {p.name}</div>
+                        </div>
+                        {/* Place number badge */}
+                        <div className="absolute top-2 left-2 bg-primary text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shadow-md">
+                          {i + 1}
                         </div>
                       </div>
                       
-                      {/* Compact Place Info */}
-                      <div className="p-2">
-                        <div className="font-semibold text-sm mb-1">
-                          {`${i + 1}. ${p.name}`}
+                      {/* Place Info - Better organized with proper spacing */}
+                      <div className="p-3 space-y-2">
+                        {/* Place name - Full visibility */}
+                        <div className="font-bold text-base leading-tight break-words pr-1">
+                          {p.name}
                         </div>
                         
                         {/* Category Badge */}
                         {p.goalMatched && (
-                          <div className="mb-2">
+                          <div className="flex items-center gap-2">
                             <CategoryBadge 
                               category={p.goalMatched} 
                               size="sm" 
@@ -382,32 +387,47 @@ const RoutePreviewStep: React.FC<Props> = ({
                           </div>
                         )}
                         
-                        <div className="text-gray-600 text-xs flex items-center gap-1 mb-1">
-                          <MapPin className="w-3 h-3" />
-                          {p.address}
+                        {/* Address - Properly wrapped */}
+                        <div className="text-gray-600 text-xs flex items-start gap-1 leading-snug">
+                          <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                          <span className="break-words">{p.address}</span>
                         </div>
-                        <div className="text-xs text-gray-500 flex items-center gap-3 mb-2">
-                          <span className="flex items-center gap-1">
+                        
+                        {/* Time info - Clean horizontal layout */}
+                        <div className="flex items-center gap-2 text-xs flex-wrap">
+                          <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
                             <Clock className="w-3 h-3" />
-                            🚶 {p.walkingTime} min
-                          </span>
-                          {p.type && <span>{p.type}</span>}
+                            <span>🚶 {p.walkingTime} min</span>
+                          </div>
+                          {p.visitDuration && (
+                            <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full">
+                              <span>⏱️ {p.visitDuration} min visit</span>
+                            </div>
+                          )}
+                          {p.type && (
+                            <div className="text-gray-500 text-xs px-2 py-1">
+                              {p.type}
+                            </div>
+                          )}
                         </div>
+                        
+                        {/* Description - Properly formatted with max height */}
                         {p.description && (
-                          <div className="text-xs mt-1 text-gray-700 bg-white p-2 rounded leading-relaxed whitespace-normal break-words">
+                          <div className="text-xs text-gray-700 bg-gray-50 p-2 rounded leading-relaxed break-words max-h-20 overflow-y-auto">
                             {p.description}
                           </div>
                         )}
                         
-                        {/* Compact Google Maps link */}
+                        {/* Google Maps link - Clear and accessible */}
                         {p.lat && p.lon && (
                           <a
                             href={`https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded hover:bg-blue-200 transition-colors"
+                            className="inline-flex items-center gap-1 mt-1 px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition-colors font-medium"
                           >
-                            📍 Maps
+                            <MapPin className="w-3 h-3" />
+                            View on Maps
                           </a>
                         )}
                       </div>
