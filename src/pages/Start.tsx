@@ -53,9 +53,8 @@ const Start = () => {
   }, [user, isLoading, navigate]);
 
   const handleStartClick = () => {
-    if (user) {
-      navigate('/chat');
-    }
+    // Navigate to chat regardless of auth state - free access for all
+    navigate('/chat');
   };
 
   return (
@@ -90,7 +89,7 @@ const Start = () => {
             onClick={handleStartClick}
             size="lg"
             className="w-full"
-            disabled={isLoading || !user}
+            disabled={isLoading}
           >
             {isLoading ? (
               <>
