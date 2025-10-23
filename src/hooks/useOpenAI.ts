@@ -317,73 +317,11 @@ export function useOpenAI() {
       };
       
     } catch (err) {
-      console.error("=== DEBUG: TripAdvisor Error ===", err);
+      console.error("=== ROUTE GENERATION ERROR ===", err);
+      console.error("Error details:", err instanceof Error ? err.message : String(err));
       
-      // Return test data when API fails (for demo purposes)
-      console.log("=== USING TEST ROUTE DATA ===");
-      
-      const testPlaces: LLMPlace[] = [
-        {
-          name: "Eiffel Tower",
-          address: "Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France",
-          walkingTime: 15,
-          visitDuration: 45,
-          type: "monument",
-          reason: "Iconic landmark and symbol of Paris",
-          lat: 48.8584,
-          lon: 2.2945,
-          coordinates: [2.2945, 48.8584],
-          photoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Eiffel_Tower_from_Champs_de_Mars%2C_Paris%2C_August_2014.jpg/800px-Eiffel_Tower_from_Champs_de_Mars%2C_Paris%2C_August_2014.jpg",
-          description: "The Eiffel Tower is an iconic iron lattice tower located on the Champ de Mars in Paris. Built in 1889, it stands 330 meters tall and offers breathtaking views of the city. A must-visit landmark that represents the beauty and engineering marvel of Paris.",
-          rating: 4.6,
-          goalMatched: "monuments"
-        },
-        {
-          name: "Louvre Museum",
-          address: "Rue de Rivoli, 75001 Paris, France",
-          walkingTime: 20,
-          visitDuration: 120,
-          type: "museum",
-          reason: "World's largest art museum",
-          lat: 48.8606,
-          lon: 2.3376,
-          coordinates: [2.3376, 48.8606],
-          photoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Louvre_Museum_Wikimedia_Commons.jpg/800px-Louvre_Museum_Wikimedia_Commons.jpg",
-          description: "The Louvre is the world's largest art museum and a historic monument in Paris. Home to the famous Mona Lisa and thousands of other masterpieces, it offers an unparalleled journey through art history from ancient civilizations to the 19th century.",
-          rating: 4.5,
-          goalMatched: "museums"
-        },
-        {
-          name: "Notre-Dame Cathedral",
-          address: "6 Parvis Notre-Dame - Pl. Jean-Paul II, 75004 Paris, France",
-          walkingTime: 10,
-          visitDuration: 30,
-          type: "monument",
-          reason: "Gothic masterpiece and spiritual center",
-          lat: 48.8530,
-          lon: 2.3499,
-          coordinates: [2.3499, 48.8530],
-          photoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Notre-Dame_de_Paris_-_2018_%2842070826302%29.jpg/800px-Notre-Dame_de_Paris_-_2018_%2842070826302%29.jpg",
-          description: "Notre-Dame Cathedral is a medieval Catholic cathedral on the Île de la Cité in Paris. Known for its French Gothic architecture, flying buttresses, and stunning stained glass windows, it's one of the most famous cathedrals in the world.",
-          rating: 4.7,
-          goalMatched: "monuments"
-        }
-      ];
-      
-      const testTimeData: RouteTimeData = {
-        requestedMinutes: timeWindow,
-        computedMinutes: 180, // 3 hours total
-        totalWalkingTime: 45, // 45 minutes walking
-        totalExploringTime: 195, // 3 hours 15 minutes exploring
-      };
-      
-      console.log("Test places generated:", testPlaces);
-      console.log("Test time data:", testTimeData);
-      
-      return {
-        places: testPlaces,
-        timeData: testTimeData
-      };
+      // Throw error instead of returning mock data
+      throw new Error(`Failed to generate route: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }
   
