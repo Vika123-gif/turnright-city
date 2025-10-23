@@ -13,13 +13,6 @@ const Index = () => {
   const { getRemainingGenerations, getTotalGenerations } = useGenerationLimit();
   const navigate = useNavigate();
 
-  // Redirect to start page if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/');
-    }
-  }, [user, loading, navigate]);
-
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -39,11 +32,6 @@ const Index = () => {
         </div>
       </div>
     );
-  }
-
-  // Don't render if not authenticated (will redirect)
-  if (!user) {
-    return null;
   }
 
   return (
