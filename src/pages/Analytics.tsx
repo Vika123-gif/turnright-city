@@ -76,12 +76,12 @@ const DataAnalyticsDashboard: React.FC = () => {
       if (interactionsError) {
         console.error('Error fetching interactions:', interactionsError);
       } else {
-        setUserInteractions(interactions || []);
+        setUserInteractions(interactions as any || []); // Type will be fixed when Supabase types are regenerated
       }
 
       // Fetch route generation details
       const { data: routes, error: routesError } = await supabase
-        .from('route_generation_details')
+        .from('route_generation_details' as any) // Type will be fixed when Supabase types are regenerated
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
@@ -89,7 +89,7 @@ const DataAnalyticsDashboard: React.FC = () => {
       if (routesError) {
         console.error('Error fetching routes:', routesError);
       } else {
-        setRouteGenerations(routes || []);
+        setRouteGenerations(routes as any || []); // Type will be fixed when Supabase types are regenerated
       }
 
       // Fetch button clicks
@@ -102,7 +102,7 @@ const DataAnalyticsDashboard: React.FC = () => {
       if (clicksError) {
         console.error('Error fetching clicks:', clicksError);
       } else {
-        setButtonClicks(clicks || []);
+        setButtonClicks(clicks as any || []); // Type will be fixed when Supabase types are regenerated
       }
 
     } catch (error) {

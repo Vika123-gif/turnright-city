@@ -213,7 +213,7 @@ export const useComprehensiveTracking = () => {
       });
     } else {
       localTracking.trackAction({
-        actionType: 'route_action',
+        actionType: 'route_action' as any, // Type will be fixed when Supabase types are regenerated
         actionName: actionType,
         data: {
           componentName,

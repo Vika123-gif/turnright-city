@@ -274,7 +274,7 @@ const Admin = () => {
       
       // First, let's try to reset credits using the RPC function
       const { data: resetResult, error: resetError } = await supabase
-        .rpc('reset_all_user_credits');
+        .rpc('reset_all_user_credits' as any); // Type will be fixed when Supabase types are regenerated
 
       if (resetError) {
         console.error('Error using reset function:', resetError);
@@ -318,7 +318,7 @@ const Admin = () => {
         // Clear localStorage
         localStorage.removeItem('turnright_user_actions');
         
-        alert(`✅ Credits reset completed!\n\n✅ Successfully reset: ${resetResult?.length || 0} users\n\nAll users now have fresh free credits!`);
+        alert(`✅ Credits reset completed!\n\n✅ Successfully reset: ${(resetResult as any)?.length || 0} users\n\nAll users now have fresh free credits!`);
       }
       
     } catch (err) {

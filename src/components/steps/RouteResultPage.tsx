@@ -82,8 +82,8 @@ const RouteResultPage: React.FC<Props> = ({
                     </div>
                   )}
                   <div className="mt-1 text-sm text-gray-600 flex items-center gap-3 flex-wrap">
-                    {p.walkingTimeFromPrevious || (p as any).walkingTime ? (
-                      <span>🚶 {p.walkingTimeFromPrevious || (p as any).walkingTime} min</span>
+                    {p.walkingTime ? (
+                      <span>🚶 {p.walkingTime} min</span>
                     ) : null}
                     {Array.isArray(p.openingHours) && p.openingHours.length > 0 ? (
                       <span className="truncate">{p.openingHours[0]}</span>

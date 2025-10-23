@@ -191,7 +191,7 @@ export default function ChatFlow() {
       console.log("Original coordinates stored:", originCoordinates);
       console.log("City name for search:", locationForSearch);
       
-      const response: LLMPlace[] = await getLLMPlaces({
+      const llmResponse = await getLLMPlaces({
         location: locationForSearch,
         origin: originToUse, // Use coordinates if available
         destination: destination,
@@ -205,6 +205,9 @@ export default function ChatFlow() {
       });
       
       console.log("=== DEBUG: Places Response ===");
+      console.log("Full LLM response:", llmResponse);
+      
+      const response = llmResponse.places;
       console.log("Places returned:", response);
       
       // Enrich places with real photos and coordinates using Google Places API
