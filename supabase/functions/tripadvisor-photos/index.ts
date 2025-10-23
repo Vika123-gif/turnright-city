@@ -677,7 +677,7 @@ async function collectCandidatesForGoal(
     }
 
     // Check if we have enough candidates
-    const goalMatches = allCandidates.filter(place => fits(place, goal).match);
+    const goalMatchesInRadius = allCandidates.filter(place => fits(place, goal).match);
     const radiusEndCount = allCandidates.length;
     
     diagnostics.radiusProgression.push({
@@ -686,7 +686,7 @@ async function collectCandidatesForGoal(
       startCount: radiusStartCount,
       endCount: radiusEndCount,
       newCandidates: radiusEndCount - radiusStartCount,
-      goalMatches: goalMatches.length
+      goalMatches: goalMatchesInRadius.length
     });
     
     if (goalMatches.length >= minPerGoal) {
