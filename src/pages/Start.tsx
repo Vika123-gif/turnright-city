@@ -45,7 +45,7 @@ const Start = () => {
     }
   };
 
-  // If user is already authenticated, redirect to chat
+  // Auto-redirect to chat (anonymous auth handles user creation)
   React.useEffect(() => {
     if (user) {
       navigate('/chat');
@@ -78,8 +78,8 @@ const Start = () => {
           Your AI city guide - discover new places in seconds, share and save your adventures!
         </h1>
 
-        {/* Google Sign In */}
-        <div className="space-y-4">
+        {/* Google Sign In - TEMPORARILY HIDDEN */}
+        <div className="space-y-4 hidden">
           <Button
             onClick={handleGoogleSignIn}
             variant="outline"
@@ -125,6 +125,13 @@ const Start = () => {
           
           <p className="text-xs text-muted-foreground text-center">
             We'll create your account for immediate access
+          </p>
+        </div>
+        
+        {/* Anonymous access message */}
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground text-center">
+            Loading your personalized experience...
           </p>
 
           {/* Info Link */}
