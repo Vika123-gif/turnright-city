@@ -197,7 +197,7 @@ const RoutePreviewStep: React.FC<Props> = ({
   });
 
   return (
-    <div className="text-left overflow-y-auto flex flex-col relative p-4" style={{ height: '100%', maxHeight: '100vh' }}>
+    <div className="text-left flex flex-col relative p-4 min-h-screen">
       {/* Floating Action Menu */}
       <div className="absolute top-4 right-4 z-50">
         <DropdownMenu>
@@ -341,7 +341,7 @@ const RoutePreviewStep: React.FC<Props> = ({
                 </div>
               </div>
               
-              <div className="p-3 pb-40 space-y-3">
+              <div className="p-3 pb-6 space-y-3">
                   {(currentDayData?.places || places).map((p, i) => (
                     <div key={i} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col sm:flex-row">
                       {/* Place Image - Left side on desktop, top on mobile */}

@@ -539,7 +539,7 @@ const DetailedMapStep: React.FC<Props> = ({
   });
 
   return (
-    <div className="w-full flex flex-col text-left p-4 pb-48 overflow-y-auto" style={{ height: '100%', maxHeight: '100vh' }}>
+    <div className="w-full flex flex-col text-left p-4 pb-6 min-h-screen">
       <div className="flex items-center justify-between mb-3">
         <button 
           className="text-sm text-gray-600 hover:text-gray-800" 

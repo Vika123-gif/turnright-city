@@ -654,7 +654,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       {!chatVisible && (
         <div className={`w-full mx-auto bg-white shadow-md px-6 py-8 relative ${
           step === "route_preview" || step === "detailed-map" 
-            ? "h-screen rounded-none" 
+            ? "min-h-screen rounded-none" 
             : "max-w-md rounded-2xl"
         }`}>
           {step === "generating" && (
