@@ -14,6 +14,7 @@ type Props = {
   onReset: () => void;
   origin: string;
   destination?: string;
+  destinationType?: 'none' | 'circle' | 'specific';
   onFeedbackSubmit?: (feedback: string) => void;
   scenario?: 'onsite' | 'planning';
   days?: number;
@@ -25,6 +26,7 @@ const DetailedMapStep: React.FC<Props> = ({
   onReset,
   origin,
   destination,
+  destinationType = 'none',
   onFeedbackSubmit,
   scenario = 'onsite',
   days,
@@ -33,7 +35,6 @@ const DetailedMapStep: React.FC<Props> = ({
   const { trackButtonClick, trackRouteAction, trackPageView } = useComprehensiveTracking();
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [isListOpen, setIsListOpen] = useState(true);
-  const [showAudioNotice, setShowAudioNotice] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [startAddress, setStartAddress] = useState<string>("");
@@ -108,6 +109,12 @@ const DetailedMapStep: React.FC<Props> = ({
   }, [origin, destination]);
 
   const handleSaveHtml = () => {
+    console.log('💾 Save button clicked!');
+    console.log('Current day places:', currentDayPlaces);
+    console.log('Legs:', legs);
+    console.log('First leg:', firstLeg);
+    console.log('Arrivals:', arrivals);
+    
     // Track save route action
     trackRouteAction('save', {
       placesCount: currentDayPlaces.length,
@@ -151,6 +158,7 @@ const DetailedMapStep: React.FC<Props> = ({
             <h3 class="place-name">${place.name}</h3>
             ${place.goalMatched ? `<div class="place-category">${place.goalMatched}</div>` : ''}
             <div class="place-rating">⭐ ${rating}</div>
+            ${place.address ? `<p class="place-address">📍 ${place.address}</p>` : ''}
             <p class="place-description">${description}</p>
             <div class="place-info">
               <div class="info-item">🕐 Arrive: ${arrivalTime}</div>
@@ -295,8 +303,16 @@ const DetailedMapStep: React.FC<Props> = ({
     .place-rating {
       font-size: 1.1em;
       color: #f6ad55;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
       font-weight: 600;
+    }
+    
+    .place-address {
+      color: #4a5568;
+      font-size: 0.9em;
+      margin-bottom: 12px;
+      line-height: 1.4;
+      font-style: italic;
     }
     
     .place-description {
@@ -380,6 +396,7 @@ const DetailedMapStep: React.FC<Props> = ({
 </body>
 </html>`;
 
+    try {
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -389,6 +406,11 @@ const DetailedMapStep: React.FC<Props> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+      console.log('✅ Route saved successfully!');
+    } catch (error) {
+      console.error('❌ Error saving route:', error);
+      alert('Failed to save route. Please try again.');
+    }
   };
 
   const handleFeedbackSubmit = async (feedback: string) => {
@@ -486,6 +508,19 @@ const DetailedMapStep: React.FC<Props> = ({
     }
   }
 
+  // Last leg: from last place to destination (if destination exists)
+  let lastLeg = { distanceKm: 0, walkMin: 0 };
+  if (destination && currentDayPlaces.length > 0) {
+    const m = destination.trim().match(/^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
+    if (m) {
+      const dest = { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+      const lastPlace = currentDayPlaces[currentDayPlaces.length - 1];
+      const kmLast = haversineKm({ lat: lastPlace.lat, lon: lastPlace.lon }, dest) ?? 0;
+      const minLast = Math.round((kmLast / 4.5) * 60);
+      lastLeg = { distanceKm: kmLast, walkMin: isFinite(minLast) ? minLast : 0 };
+    }
+  }
+
   // Arrival times starting now
   const start = new Date();
   let accumMin = 0;
@@ -504,7 +539,7 @@ const DetailedMapStep: React.FC<Props> = ({
   });
 
   return (
-    <div className="w-full flex flex-col text-left p-4 pb-24 overflow-y-auto" style={{ height: '100%', maxHeight: '100vh' }}>
+    <div className="w-full flex flex-col text-left p-4 pb-48 overflow-y-auto" style={{ height: '100%', maxHeight: '100vh' }}>
       <div className="flex items-center justify-between mb-3">
         <button 
           className="text-sm text-gray-600 hover:text-gray-800" 
@@ -596,33 +631,40 @@ const DetailedMapStep: React.FC<Props> = ({
                   )}
                   <div className="text-[11px] text-gray-500 space-y-0.5">
                     <div>{`Arrive ${arrivals[i]}`}{place.visitDuration ? ` · ⏱ ${place.visitDuration} min` : ''}</div>
-                    <div>{i === 0 ? `🚶 ${firstLeg.walkMin} min · ${firstLeg.distanceKm.toFixed(2)} km` : `🚶 ${legs[i].walkMin} min · ${legs[i].distanceKm.toFixed(2)} km`}</div>
+                    <div>{i === 0 ? `🚶 ${firstLeg.walkMin} min from start · ${firstLeg.distanceKm.toFixed(2)} km` : `🚶 ${legs[i].walkMin} min from ${i} · ${legs[i].distanceKm.toFixed(2)} km`}</div>
                   </div>
                 </div>
                 <div className="hidden md:block flex-shrink-0">
                 {(() => {
-                  const audioCategories = new Set(['Architectural landmarks','Museums','Viewpoints','Parks']);
-                  const goal = place.goalMatched || '';
-                  if (audioCategories.has(goal)) {
-                    return (
-                      <button
-                        onClick={() => {
-                          trackButtonClick('audio_guide', '▶ Play · Audio guide — coming soon', 'DetailedMapStep', {
-                            placeName: place.name,
-                            placeIndex: i
-                          });
-                          setShowAudioNotice(true);
-                        }}
-                        className="text-[11px] px-2 py-1 rounded border hover:bg-gray-50 cursor-not-allowed"
-                        disabled
-                      >▶ Play · Audio guide — coming soon</button>
-                    );
-                  }
-                  const niceComment = (place as any).aiReason || (place as any).description || 'A pleasant stop on your route';
+                  // Audio function for place descriptions
+                  const speakPlaceDescription = (place: LLMPlace) => {
+                    if ('speechSynthesis' in window) {
+                      const utterance = new SpeechSynthesisUtterance();
+                      utterance.text = `${place.name}. ${place.description || 'A wonderful place to visit on your route.'}`;
+                      utterance.lang = 'en-US';
+                      utterance.rate = 0.9;
+                      utterance.pitch = 1;
+                      utterance.volume = 0.8;
+                      
+                      // Cancel any ongoing speech
+                      window.speechSynthesis.cancel();
+                      window.speechSynthesis.speak(utterance);
+                    }
+                  };
+
                   return (
-                    <div className="text-[11px] text-gray-600 italic max-w-[180px] break-words">
-                      {niceComment}
-                    </div>
+                    <button
+                      onClick={() => {
+                        trackButtonClick('audio_guide', '🔊 Audio Guide', 'DetailedMapStep', {
+                          placeName: place.name,
+                          placeIndex: i
+                        });
+                        speakPlaceDescription(place);
+                      }}
+                      className="text-[11px] px-2 py-1 rounded border hover:bg-gray-50 transition-colors flex items-center gap-1"
+                    >
+                      🔊 Audio Guide
+                    </button>
                   );
                 })()}
                 </div>
@@ -643,6 +685,11 @@ const DetailedMapStep: React.FC<Props> = ({
                     })()}
                   </div>
                   <div className="text-[11px] text-gray-600 truncate">{endAddress}</div>
+                  {places.length > 0 && (
+                    <div className="text-[11px] text-gray-500 mt-1">
+                      🚶 {lastLeg.walkMin} min from {places.length} · {lastLeg.distanceKm.toFixed(2)} km
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -651,7 +698,7 @@ const DetailedMapStep: React.FC<Props> = ({
       </div>
 
       {/* Map */}
-      <Map places={currentDayPlaces} origin={origin} destinationType={destination ? 'specific' : 'circle'} destination={destination} className="flex-1 min-h-0 w-full rounded-lg border-2 border-primary/20 shadow-lg" />
+      <Map places={currentDayPlaces} origin={origin} destinationType={destinationType} destination={destination} className="flex-1 min-h-0 w-full rounded-lg border-2 border-primary/20 shadow-lg" />
 
       {/* Action bar */}
       <div className="mt-3 flex gap-2 flex-shrink-0">
@@ -674,20 +721,6 @@ const DetailedMapStep: React.FC<Props> = ({
           }}
         >🔄 New route</button>
       </div>
-
-      {/* Audio notice */}
-      {showAudioNotice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowAudioNotice(false)}></div>
-          <div className="relative bg-white rounded-lg shadow-lg p-4 w-[92vw] max-w-sm border">
-            <div className="font-semibold mb-1">Audio guide</div>
-            <div className="text-sm text-gray-600 mb-3">This feature is part of a paid/donation upgrade. Coming soon.</div>
-            <div className="flex justify-end gap-2">
-              <button className="px-3 py-1.5 rounded-md border text-sm" onClick={() => setShowAudioNotice(false)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Detailed Places List removed from below map to keep UI clean */}
       <div className="hidden">

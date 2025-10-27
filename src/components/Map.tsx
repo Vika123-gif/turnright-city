@@ -17,6 +17,8 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
   const map = useRef<mapboxgl.Map | null>(null);
   const userMarker = useRef<mapboxgl.Marker | null>(null);
   const [routeCreated, setRouteCreated] = useState(false);
+  const [isDirectionsRoute, setIsDirectionsRoute] = useState(false); // Track if route was created with Directions API
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Track user's real-time location
   const { coordinates: userLocation, error: locationError } = useGeolocation();
@@ -26,6 +28,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
 
     // Reset route creation state when map is recreated
     setRouteCreated(false);
+    setIsDirectionsRoute(false);
 
     // Initialize map with Mapbox token
     const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -179,7 +182,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
         numberEl.textContent = (index + 1).toString();
         markerEl.appendChild(numberEl);
 
-        // Create popup content - simplified to show only photo and name
+        // Create popup content with audio button
         const popupContent = `
           <div style="padding: 8px; min-width: 200px; max-width: 250px;">
             ${place.photoUrl ? `<img src="${place.photoUrl}" alt="${place.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" onerror="this.style.display='none'">` : 
@@ -187,6 +190,43 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
                 <div style="color: #3b82f6; font-size: 24px;">📍</div>
               </div>`}
             <h3 style="margin: 0; font-weight: bold; color: #008457; font-size: 16px; text-align: center;">${place.name}</h3>
+            ${place.visitDuration ? `<div style="margin-top: 6px; text-align: center; color: #6b7280; font-size: 14px;">⏱️ ${place.visitDuration} min at location</div>` : ''}
+            
+            <!-- Audio button -->
+            <div style="margin-top: 8px; text-align: center;">
+              <button 
+                onclick="
+                  if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance();
+                    utterance.text = '${place.name.replace(/'/g, "\\'")}. ${(place.description || 'A wonderful place to visit on your route.').replace(/'/g, "\\'")}';
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1;
+                    utterance.volume = 0.8;
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.speak(utterance);
+                  }
+                "
+                style="
+                  background: linear-gradient(135deg, #008457 0%, #00a86b 100%);
+                  color: white;
+                  border: none;
+                  padding: 6px 12px;
+                  border-radius: 20px;
+                  font-size: 12px;
+                  font-weight: 500;
+                  cursor: pointer;
+                  transition: all 0.2s ease;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 4px;
+                "
+                onmouseover="this.style.transform='scale(1.05)'"
+                onmouseout="this.style.transform='scale(1)'"
+              >
+                🔊 Audio Guide
+              </button>
+            </div>
           </div>
         `;
 
@@ -217,16 +257,56 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
           destCoords = { lat, lng };
           console.log('Destination is coordinates:', destCoords);
         } else {
-          // Destination is a location name, try to geocode it
+          // Destination is a location name, try to geocode it with multiple attempts
           try {
             console.log('Geocoding destination location:', destination);
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1&accept-language=en`
+            
+            // First try with the exact name
+            let response = await fetch(
+              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination)}&format=json&limit=1&accept-language=en&countrycodes=pl`
             );
-            const data = await response.json();
+            let data = await response.json();
+            
+            // If not found, try with Warsaw, Poland context
+            if (data.length === 0) {
+              console.log('Not found, trying with Warsaw context...');
+              response = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination + ', Warsaw, Poland')}&format=json&limit=1&accept-language=en`
+              );
+              data = await response.json();
+            }
+            
+            // If still not found, try with Poland context
+            if (data.length === 0) {
+              console.log('Still not found, trying with Poland context...');
+              response = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(destination + ', Poland')}&format=json&limit=1&accept-language=en`
+              );
+              data = await response.json();
+            }
+            
             if (data.length > 0) {
               destCoords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
               console.log('Geocoded destination to:', destCoords);
+              console.log('Geocoding result:', data[0]);
+            } else {
+              // Fallback for known Warsaw landmarks
+              const knownLandmarks: { [key: string]: { lat: number; lng: number } } = {
+                'palace of culture and science': { lat: 52.2319, lng: 21.0067 },
+                'pałac kultury i nauki': { lat: 52.2319, lng: 21.0067 },
+                'warsaw old town': { lat: 52.2297, lng: 21.0122 },
+                'stare miasto': { lat: 52.2297, lng: 21.0122 },
+                'royal castle': { lat: 52.2477, lng: 21.0139 },
+                'zamek królewski': { lat: 52.2477, lng: 21.0139 }
+              };
+              
+              const lowerDestination = destination.toLowerCase();
+              if (knownLandmarks[lowerDestination]) {
+                destCoords = knownLandmarks[lowerDestination];
+                console.log('Using known landmark coordinates:', destCoords);
+              } else {
+                console.warn('Could not geocode destination:', destination);
+              }
             }
           } catch (error) {
             console.error('Error geocoding destination:', error);
@@ -299,12 +379,6 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
         }
       }
 
-      // Close the loop only when requested: add start point at the end to create circular route
-      if (destinationType === 'circle' && startCoords && routeCoordinates.length > 1) {
-        routeCoordinates.push([startCoords.lng, startCoords.lat]);
-        console.log('Added return to start point to create circular route');
-      }
-
       // Add route line if we have coordinates
       if (routeCoordinates.length > 1) {
         console.log('=== ROUTE DEBUG ===');
@@ -314,9 +388,25 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
         // Try to get walking route from Mapbox Directions API
         const getWalkingRoute = async () => {
           try {
+            // Create coordinates array for API
+            let apiCoordinates = [...routeCoordinates];
+            
+            // For circular routes, we'll handle the return differently
+            if (destinationType === 'circle' && startCoords && routeCoordinates.length > 1) {
+              // Don't add the start point here - we'll handle it in the API call differently
+              console.log('Preparing circular route coordinates');
+            }
+            
             // Build Directions API request URL
-            const coordinates = routeCoordinates.map(coord => `${coord[0]},${coord[1]}`).join(';');
-            const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?geometries=geojson&overview=full&steps=true&access_token=${mapboxToken}`;
+            const coordinates = apiCoordinates.map(coord => `${coord[0]},${coord[1]}`).join(';');
+            const isCircular = destinationType === 'circle';
+            
+            // For circular routes, add the start point at the end to create a loop
+            const finalCoordinates = isCircular && startCoords 
+              ? `${coordinates};${startCoords.lng},${startCoords.lat}`
+              : coordinates;
+              
+            const directionsUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${finalCoordinates}?geometries=geojson&overview=full&steps=true&annotations=duration,distance&roundabout_exits=false&access_token=${mapboxToken}`;
             
             console.log('Mapbox Directions API URL:', directionsUrl);
             console.log('Fetching walking route from Mapbox Directions API...');
@@ -374,6 +464,10 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
                 console.log('Fitted map to route bounds');
               }
               
+              setIsDirectionsRoute(true); // Mark that we have a Directions API route
+              console.log('✅ Directions API route created - will not be overwritten');
+              
+              
               return true; // Success
             } else {
               console.error('No routes found in API response:', data);
@@ -425,6 +519,11 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
   // Update user location marker when position changes
   useEffect(() => {
     if (!map.current || !userLocation) return;
+    
+    // Don't update route if it was created with Directions API (to preserve street routing)
+    if (isDirectionsRoute) {
+      console.log('⚠️ Skipping route update - preserving Directions API route');
+    }
 
     // Remove existing user marker
     if (userMarker.current) {
@@ -476,8 +575,8 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
       ))
       .addTo(map.current);
 
-    // Update route if it exists
-    if (map.current.getSource('route')) {
+    // Update route if it exists (but only if it's NOT a Directions API route)
+    if (map.current.getSource('route') && !isDirectionsRoute) {
       const routeCoordinates: [number, number][] = [[userLocation.lng, userLocation.lat]];
       
       // Add place coordinates
@@ -499,7 +598,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
     }
 
     console.log('User location updated:', userLocation);
-  }, [userLocation, places]);
+  }, [userLocation, places, isDirectionsRoute]);
 
   if (!places.length) {
     return (
@@ -527,19 +626,57 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
   }
 
   return (
-    <div className={`relative rounded-lg overflow-hidden ${className}`}>
-      <div ref={mapContainer} className="w-full h-full min-h-[400px]" />
-      {locationError && (
-        <div className="absolute top-4 left-4 bg-background border rounded-lg p-2 shadow-lg">
-          <p className="text-sm text-muted-foreground">📍 Location: {locationError}</p>
+    <>
+      <div className={`relative rounded-lg overflow-hidden ${className}`}>
+        <div ref={mapContainer} className="w-full h-full min-h-[400px]" />
+        
+        {/* Map controls overlay */}
+        <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+          {/* Fullscreen button */}
+          <button
+            onClick={() => setIsFullscreen(true)}
+            className="bg-white/90 hover:bg-white p-2 rounded-lg shadow-lg transition-colors"
+            title="Expand map to fullscreen"
+          >
+            🔍
+          </button>
+        </div>
+        
+        {locationError && (
+          <div className="absolute top-4 left-4 bg-background border rounded-lg p-2 shadow-lg">
+            <p className="text-sm text-muted-foreground">📍 Location: {locationError}</p>
+          </div>
+        )}
+        {userLocation && (
+          <div className="absolute top-4 left-4 bg-background border rounded-lg p-2 shadow-lg">
+            <p className="text-sm text-muted-foreground">📍 Tracking your location</p>
+          </div>
+        )}
+      </div>
+
+      {/* Fullscreen modal */}
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <div className="h-full w-full">
+            <Map places={places} origin={origin} destinationType={destinationType} destination={destination} className="h-full" />
+            
+            {/* Close button */}
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="absolute top-4 right-4 bg-white/90 hover:bg-white p-3 rounded-lg shadow-lg transition-colors z-10"
+              title="Close fullscreen"
+            >
+              ✕
+            </button>
+            
+            {/* Fullscreen indicator */}
+            <div className="absolute top-4 left-4 bg-white/90 px-3 py-2 rounded-lg shadow-lg">
+              <p className="text-sm font-medium text-gray-700">🗺️ Fullscreen Map</p>
+            </div>
+          </div>
         </div>
       )}
-      {userLocation && (
-        <div className="absolute top-4 right-4 bg-background border rounded-lg p-2 shadow-lg">
-          <p className="text-sm text-muted-foreground">📍 Tracking your location</p>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 

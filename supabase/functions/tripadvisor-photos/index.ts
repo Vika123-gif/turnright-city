@@ -1012,8 +1012,9 @@ serve(async (req) => {
       sessionId // Add sessionId for rate limiting
     } = await req.json();
 
-    // Rate limiting check
-    if (sessionId) {
+    // Rate limiting check - TEMPORARILY DISABLED FOR TESTING
+    // TODO: Re-enable rate limiting when ready for production
+    if (false && sessionId) { // Changed to false to disable rate limiting
       try {
         const { data: rateLimitResult, error: rateLimitError } = await supabase
           .rpc('check_generation_limit', { p_session_id: sessionId });

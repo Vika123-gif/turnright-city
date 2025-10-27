@@ -19,9 +19,10 @@ type Step =
   | "generating"
   | "summary"
   | "purchase"
-  | "detailed-map";
+  | "detailed-map"
+  | "route_preview";
 
-export default function ChatFlow() {
+export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibilityChange?: (visible: boolean) => void }) {
   const [step, setStep] = useState<Step>("chat");
   const [location, setLocation] = useState("");
   const [coordinates, setCoordinates] = useState(""); // Store coordinates separately for map
@@ -634,6 +635,12 @@ export default function ChatFlow() {
     handleShowMap();
   };
 
+  // Notify parent about header visibility
+  useEffect(() => {
+    const shouldHideHeader = !chatVisible && (step === "route_preview" || step === "detailed-map");
+    onHeaderVisibilityChange?.(!shouldHideHeader);
+  }, [chatVisible, step, onHeaderVisibilityChange]);
+
   return (
     <div className="w-full h-full flex flex-col bg-[#F3FCF8] overflow-hidden">
       <ChatBot
@@ -645,7 +652,11 @@ export default function ChatFlow() {
       />
       
       {!chatVisible && (
-        <div className="w-full max-w-md mx-auto bg-white rounded-2xl shadow-md px-6 py-8 relative">
+        <div className={`w-full mx-auto bg-white shadow-md px-6 py-8 relative ${
+          step === "route_preview" || step === "detailed-map" 
+            ? "h-screen rounded-none" 
+            : "max-w-md rounded-2xl"
+        }`}>
           {step === "generating" && (
             <>
               <div className="absolute top-4 left-4">

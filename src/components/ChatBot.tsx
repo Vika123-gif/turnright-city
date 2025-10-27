@@ -1150,35 +1150,38 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "route_preview" && places && places.length > 0 && (
-        <RoutePreviewStep
-          places={places}
-          onRegenerate={handleRegenerate}
-          onBuy={() => {
-            if (onShowMap) {
-              onShowMap();
-            } else {
-              setCurrentStep("complete");
-              onComplete(collectedData);
-            }
-          }}
-          purchasing={false}
-          location={collectedData.location || collectedData.city || ''}
-          days={collectedData.days || 1}
-          scenario={collectedData.scenario}
-          userSessionId="demo-session" // Временная сессия для демо
-          goals={collectedData.categories || []}
-          onStartNew={startNewDialog}
-        />
+        <div className="flex-1 flex flex-col">
+          <RoutePreviewStep
+            places={places}
+            onRegenerate={handleRegenerate}
+            onBuy={() => {
+              if (onShowMap) {
+                onShowMap();
+              } else {
+                setCurrentStep("complete");
+                onComplete(collectedData);
+              }
+            }}
+            purchasing={false}
+            location={collectedData.location || collectedData.city || ''}
+            days={collectedData.days || 1}
+            scenario={collectedData.scenario}
+            userSessionId="demo-session" // Временная сессия для демо
+            goals={collectedData.categories || []}
+            onStartNew={startNewDialog}
+          />
+        </div>
       )}
 
       {currentStep === "detailed-map" && (
-        <div className="p-0 p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="flex-1 flex flex-col">
           <DetailedMapStep
             places={places || []}
             origin={collectedData.location || collectedData.city || ''}
             destination={(collectedData.destinationType === 'circle')
               ? (collectedData.location || collectedData.city || '')
               : (collectedData.destinationType === 'specific' ? (collectedData.destination || '') : undefined)}
+            destinationType={collectedData.destinationType || 'none'}
             scenario={collectedData.scenario}
             days={collectedData.days}
             onBack={() => setCurrentStep("summary")}
