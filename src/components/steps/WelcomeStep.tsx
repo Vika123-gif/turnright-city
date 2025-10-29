@@ -47,27 +47,27 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
 
   return (
     <div className="chat-card text-left fade-in">
-      <div className="mb-8 flex flex-row items-start gap-4">
-        <div className="text-3xl animate-pulse">👋</div>
+      <div className="mb-6 flex flex-row items-start gap-3">
+        <div className="text-2xl animate-pulse">👋</div>
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 leading-tight mb-2">
+          <h2 className="text-xl font-bold text-gray-800 leading-tight mb-2">
             I'm TurnRight, your personal city guide. 
           </h2>
-          <p className="text-lg text-gray-600 font-medium">
+          <p className="text-base text-gray-600 font-medium">
             I'll whip up a best route for you in seconds, tailored to what you want! Ready to explore? Let's go!
           </p>
         </div>
       </div>
       
-      <div className="chatbot-bubble mb-6">
+      <div className="chatbot-bubble mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-xl">🗺️</span>
-          <span className="font-medium">Share your location and let's get started!</span>
+          <span className="text-lg">🗺️</span>
+          <span className="font-medium text-sm">Share your location and let's get started!</span>
         </div>
       </div>
       
-      <div className="space-y-6">
-        <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
+      <div className="space-y-4">
+        <div className="flex items-start gap-2 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
           <input
             type="checkbox"
             id="locationConsent"
@@ -122,9 +122,9 @@ const WelcomeStep: React.FC<Props> = ({ onLocation, value }) => {
       </div>
 
       {/* MVP Link */}
-      <div className="border-t border-gray-100 pt-6 mt-8 text-center">
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
-          <p className="text-sm text-gray-600 mb-3 font-medium">
+      <div className="border-t border-gray-100 pt-4 mt-6 text-center">
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
+          <p className="text-xs text-gray-600 mb-2 font-medium">
             🌍 Save for the next generations!
           </p>
           <a
