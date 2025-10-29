@@ -642,7 +642,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
   }, [chatVisible, step, onHeaderVisibilityChange]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#F3FCF8] overflow-y-auto">
+    <div className="w-full h-full flex flex-col bg-[#F3FCF8] absolute inset-0 overflow-y-auto">
       <ChatBot
         onComplete={handleChatComplete}
         onShowMap={handleShowMap}
@@ -654,8 +654,8 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       {!chatVisible && (
         <div className={`w-full mx-auto bg-white shadow-md px-6 py-8 relative ${
           step === "route_preview" || step === "detailed-map" 
-            ? "min-h-screen rounded-none overflow-y-auto" 
-            : "max-w-md rounded-2xl overflow-y-auto"
+            ? "rounded-none" 
+            : "max-w-md rounded-2xl"
         }`}>
           {step === "generating" && (
             <>
