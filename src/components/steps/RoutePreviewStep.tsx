@@ -197,7 +197,7 @@ const RoutePreviewStep: React.FC<Props> = ({
   });
 
   return (
-    <div className="text-left flex flex-col relative p-4 pb-20">
+    <div className="text-left flex flex-col relative p-4 pb-32">
       {/* Floating Action Menu */}
       <div className="absolute top-4 right-4 z-50">
         <DropdownMenu>
