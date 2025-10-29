@@ -1,13 +1,13 @@
 project_id = "gwwqfoplhhtyjkrhazbt"
 
 [functions.google-places]
-verify_jwt = false
+verify_jwt = true
 
 [functions.mapbox-geocoding]
-verify_jwt = false
+verify_jwt = true
 
 [functions.tripadvisor-photos]
-verify_jwt = false
+verify_jwt = true
 
 [functions.stripe-webhook]
 verify_jwt = false
