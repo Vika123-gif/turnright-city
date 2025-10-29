@@ -833,9 +833,9 @@ export type Database = {
           reset_at: string
         }[]
       }
-      cleanup_expired_cache: { Args: never; Returns: number }
-      cleanup_old_location_exits: { Args: never; Returns: number }
-      cleanup_old_visitor_sessions: { Args: never; Returns: number }
+      cleanup_expired_cache: { Args: never; Returns: undefined }
+      cleanup_old_location_exits: { Args: never; Returns: undefined }
+      cleanup_old_visitor_sessions: { Args: never; Returns: undefined }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -1079,7 +1079,7 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
-      reset_daily_limits: { Args: never; Returns: number }
+      reset_daily_limits: { Args: never; Returns: undefined }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown

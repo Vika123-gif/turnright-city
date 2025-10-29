@@ -1012,6 +1012,39 @@ serve(async (req) => {
       sessionId // Add sessionId for rate limiting
     } = await req.json();
 
+    // Input validation
+    if (!location || typeof location !== 'string' || location.length > 200 || location.length < 2) {
+      throw new Error('Invalid location parameter: must be 2-200 characters');
+    }
+
+    // Validate safe characters for location
+    const safePattern = /^[a-zA-Z0-9\s\-.,áéíóúàèìòùâêîôûãõñçüäöß]+$/;
+    if (!safePattern.test(location)) {
+      throw new Error('Location contains invalid characters');
+    }
+
+    // Validate goals array
+    if (!Array.isArray(goals)) {
+      throw new Error('Goals must be an array');
+    }
+
+    // Validate each goal string
+    for (const goal of goals) {
+      if (typeof goal !== 'string' || goal.length > 100) {
+        throw new Error('Invalid goal: must be string with max 100 characters');
+      }
+    }
+
+    // Validate timeWindow
+    if (typeof timeWindow !== 'number' || timeWindow < 15 || timeWindow > 1440) {
+      throw new Error('Invalid timeWindow: must be number between 15 and 1440 minutes');
+    }
+
+    // Validate scenario
+    if (!['explore', 'planning', 'onsite'].includes(scenario)) {
+      throw new Error('Invalid scenario: must be explore, planning, or onsite');
+    }
+
     // Rate limiting check - TEMPORARILY DISABLED FOR TESTING
     // TODO: Re-enable rate limiting when ready for production
     if (false && sessionId) { // Changed to false to disable rate limiting

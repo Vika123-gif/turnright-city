@@ -36,6 +36,47 @@ serve(async (req) => {
   try {
     const { routeData }: { routeData: RouteData } = await req.json();
 
+    // Input validation
+    if (!routeData || typeof routeData !== 'object') {
+      throw new Error('Invalid routeData: must be an object');
+    }
+
+    // Validate required fields
+    if (!routeData.routeName || typeof routeData.routeName !== 'string' || routeData.routeName.length > 200) {
+      throw new Error('Invalid routeName: must be string with max 200 characters');
+    }
+
+    if (!routeData.location || typeof routeData.location !== 'string' || routeData.location.length > 200) {
+      throw new Error('Invalid location: must be string with max 200 characters');
+    }
+
+    if (!routeData.scenario || !['onsite', 'planning', 'explore'].includes(routeData.scenario)) {
+      throw new Error('Invalid scenario: must be onsite, planning, or explore');
+    }
+
+    if (typeof routeData.days !== 'number' || routeData.days < 1 || routeData.days > 30) {
+      throw new Error('Invalid days: must be number between 1 and 30');
+    }
+
+    if (!Array.isArray(routeData.goals)) {
+      throw new Error('Invalid goals: must be an array');
+    }
+
+    if (!Array.isArray(routeData.places) || routeData.places.length === 0) {
+      throw new Error('Invalid places: must be non-empty array');
+    }
+
+    if (typeof routeData.totalWalkingTime !== 'number' || routeData.totalWalkingTime < 0) {
+      throw new Error('Invalid totalWalkingTime: must be non-negative number');
+    }
+
+    // Validate each place
+    for (const place of routeData.places) {
+      if (!place.name || typeof place.name !== 'string' || place.name.length > 200) {
+        throw new Error('Invalid place name: must be string with max 200 characters');
+      }
+    }
+
     // Generate HTML content for PDF
     const htmlContent = generateRouteHTML(routeData);
 
