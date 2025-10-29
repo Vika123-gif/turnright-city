@@ -735,7 +735,9 @@ const DetailedMapStep: React.FC<Props> = ({
       </div>
 
       {/* Map */}
-      <Map places={currentDayPlaces} origin={origin} destinationType={destinationType} destination={destination} className="flex-1 min-h-0 w-full rounded-lg border-2 border-primary/20 shadow-lg" />
+      <div className="h-[50vh] md:h-[60vh]">
+        <Map places={currentDayPlaces} origin={origin} destinationType={destinationType} destination={destination} className="w-full h-full rounded-lg border-2 border-primary/20 shadow-lg" />
+      </div>
 
       {/* Action bar */}
       <div className="mt-3 flex gap-2 flex-shrink-0">
