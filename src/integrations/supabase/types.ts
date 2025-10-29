@@ -248,7 +248,7 @@ export type Database = {
           total_places: number
           total_walking_time: number | null
           updated_at: string
-          user_id: string | null
+          user_id: string
           user_session_id: string
         }
         Insert: {
@@ -264,7 +264,7 @@ export type Database = {
           total_places: number
           total_walking_time?: number | null
           updated_at?: string
-          user_id?: string | null
+          user_id: string
           user_session_id: string
         }
         Update: {
@@ -280,7 +280,7 @@ export type Database = {
           total_places?: number
           total_walking_time?: number | null
           updated_at?: string
-          user_id?: string | null
+          user_id?: string
           user_session_id?: string
         }
         Relationships: []
