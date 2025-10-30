@@ -1691,7 +1691,8 @@ serve(async (req) => {
       totalWalkMin += walkMinutes({ lat: lastPlace.lat, lon: lastPlace.lon }, { lat, lon: lng });
     }
     
-    const totalMin = totalWalkMin + totalDwellMin;
+    // Update totalMin with recalculated values
+    totalMin = totalWalkMin + totalDwellMin;
     
     console.log(`Recalculated time for ${finalPlaces.length} places: ${totalWalkMin}min walking, ${totalDwellMin}min exploring, ${totalMin}min total`);
 
