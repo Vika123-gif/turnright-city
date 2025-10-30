@@ -74,6 +74,59 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     initializeSession();
   }, [userSessionId, generateSessionId, trackVisitorSession, testConnection]);
 
+  // Save state to localStorage whenever important data changes
+  useEffect(() => {
+    if (places && places.length > 0 && step !== 'chat') {
+      const stateToSave = {
+        step,
+        location,
+        coordinates,
+        timeWindow,
+        scenario,
+        goals,
+        origin,
+        originCoordinates,
+        destination,
+        destinationType,
+        places,
+        currentRouteGenerationId,
+        regenerationCount,
+        isRouteGenerated,
+      };
+      localStorage.setItem('savedRouteState', JSON.stringify(stateToSave));
+      console.log('Route state saved to localStorage');
+    }
+  }, [step, location, coordinates, timeWindow, scenario, goals, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
+
+  // Restore state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('savedRouteState');
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        setStep(parsed.step || 'chat');
+        setLocation(parsed.location || '');
+        setCoordinates(parsed.coordinates || '');
+        setTimeWindow(parsed.timeWindow);
+        setScenario(parsed.scenario || 'onsite');
+        setGoals(parsed.goals || []);
+        setOrigin(parsed.origin || '');
+        setOriginCoordinates(parsed.originCoordinates || '');
+        setDestination(parsed.destination || '');
+        setDestinationType(parsed.destinationType || 'none');
+        setPlaces(parsed.places || null);
+        setCurrentRouteGenerationId(parsed.currentRouteGenerationId || null);
+        setRegenerationCount(parsed.regenerationCount || 0);
+        setIsRouteGenerated(parsed.isRouteGenerated || false);
+        setChatVisible(false); // Hide chat to show the route
+        console.log('Route state restored from localStorage');
+      } catch (error) {
+        console.error('Error restoring state from localStorage:', error);
+        localStorage.removeItem('savedRouteState');
+      }
+    }
+  }, []);
+
   // Simplified payment success check - no longer needed but keeping for potential future use
   useEffect(() => {
     console.log("=== DEBUG: Payment success check (disabled) ===");
@@ -365,6 +418,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     localStorage.removeItem('pendingRouteData');
     localStorage.removeItem('pendingRouteGenerationId');
     localStorage.removeItem('pendingUserSessionId');
+    localStorage.removeItem('savedRouteState'); // Clear saved route state
     setStep("chat");
     setChatVisible(true);
     setIsRouteGenerated(false);
