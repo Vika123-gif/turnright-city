@@ -676,8 +676,8 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
           )}
 
           {step === "summary" && (
-            <>
-              <div className="absolute top-4 left-4">
+            <div className="h-full overflow-y-auto">
+              <div className="absolute top-4 left-4 z-10">
                 <BackButton onClick={goBack} />
               </div>
               <RouteSummaryStep
@@ -688,10 +688,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
                   setStep("detailed-map");
                 }}
               />
-              {console.log("=== SUMMARY STEP RENDERED ===")}
-              {console.log("Time window:", timeWindow)}
-              {console.log("Goals:", goals)}
-            </>
+            </div>
           )}
 
           {step === "purchase" && (

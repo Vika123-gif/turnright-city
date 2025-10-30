@@ -341,7 +341,7 @@ const RoutePreviewStep: React.FC<Props> = ({
                 </div>
               </div>
               
-              <div className="p-3 pb-40 space-y-3">
+              <div className="p-3 pb-6 space-y-3">
                   {(currentDayData?.places || places).map((p, i) => (
                     <div key={i} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col sm:flex-row">
                       {/* Place Image - Left side on desktop, top on mobile */}
