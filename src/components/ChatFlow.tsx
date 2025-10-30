@@ -687,6 +687,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
                   console.log("=== Let's Go button clicked ===");
                   setStep("detailed-map");
                 }}
+                onRegenerate={regenerate}
               />
             </div>
           )}

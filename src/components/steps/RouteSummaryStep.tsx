@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import PlacesCarousel from "@/components/PlacesCarousel";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, RefreshCw } from "lucide-react";
 
 interface RouteSummaryStepProps {
   timeWindow: number | null;
   goals: string[];
   onContinue: () => void;
+  onRegenerate?: () => void;
   places?: LLMPlace[];
   travelType?: string | null;
   prefs?: string[];
@@ -24,6 +25,7 @@ export default function RouteSummaryStep({
   timeWindow,
   goals,
   onContinue,
+  onRegenerate,
   places = [],
   travelType = null,
   prefs = [],
@@ -142,7 +144,7 @@ export default function RouteSummaryStep({
 
         {/* Category chips hidden; categories now included inside the summary line */}
 
-        <div className="pt-6">
+        <div className="pt-6 flex flex-col sm:flex-row gap-3 justify-center">
           <Button
             onClick={onContinue}
             size="lg"
@@ -151,6 +153,18 @@ export default function RouteSummaryStep({
             Show My Route
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
+          
+          {onRegenerate && (
+            <Button
+              onClick={onRegenerate}
+              variant="outline"
+              size="lg"
+              className="px-8 py-6 text-lg font-semibold border-2"
+            >
+              <RefreshCw className="mr-2 h-5 w-5" />
+              Regenerate Route
+            </Button>
+          )}
         </div>
 
         {places && places.length > 0 && (
