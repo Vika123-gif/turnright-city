@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import Map from "../Map";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import CategoryBadge from "../CategoryBadge";
 import { Button } from "@/components/ui/button";
+import { Play, Square } from "lucide-react";
 
 type Props = {
   places: LLMPlace[];
@@ -23,6 +24,44 @@ const RouteResultPage: React.FC<Props> = ({
   onShareRoute,
   onStartNew
 }) => {
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const handlePlayAudio = (text: string, index: number) => {
+    // Stop any currently playing audio
+    if (playingIndex !== null) {
+      window.speechSynthesis.cancel();
+    }
+
+    // If clicking the same place, just stop
+    if (playingIndex === index) {
+      setPlayingIndex(null);
+      return;
+    }
+
+    // Create and play new utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9;
+    
+    utterance.onend = () => {
+      setPlayingIndex(null);
+    };
+    
+    utterance.onerror = () => {
+      setPlayingIndex(null);
+    };
+
+    utteranceRef.current = utterance;
+    setPlayingIndex(index);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleStopAudio = () => {
+    window.speechSynthesis.cancel();
+    setPlayingIndex(null);
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -74,11 +113,25 @@ const RouteResultPage: React.FC<Props> = ({
                       <span className="truncate">{p.openingHours[0]}</span>
                     ) : null}
                   </div>
-                  {/* Audio placeholder */}
+                  {/* Audio controls */}
                   <div className="mt-2">
-                    <button className="px-3 py-1.5 rounded-full border text-sm text-gray-500 border-gray-200 cursor-not-allowed" disabled>
-                      ▶ Play  Audio guide — coming soon
-                    </button>
+                    {playingIndex === idx ? (
+                      <button 
+                        onClick={handleStopAudio}
+                        className="px-3 py-1.5 rounded-full border text-sm text-white bg-primary border-primary hover:bg-primary/90 transition-colors inline-flex items-center gap-1.5"
+                      >
+                        <Square className="w-3 h-3" />
+                        Stop Audio
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => handlePlayAudio(p.description || `${p.name}. ${p.reason || 'A great place to visit.'}`, idx)}
+                        className="px-3 py-1.5 rounded-full border text-sm text-gray-700 border-gray-300 hover:bg-gray-50 transition-colors inline-flex items-center gap-1.5"
+                      >
+                        <Play className="w-3 h-3" />
+                        Play Audio
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
