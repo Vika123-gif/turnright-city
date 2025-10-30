@@ -74,9 +74,44 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     initializeSession();
   }, [userSessionId, generateSessionId, trackVisitorSession, testConnection]);
 
-  // Save state to localStorage whenever important data changes
+  // Restore state from localStorage on mount (runs first)
+  const [isRestoringState, setIsRestoringState] = useState(true);
+  
   useEffect(() => {
-    if (places && places.length > 0 && step !== 'chat') {
+    const savedState = localStorage.getItem('savedRouteState');
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        console.log('Restoring route state from localStorage:', parsed);
+        setStep(parsed.step || 'chat');
+        setLocation(parsed.location || '');
+        setCoordinates(parsed.coordinates || '');
+        setTimeWindow(parsed.timeWindow);
+        setScenario(parsed.scenario || 'onsite');
+        setGoals(parsed.goals || []);
+        setOrigin(parsed.origin || '');
+        setOriginCoordinates(parsed.originCoordinates || '');
+        setDestination(parsed.destination || '');
+        setDestinationType(parsed.destinationType || 'none');
+        setPlaces(parsed.places || null);
+        setCurrentRouteGenerationId(parsed.currentRouteGenerationId || null);
+        setRegenerationCount(parsed.regenerationCount || 0);
+        setIsRouteGenerated(parsed.isRouteGenerated || false);
+        if (parsed.step !== 'chat') {
+          setChatVisible(false); // Hide chat to show the route
+        }
+        console.log('✅ Route state restored successfully');
+      } catch (error) {
+        console.error('❌ Error restoring state from localStorage:', error);
+        localStorage.removeItem('savedRouteState');
+      }
+    }
+    setIsRestoringState(false);
+  }, []);
+
+  // Save state to localStorage whenever important data changes (but not during initial restore)
+  useEffect(() => {
+    if (!isRestoringState && places && places.length > 0 && step !== 'chat') {
       const stateToSave = {
         step,
         location,
@@ -92,40 +127,12 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
         currentRouteGenerationId,
         regenerationCount,
         isRouteGenerated,
+        timestamp: Date.now(),
       };
       localStorage.setItem('savedRouteState', JSON.stringify(stateToSave));
-      console.log('Route state saved to localStorage');
+      console.log('💾 Route state saved to localStorage at step:', step);
     }
-  }, [step, location, coordinates, timeWindow, scenario, goals, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
-
-  // Restore state from localStorage on mount
-  useEffect(() => {
-    const savedState = localStorage.getItem('savedRouteState');
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-        setStep(parsed.step || 'chat');
-        setLocation(parsed.location || '');
-        setCoordinates(parsed.coordinates || '');
-        setTimeWindow(parsed.timeWindow);
-        setScenario(parsed.scenario || 'onsite');
-        setGoals(parsed.goals || []);
-        setOrigin(parsed.origin || '');
-        setOriginCoordinates(parsed.originCoordinates || '');
-        setDestination(parsed.destination || '');
-        setDestinationType(parsed.destinationType || 'none');
-        setPlaces(parsed.places || null);
-        setCurrentRouteGenerationId(parsed.currentRouteGenerationId || null);
-        setRegenerationCount(parsed.regenerationCount || 0);
-        setIsRouteGenerated(parsed.isRouteGenerated || false);
-        setChatVisible(false); // Hide chat to show the route
-        console.log('Route state restored from localStorage');
-      } catch (error) {
-        console.error('Error restoring state from localStorage:', error);
-        localStorage.removeItem('savedRouteState');
-      }
-    }
-  }, []);
+  }, [isRestoringState, step, location, coordinates, timeWindow, scenario, goals, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
 
   // Simplified payment success check - no longer needed but keeping for potential future use
   useEffect(() => {
