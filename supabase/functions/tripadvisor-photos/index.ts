@@ -1667,6 +1667,34 @@ serve(async (req) => {
     // Collapse consecutive duplicates before any per-day or onsite tweaks
     finalPlaces = collapseConsecutiveDuplicates(finalPlaces);
 
+    // Recalculate time totals for finalPlaces (in case planning scenario added more places)
+    totalWalkMin = 0;
+    totalDwellMin = 0;
+    
+    for (let i = 0; i < finalPlaces.length; i++) {
+      const place = finalPlaces[i];
+      const dwellMin = getDwell(place);
+      totalDwellMin += dwellMin;
+      
+      if (i === 0) {
+        // First place: walk from origin
+        totalWalkMin += walkMinutes({ lat, lon: lng }, { lat: place.lat, lon: place.lon });
+      } else {
+        // Subsequent places: walk from previous place
+        totalWalkMin += walkMinutes({ lat: finalPlaces[i-1].lat, lon: finalPlaces[i-1].lon }, { lat: place.lat, lon: place.lon });
+      }
+    }
+    
+    // Add return walk for roundtrip
+    if (isRoundtrip && finalPlaces.length > 0) {
+      const lastPlace = finalPlaces[finalPlaces.length - 1];
+      totalWalkMin += walkMinutes({ lat: lastPlace.lat, lon: lastPlace.lon }, { lat, lon: lng });
+    }
+    
+    const totalMin = totalWalkMin + totalDwellMin;
+    
+    console.log(`Recalculated time for ${finalPlaces.length} places: ${totalWalkMin}min walking, ${totalDwellMin}min exploring, ${totalMin}min total`);
+
     // Move Bars to the end of the route for both onsite and planning scenarios
     if (finalPlaces.length > 0) {
       const withGoal = finalPlaces.map((p) => {
