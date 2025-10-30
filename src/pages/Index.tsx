@@ -87,7 +87,7 @@ const Index = () => {
       )}
       
       {/* Main content - Fills remaining space */}
-      <div className="flex-1 w-full relative overflow-y-auto">
+      <div className="flex-1 w-full relative overflow-hidden">
         <ChatFlow onHeaderVisibilityChange={setHeaderVisible} />
       </div>
     </div>
