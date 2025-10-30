@@ -83,11 +83,21 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
   const [isRestoringState, setIsRestoringState] = useState(true);
   
   useEffect(() => {
+    console.log('🔄 Starting state restoration from localStorage...');
     const savedState = localStorage.getItem('savedRouteState');
+    console.log('📦 Raw savedState from localStorage:', savedState ? 'EXISTS' : 'NOT FOUND');
+    
     if (savedState) {
       try {
         const parsed = JSON.parse(savedState);
-        console.log('Restoring route state from localStorage:', parsed);
+        console.log('🔍 Parsed state:', {
+          step: parsed.step,
+          location: parsed.location,
+          hasPlaces: !!parsed.places,
+          placesCount: parsed.places?.length,
+          timestamp: new Date(parsed.timestamp).toLocaleString()
+        });
+        
         setStep(parsed.step || 'chat');
         setLocation(parsed.location || '');
         setCoordinates(parsed.coordinates || '');
@@ -108,13 +118,16 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
         if (parsed.step !== 'chat') {
           setChatVisible(false); // Hide chat to show the route
         }
-        console.log('✅ Route state restored successfully');
+        console.log('✅ Route state restored successfully to step:', parsed.step);
       } catch (error) {
         console.error('❌ Error restoring state from localStorage:', error);
         localStorage.removeItem('savedRouteState');
       }
+    } else {
+      console.log('ℹ️ No saved state found, starting fresh');
     }
     setIsRestoringState(false);
+    console.log('✓ State restoration completed');
   }, []);
 
   // Helper function to save state with explicit values (no closure issues)
@@ -162,7 +175,13 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     
     try {
       localStorage.setItem('savedRouteState', JSON.stringify(stateToSave));
-      console.log('💾 SAVE:', stateToSave.step, '| Location:', stateToSave.location?.substring(0, 20));
+      console.log('💾 STATE SAVED:', {
+        step: stateToSave.step,
+        location: stateToSave.location?.substring(0, 30),
+        hasPlaces: !!stateToSave.places,
+        placesCount: stateToSave.places?.length,
+        time: new Date().toLocaleTimeString()
+      });
     } catch (error) {
       console.error('❌ Failed to save state:', error);
     }
