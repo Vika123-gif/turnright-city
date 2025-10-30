@@ -117,13 +117,8 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
 
   // Save state to localStorage whenever important data changes (but not during initial restore)
   useEffect(() => {
-    // Only save on "complete" steps where we know all data is ready
-    const shouldSave = !isRestoringState && (
-      step === 'summary' || 
-      step === 'detailed-map' || 
-      step === 'route_preview' || 
-      step === 'purchase'
-    );
+    // Save on all steps except chat and generating
+    const shouldSave = !isRestoringState && step !== 'chat' && step !== 'generating';
     
     if (shouldSave) {
       const stateToSave = {
