@@ -133,7 +133,7 @@ export default function RouteSummaryStep({
   const currentDayPlaces = placesByDay[selectedDay] || [];
 
   return (
-    <div className="flex flex-col items-center justify-center text-center px-4 py-6 pb-6">
+    <div className="flex flex-col items-center justify-center text-center px-4 py-6 pb-24">
       <div className="max-w-2xl w-full space-y-6">
         <h1 className="text-3xl md:text-4xl font-bold">Your route is ready 🎉</h1>
         <div className="text-lg md:text-xl text-foreground/80">{subtitle}</div>
