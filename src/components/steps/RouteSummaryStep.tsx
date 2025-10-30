@@ -60,21 +60,11 @@ export default function RouteSummaryStep({
   const knownCategories = new Set([
     'Restaurants','Cafés','Bars','Viewpoints','Parks','Museums','Architectural landmarks','Coworking','Bakery','Specialty coffee'
   ]);
+  
+  // Extract preference labels from settings (e.g., "Mobility-friendly" from "Mobility-friendly → Easy routes...")
   const basePrefs = (prefs || [])
     .map(p => (typeof p === 'string' ? p.split('→')[0].trim() : ''))
     .filter(p => p && !knownCategories.has(p) && !goals.includes(p));
-  const joinSelectedPrefs = (labels: string[]) => labels.join(', ');
-  const phrasePool = [
-    'easy to walk',
-    'calm',
-    'focused on comfort and safety',
-    'pleasant and relaxed',
-    'low-stress and scenic'
-  ];
-  const combineRandomPhrases = (labels: string[]) => {
-    const picks = phrasePool.slice(0).sort(() => 0.5 - Math.random()).slice(2);
-    return picks.join(', ');
-  };
 
   // Use backend time data if available, otherwise fallback to frontend calculation
   const walkMin = totalWalkingTime || 0;
@@ -95,29 +85,27 @@ export default function RouteSummaryStep({
     : (requestedMin > 0 ? `${hours}h ${minutes}min` : null);
 
   const travelTypePhrase = travelType ? (
-    travelType === 'With family' ? 'perfect for a relaxed family day' :
-    travelType === 'Business' ? 'balanced and efficient' :
-    travelType === 'Couple / Romantic' ? 'cozy and romantic' :
-    travelType === 'Solo' ? 'great for solo exploring' :
+    travelType === 'With family' ? 'family-friendly' :
+    travelType === 'Business' ? 'efficient' :
+    travelType === 'Couple / Romantic' ? 'romantic' :
+    travelType === 'Solo' ? 'solo adventure' :
     travelType === 'With friends' ? 'fun with friends' : ''
   ) : '';
 
-  const combinedPrefs = [...(goals || []), ...basePrefs];
-  const prefText = combinedPrefs.join(' + ');
-  const routeTone = combineRandomPhrases(basePrefs.length ? basePrefs : combinedPrefs);
-  const prefClause = combinedPrefs.length > 0 ? ` — ${prefText} ` : ' ';
-  const travelClause = travelTypePhrase ? ` — ${travelTypePhrase}` : '';
   const timeLabel = scenario === 'planning' ? `${days} day${(days||0) !== 1 ? 's' : ''}` : `${hours}h`;
   const totalLabel = scenario === 'planning'
     ? `${Math.max(1, Math.round(totalMin / 480))} day(s)`
-    : `${totalH}h (${walkH}h walking, ${dwellH}h exploring)`;
+    : `${totalH}h (${walkH}h walk, ${dwellH}h explore)`;
   
-  // Show requested vs computed time if they differ significantly
-  const timeInfo = requestedMin > 0 && Math.abs(totalMin - requestedMin) > 30 
-    ? `Requested: ${requestedH}h, Computed: ${totalH}h`
-    : `Total time: ${totalLabel}`;
-    
-  const summary = `We've considered your preferences${prefClause}and your time (${timeLabel}). This route is ${routeTone}${travelClause}. ${timeInfo}.`;
+  // Build personalized summary
+  const goalsList = goals.slice(0, 3).join(', '); // Show max 3 goals
+  const hasMoreGoals = goals.length > 3;
+  const goalsText = hasMoreGoals ? `${goalsList} & more` : goalsList;
+  
+  const prefsText = basePrefs.length > 0 ? ` We made sure it's ${basePrefs.join(' and ').toLowerCase()}.` : '';
+  const travelText = travelTypePhrase ? `, ${travelTypePhrase}` : '';
+  
+  const summary = `Your personalized ${timeLabel} route for ${goalsText}${travelText}.${prefsText} Total: ${totalLabel}.`;
 
   const subtitle = summary;
 
