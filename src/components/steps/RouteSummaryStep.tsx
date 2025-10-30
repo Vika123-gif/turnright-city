@@ -72,17 +72,17 @@ export default function RouteSummaryStep({
   const totalMin = computedMinutes || (walkMin + dwellMin);
   const requestedMin = requestedMinutes || timeWindow || 0;
 
-  // Convert to hours for display
-  const walkH = Math.round(walkMin / 60);
-  const dwellH = Math.round(dwellMin / 60);
-  const totalH = Math.round(totalMin / 60);
-  const requestedH = Math.round(requestedMin / 60);
+  // Helper function to format time (show minutes if < 60, otherwise hours and minutes)
+  const formatTime = (minutes: number): string => {
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+  };
 
-  const hours = scenario === 'planning' ? 0 : requestedH;
-  const minutes = scenario === 'planning' ? 0 : (requestedMin % 60);
   const formattedDuration = scenario === 'planning'
     ? (days ? `${days} day${days !== 1 ? 's' : ''}` : null)
-    : (requestedMin > 0 ? `${hours}h ${minutes}min` : null);
+    : (requestedMin > 0 ? formatTime(requestedMin) : null);
 
   const travelTypePhrase = travelType ? (
     travelType === 'With family' ? 'family-friendly' :
@@ -92,10 +92,12 @@ export default function RouteSummaryStep({
     travelType === 'With friends' ? 'fun with friends' : ''
   ) : '';
 
-  const timeLabel = scenario === 'planning' ? `${days} day${(days||0) !== 1 ? 's' : ''}` : `${hours}h`;
+  const timeLabel = scenario === 'planning' 
+    ? `${days} day${(days||0) !== 1 ? 's' : ''}` 
+    : formatTime(requestedMin);
   const totalLabel = scenario === 'planning'
     ? `${Math.max(1, Math.round(totalMin / 480))} day(s)`
-    : `${totalH}h (${walkH}h walk, ${dwellH}h explore)`;
+    : `${formatTime(totalMin)} (${formatTime(walkMin)} walk, ${formatTime(dwellMin)} explore)`;
   
   // Build personalized summary
   const goalsList = goals.slice(0, 3).join(', '); // Show max 3 goals
