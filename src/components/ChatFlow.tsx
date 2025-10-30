@@ -755,7 +755,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
           )}
 
           {step === "summary" && (
-            <div className="h-full overflow-y-auto">
+            <div className="h-full overflow-y-auto pb-20">
               <div className="absolute top-4 left-4 z-10">
                 <BackButton onClick={goBack} />
               </div>

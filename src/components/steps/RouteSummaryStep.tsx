@@ -125,8 +125,8 @@ export default function RouteSummaryStep({
   const currentDayPlaces = placesByDay[selectedDay] || [];
 
   return (
-    <div className="flex flex-col items-center justify-center text-center px-4 py-6 pb-24">
-      <div className="max-w-2xl w-full space-y-6">
+    <div className="flex flex-col items-center justify-center text-center px-4 py-6 pb-32">
+      <div className="max-w-2xl w-full space-y-6 pb-16">
         <h1 className="text-3xl md:text-4xl font-bold">Your route is ready 🎉</h1>
         <div className="text-lg md:text-xl text-foreground/80">{subtitle}</div>
 
@@ -158,7 +158,7 @@ export default function RouteSummaryStep({
         </div>
 
         {places && places.length > 0 && (
-          <div className="mt-8 w-full pb-8">
+          <div className="mt-8 w-full pb-16 mb-16">
             {/* Day switching buttons for planning scenario */}
             {scenario === 'planning' && availableDays.length > 1 && (
               <div className="mb-6 flex justify-center gap-2">
