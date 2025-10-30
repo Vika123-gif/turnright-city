@@ -127,13 +127,10 @@ export default function RouteSummaryStep({
   return (
     <div className="flex flex-col items-center justify-center text-center px-4 pt-2 pb-32">
       <div className="max-w-2xl w-full space-y-6 pb-16">
+        <h1 className="text-3xl md:text-4xl font-bold">Your route is ready 🎉</h1>
         <div className="text-lg md:text-xl text-foreground/80">{subtitle}</div>
 
-        {/* Summary already includes time breakdown and travel type */}
-
-        {/* Category chips hidden; categories now included inside the summary line */}
-
-        <div className="pt-6 flex flex-col sm:flex-row gap-3 justify-center">
+        <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
           <Button
             onClick={onContinue}
             size="lg"
@@ -151,34 +148,35 @@ export default function RouteSummaryStep({
               className="px-8 py-6 text-lg font-semibold border-2"
             >
               <RefreshCw className="mr-2 h-5 w-5" />
-              Regenerate Route
+              Regenerate
             </Button>
           )}
         </div>
-
-        {places && places.length > 0 && (
-          <div className="mt-8 w-full pb-16 mb-16">
-            {/* Day switching buttons for planning scenario */}
-            {scenario === 'planning' && availableDays.length > 1 && (
-              <div className="mb-6 flex justify-center gap-2">
-                {availableDays.map(day => (
-                  <Button
-                    key={day}
-                    variant={selectedDay === day ? "default" : "outline"}
-                    onClick={() => setSelectedDay(day)}
-                    className="px-4 py-2"
-                  >
-                    Day {day}
-                  </Button>
-                ))}
-              </div>
-            )}
-            
-            {/* Places carousel for current day */}
-            <PlacesCarousel places={currentDayPlaces.slice(0, 12)} />
-          </div>
-        )}
       </div>
+
+      {/* Places Preview Section - Moved outside for better visibility */}
+      {places && places.length > 0 && (
+        <div className="w-full max-w-6xl px-4 mt-8">
+          {/* Day switching buttons for planning scenario */}
+          {scenario === 'planning' && availableDays.length > 1 && (
+            <div className="mb-6 flex justify-center gap-2">
+              {availableDays.map(day => (
+                <Button
+                  key={day}
+                  variant={selectedDay === day ? "default" : "outline"}
+                  onClick={() => setSelectedDay(day)}
+                  className="px-4 py-2"
+                >
+                  Day {day}
+                </Button>
+              ))}
+            </div>
+          )}
+          
+          {/* Places carousel for current day */}
+          <PlacesCarousel places={currentDayPlaces.slice(0, 12)} />
+        </div>
+      )}
     </div>
   );
 }
