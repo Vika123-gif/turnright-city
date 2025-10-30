@@ -117,7 +117,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
 
   // Save state to localStorage whenever important data changes (but not during initial restore)
   useEffect(() => {
-    if (!isRestoringState && places && places.length > 0 && step !== 'chat') {
+    if (!isRestoringState && step !== 'chat') {
       const stateToSave = {
         step,
         location,
@@ -141,7 +141,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       localStorage.setItem('savedRouteState', JSON.stringify(stateToSave));
       console.log('💾 Route state saved to localStorage at step:', step);
     }
-  }, [isRestoringState, step, location, coordinates, timeWindow, scenario, goals, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
+  }, [isRestoringState, step, location, coordinates, timeWindow, scenario, goals, travelType, prefs, days, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
 
   // Simplified payment success check - no longer needed but keeping for potential future use
   useEffect(() => {
