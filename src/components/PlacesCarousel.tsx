@@ -33,7 +33,7 @@ const PlacesCarousel: React.FC<Props> = ({ places, className }) => {
 
       <div
         ref={scrollerRef}
-        className="flex gap-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory"
+        className="flex gap-4 overflow-x-auto pb-4 no-scrollbar snap-x snap-mandatory"
       >
         {places.map((p, idx) => (
           <article

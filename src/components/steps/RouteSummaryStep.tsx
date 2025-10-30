@@ -156,7 +156,7 @@ export default function RouteSummaryStep({
         </div>
 
         {places && places.length > 0 && (
-          <div className="mt-8 w-full">
+          <div className="mt-8 w-full pb-8">
             {/* Day switching buttons for planning scenario */}
             {scenario === 'planning' && availableDays.length > 1 && (
               <div className="mb-6 flex justify-center gap-2">
