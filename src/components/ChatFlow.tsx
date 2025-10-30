@@ -55,6 +55,50 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
   const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, saveUserRoute, getSavedRoutes, testConnection } = useDatabase();
   const { trackButtonClick } = useButtonTracking();
 
+  // Function to immediately save state to localStorage (synchronous)
+  const saveStateNow = (overrides: Partial<{
+    step: Step;
+    location: string;
+    coordinates: string;
+    timeWindow: number | null;
+    scenario: "onsite" | "planning";
+    goals: string[];
+    travelType: string | null;
+    prefs: string[];
+    days: number | undefined;
+    origin: string;
+    originCoordinates: string;
+    destination: string;
+    destinationType: "none" | "circle" | "specific";
+    places: LLMPlace[] | null;
+    currentRouteGenerationId: string | null;
+    regenerationCount: number;
+    isRouteGenerated: boolean;
+  }> = {}) => {
+    const stateToSave = {
+      step: overrides.step ?? step,
+      location: overrides.location ?? location,
+      coordinates: overrides.coordinates ?? coordinates,
+      timeWindow: overrides.timeWindow ?? timeWindow,
+      scenario: overrides.scenario ?? scenario,
+      goals: overrides.goals ?? goals,
+      origin: overrides.origin ?? origin,
+      originCoordinates: overrides.originCoordinates ?? originCoordinates,
+      destination: overrides.destination ?? destination,
+      destinationType: overrides.destinationType ?? destinationType,
+      places: overrides.places ?? places,
+      travelType: overrides.travelType ?? travelType,
+      prefs: overrides.prefs ?? prefs,
+      days: overrides.days ?? days,
+      currentRouteGenerationId: overrides.currentRouteGenerationId ?? currentRouteGenerationId,
+      regenerationCount: overrides.regenerationCount ?? regenerationCount,
+      isRouteGenerated: overrides.isRouteGenerated ?? isRouteGenerated,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem('savedRouteState', JSON.stringify(stateToSave));
+    console.log('💾 State saved immediately at step:', stateToSave.step);
+  };
+
   // Generate session ID and track visitor on component mount
   useEffect(() => {
     const initializeSession = async () => {
@@ -399,10 +443,12 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       console.log("Time window:", timeWindow);
       console.log("Goals:", goalsToUse);
       setStep("summary");
+      saveStateNow({ step: "summary" });
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
       setStep("summary"); // Show summary even if there's an error
+      saveStateNow({ step: "summary" });
     } finally {
       setGenerating(false);
     }
@@ -414,6 +460,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     console.log("Current regeneration count:", regenerationCount);
     trackButtonClick('regenerate_route');
     setStep("generating");
+    saveStateNow({ step: "generating" });
     fetchPlacesWithGoals(goals, true); // Pass true to indicate this is a regeneration
   }
 
@@ -446,26 +493,35 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
 
   function goBack() {
     console.log("=== DEBUG: goBack called from step:", step);
+    let newStep: Step = step;
+    let newChatVisible = chatVisible;
+    let newIsRouteGenerated = isRouteGenerated;
+    
     switch (step) {
       case "generating":
-        setStep("chat");
-        setChatVisible(true);
-        setIsRouteGenerated(false);
+        newStep = "chat";
+        newChatVisible = true;
+        newIsRouteGenerated = false;
         break;
       case "summary":
-        setStep("generating");
+        newStep = "generating";
         break;
       case "detailed-map":
-        setStep("summary");
+        newStep = "summary";
         break;
       case "purchase":
-        setStep("detailed-map");
+        newStep = "detailed-map";
         break;
       default:
-        setStep("chat");
-        setChatVisible(true);
-        setIsRouteGenerated(false);
+        newStep = "chat";
+        newChatVisible = true;
+        newIsRouteGenerated = false;
     }
+    
+    setStep(newStep);
+    setChatVisible(newChatVisible);
+    setIsRouteGenerated(newIsRouteGenerated);
+    saveStateNow({ step: newStep, isRouteGenerated: newIsRouteGenerated });
   }
 
   function handleBuyButtonClick(location: string, placesCount: number) {
@@ -564,6 +620,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     setPurchaseRoute(routeData);
     setStep("purchase");
     setIsRouteGenerated(true);
+    saveStateNow({ step: "purchase", isRouteGenerated: true });
   }
 
   // Handler for location exit tracking
@@ -669,6 +726,21 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       setChatVisible(false);
       setStep("generating");
       
+      // Save state immediately
+      saveStateNow({
+        step: "generating",
+        location: data.location,
+        origin: data.location,
+        originCoordinates: /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(data.location) ? data.location : "",
+        destination: data.destination || "",
+        destinationType: data.destinationType || "none",
+        timeWindow: data.timeMinutes,
+        goals: data.categories,
+        travelType: data.travelType || null,
+        prefs: data.additionalSettings || [],
+        scenario: data.scenario
+      });
+      
       console.log("=== Starting route with ===");
       console.log("Origin:", data.location);
       console.log("Origin Coordinates:", /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(data.location) ? data.location : "none");
@@ -690,6 +762,19 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       setChatVisible(false);
       setStep("generating");
       
+      // Save state immediately
+      saveStateNow({
+        step: "generating",
+        location: data.city,
+        origin: data.accommodation || data.city,
+        timeWindow: data.days,
+        days: data.days,
+        goals: data.categories,
+        travelType: data.travelType || null,
+        prefs: data.additionalSettings || [],
+        scenario: data.scenario
+      });
+      
       // Start generating places for trip planning
       fetchPlacesWithGoals(data.categories);
     } else {
@@ -706,6 +791,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     // Allow showing the map immediately; DetailedMapStep will handle empty states gracefully
     setChatVisible(false);
     setStep("detailed-map");
+    saveStateNow({ step: "detailed-map" });
   };
 
   const handleShowDayMap = (dayPlaces: LLMPlace[]) => {
@@ -771,6 +857,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
                 onContinue={() => {
                   console.log("=== Let's Go button clicked ===");
                   setStep("detailed-map");
+                  saveStateNow({ step: "detailed-map" });
                 }}
                 onRegenerate={regenerate}
               />
@@ -791,7 +878,10 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
                 routeRating={routeRating}
                 onRatingSubmit={handleRouteRating}
                 RouteRatingComponent={RouteRating}
-                onViewDetailed={() => setStep("detailed-map")}
+                onViewDetailed={() => {
+                  setStep("detailed-map");
+                  saveStateNow({ step: "detailed-map" });
+                }}
               />
             </>
           )}
@@ -807,6 +897,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
                 onBack={() => {
                   setSelectedDayPlaces(null); // Reset selected day places when going back
                   setStep("summary");
+                  saveStateNow({ step: "summary" });
                 }}
                 onReset={reset}
                 onFeedbackSubmit={handleTextFeedback}
