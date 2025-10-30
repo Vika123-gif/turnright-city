@@ -25,21 +25,6 @@ const RouteResultPage: React.FC<Props> = ({
 }) => {
   return (
     <div className="w-full max-w-5xl mx-auto">
-      {/* Header (optional placeholder) */}
-      <div className="flex items-center justify-between py-3">
-        <h2 className="text-lg font-semibold text-gray-800">Your Route</h2>
-        {mapUrl && (
-          <a
-            href={mapUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-[hsl(var(--primary))] hover:underline"
-          >
-            Open in Google Maps
-          </a>
-        )}
-      </div>
-
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         {/* MapPanel */}
         <div className="w-full h-[320px] md:h-[420px] bg-gray-50">
