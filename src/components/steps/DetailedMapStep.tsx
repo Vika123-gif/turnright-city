@@ -4,7 +4,7 @@ import Button from "../Button";
 import Map from "../Map";
 import RouteFeedback from "../RouteFeedback";
 import CategoryBadge from "../CategoryBadge";
-import { MapPin, Clock, ExternalLink, Star, Play, Square } from "lucide-react";
+import { MapPin, Clock, ExternalLink, Star } from "lucide-react";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import { useComprehensiveTracking } from "@/hooks/useComprehensiveTracking";
 
@@ -40,7 +40,6 @@ const DetailedMapStep: React.FC<Props> = ({
   const [startAddress, setStartAddress] = useState<string>("");
   const [endAddress, setEndAddress] = useState<string>("");
   const [selectedDay, setSelectedDay] = useState(1);
-  const [speakingPlaceIndex, setSpeakingPlaceIndex] = useState<number | null>(null);
 
   // Group places by day for planning scenario
   const placesByDay = scenario === 'planning' && days && days > 1 
@@ -540,7 +539,7 @@ const DetailedMapStep: React.FC<Props> = ({
   });
 
   return (
-    <div className="w-full flex flex-col text-left p-4 pb-6 min-h-screen">
+    <div className="w-full flex flex-col text-left p-4 pb-48 overflow-y-auto" style={{ height: '100%', maxHeight: '100vh' }}>
       <div className="flex items-center justify-between mb-3">
         <button 
           className="text-sm text-gray-600 hover:text-gray-800" 
@@ -637,10 +636,8 @@ const DetailedMapStep: React.FC<Props> = ({
                 </div>
                 <div className="hidden md:block flex-shrink-0">
                 {(() => {
-                  const isSpeaking = speakingPlaceIndex === i;
-                  
                   // Audio function for place descriptions
-                  const speakPlaceDescription = (place: LLMPlace, index: number) => {
+                  const speakPlaceDescription = (place: LLMPlace) => {
                     if ('speechSynthesis' in window) {
                       const utterance = new SpeechSynthesisUtterance();
                       utterance.text = `${place.name}. ${place.description || 'A wonderful place to visit on your route.'}`;
@@ -649,58 +646,24 @@ const DetailedMapStep: React.FC<Props> = ({
                       utterance.pitch = 1;
                       utterance.volume = 0.8;
                       
-                      utterance.onend = () => {
-                        setSpeakingPlaceIndex(null);
-                      };
-                      
-                      utterance.onerror = () => {
-                        setSpeakingPlaceIndex(null);
-                      };
-                      
                       // Cancel any ongoing speech
                       window.speechSynthesis.cancel();
-                      setSpeakingPlaceIndex(index);
                       window.speechSynthesis.speak(utterance);
                     }
                   };
-                  
-                  const stopSpeech = () => {
-                    window.speechSynthesis.cancel();
-                    setSpeakingPlaceIndex(null);
-                  };
 
-                  return (
-                    <button
-                      onClick={() => {
-                        if (isSpeaking) {
-                          trackButtonClick('audio_stop', 'Stop Audio', 'DetailedMapStep', {
+                    return (
+                      <button
+                        onClick={() => {
+                        trackButtonClick('audio_guide', '🔊 Audio Guide', 'DetailedMapStep', {
                             placeName: place.name,
                             placeIndex: i
                           });
-                          stopSpeech();
-                        } else {
-                          trackButtonClick('audio_play', 'Play Audio', 'DetailedMapStep', {
-                            placeName: place.name,
-                            placeIndex: i
-                          });
-                          speakPlaceDescription(place, i);
-                        }
+                        speakPlaceDescription(place);
                       }}
-                      className={`text-[11px] px-2 py-1 rounded border transition-colors flex items-center gap-1 ${
-                        isSpeaking ? 'bg-red-50 hover:bg-red-100 border-red-300' : 'hover:bg-gray-50'
-                      }`}
+                      className="text-[11px] px-2 py-1 rounded border hover:bg-gray-50 transition-colors flex items-center gap-1"
                     >
-                      {isSpeaking ? (
-                        <>
-                          <Square className="w-3 h-3" />
-                          Stop
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-3 h-3" />
-                          Play
-                        </>
-                      )}
+                      🔊 Audio Guide
                     </button>
                   );
                 })()}
@@ -735,9 +698,7 @@ const DetailedMapStep: React.FC<Props> = ({
       </div>
 
       {/* Map */}
-      <div className="h-[50vh] md:h-[60vh]">
-        <Map places={currentDayPlaces} origin={origin} destinationType={destinationType} destination={destination} className="w-full h-full rounded-lg border-2 border-primary/20 shadow-lg" />
-      </div>
+      <Map places={currentDayPlaces} origin={origin} destinationType={destinationType} destination={destination} className="flex-1 min-h-0 w-full rounded-lg border-2 border-primary/20 shadow-lg" />
 
       {/* Action bar */}
       <div className="mt-3 flex gap-2 flex-shrink-0">
