@@ -128,6 +128,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     location?: string;
     timeMinutes?: number;
     categories?: string[];
+    travelType?: string;
     destination?: string;
     destinationType?: "none" | "circle" | "specific";
     additionalSettings?: string[];

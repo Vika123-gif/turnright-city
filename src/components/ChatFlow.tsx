@@ -29,6 +29,9 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
   const [timeWindow, setTimeWindow] = useState<number | null>(null);
   const [scenario, setScenario] = useState<"onsite" | "planning">("onsite");
   const [goals, setGoals] = useState<string[]>([]);
+  const [travelType, setTravelType] = useState<string | null>(null);
+  const [prefs, setPrefs] = useState<string[]>([]);
+  const [days, setDays] = useState<number | undefined>(undefined);
   const [origin, setOrigin] = useState<string>("");
   const [originCoordinates, setOriginCoordinates] = useState<string>(""); // Store original coordinates
   const [destination, setDestination] = useState<string>("");
@@ -94,6 +97,9 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
         setDestination(parsed.destination || '');
         setDestinationType(parsed.destinationType || 'none');
         setPlaces(parsed.places || null);
+        setTravelType(parsed.travelType || null);
+        setPrefs(parsed.prefs || []);
+        setDays(parsed.days);
         setCurrentRouteGenerationId(parsed.currentRouteGenerationId || null);
         setRegenerationCount(parsed.regenerationCount || 0);
         setIsRouteGenerated(parsed.isRouteGenerated || false);
@@ -124,6 +130,9 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
         destination,
         destinationType,
         places,
+        travelType,
+        prefs,
+        days,
         currentRouteGenerationId,
         regenerationCount,
         isRouteGenerated,
@@ -414,14 +423,17 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     setCoordinates("");
     setOriginCoordinates(""); // Clear original coordinates
     setTimeWindow(null);
-    setGoals([]);
-    setPlaces(null);
-    setError(null);
-    setPurchaseRoute(null);
-    setRouteRating(null);
-    setCurrentRouteGenerationId(null);
-    setRegenerationCount(0); // Reset regeneration count
-    // Don't regenerate session ID on reset, keep the same browser session
+        setGoals([]);
+        setPlaces(null);
+        setError(null);
+        setPurchaseRoute(null);
+        setRouteRating(null);
+        setCurrentRouteGenerationId(null);
+        setRegenerationCount(0);
+        setTravelType(null);
+        setPrefs([]);
+        setDays(undefined);
+        // Don't regenerate session ID on reset, keep the same browser session
     localStorage.removeItem('pendingRouteData');
     localStorage.removeItem('pendingRouteGenerationId');
     localStorage.removeItem('pendingUserSessionId');
@@ -626,6 +638,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     destination?: string;
     destinationType?: "none" | "circle" | "specific";
     additionalSettings?: string[];
+    travelType?: string;
     city?: string;
     days?: number;
     accommodation?: string;
@@ -650,6 +663,8 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       setDestinationType(data.destinationType || "none");
       setTimeWindow(data.timeMinutes);
       setGoals(data.categories);
+      setTravelType(data.travelType || null);
+      setPrefs(data.additionalSettings || []);
       setChatVisible(false);
       setStep("generating");
       
@@ -667,7 +682,10 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       // Use accommodation address if provided, otherwise fall back to city center
       setOrigin(data.accommodation || data.city);
       setTimeWindow(data.days);
+      setDays(data.days);
       setGoals(data.categories);
+      setTravelType(data.travelType || null);
+      setPrefs(data.additionalSettings || []);
       setChatVisible(false);
       setStep("generating");
       
@@ -744,6 +762,11 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
               <RouteSummaryStep
                 timeWindow={timeWindow}
                 goals={goals}
+                places={places || []}
+                travelType={travelType}
+                prefs={prefs}
+                scenario={scenario}
+                days={days}
                 onContinue={() => {
                   console.log("=== Let's Go button clicked ===");
                   setStep("detailed-map");
