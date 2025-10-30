@@ -117,44 +117,63 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     setIsRestoringState(false);
   }, []);
 
-  // Helper function to save state IMMEDIATELY (synchronously)
-  const saveStateImmediately = React.useCallback(() => {
+  // Helper function to save state with explicit values (no closure issues)
+  const saveState = (overrides: Partial<{
+    step: Step;
+    location: string;
+    coordinates: string;
+    timeWindow: number | null;
+    scenario: "onsite" | "planning";
+    goals: string[];
+    origin: string;
+    originCoordinates: string;
+    destination: string;
+    destinationType: "none" | "circle" | "specific";
+    places: LLMPlace[] | null;
+    travelType: string | null;
+    prefs: string[];
+    days: number | undefined;
+    currentRouteGenerationId: string | null;
+    regenerationCount: number;
+    isRouteGenerated: boolean;
+  }> = {}) => {
     if (isRestoringState) return;
     
-    // Use refs to get the latest values
     const stateToSave = {
-      step,
-      location,
-      coordinates,
-      timeWindow,
-      scenario,
-      goals,
-      origin,
-      originCoordinates,
-      destination,
-      destinationType,
-      places,
-      travelType,
-      prefs,
-      days,
-      currentRouteGenerationId,
-      regenerationCount,
-      isRouteGenerated,
+      step: overrides.step ?? step,
+      location: overrides.location ?? location,
+      coordinates: overrides.coordinates ?? coordinates,
+      timeWindow: overrides.timeWindow ?? timeWindow,
+      scenario: overrides.scenario ?? scenario,
+      goals: overrides.goals ?? goals,
+      origin: overrides.origin ?? origin,
+      originCoordinates: overrides.originCoordinates ?? originCoordinates,
+      destination: overrides.destination ?? destination,
+      destinationType: overrides.destinationType ?? destinationType,
+      places: overrides.places ?? places,
+      travelType: overrides.travelType ?? travelType,
+      prefs: overrides.prefs ?? prefs,
+      days: overrides.days ?? days,
+      currentRouteGenerationId: overrides.currentRouteGenerationId ?? currentRouteGenerationId,
+      regenerationCount: overrides.regenerationCount ?? regenerationCount,
+      isRouteGenerated: overrides.isRouteGenerated ?? isRouteGenerated,
       timestamp: Date.now(),
     };
     
     try {
       localStorage.setItem('savedRouteState', JSON.stringify(stateToSave));
-      console.log('💾 IMMEDIATE SAVE:', step, '| Location:', location?.substring(0, 20));
+      console.log('💾 SAVE:', stateToSave.step, '| Location:', stateToSave.location?.substring(0, 20));
     } catch (error) {
-      console.error('❌ Failed to save state immediately:', error);
+      console.error('❌ Failed to save state:', error);
     }
-  }, [isRestoringState, step, location, coordinates, timeWindow, scenario, goals, origin, originCoordinates, destination, destinationType, places, travelType, prefs, days, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
+  };
 
-  // Auto-save state whenever important data changes (backup to immediate saves)
+  // Auto-save state whenever important data changes
   useEffect(() => {
-    saveStateImmediately();
-  }, [saveStateImmediately]);
+    if (!isRestoringState) {
+      saveState();
+    }
+  }, [isRestoringState, step, location, coordinates, timeWindow, scenario, goals, travelType, prefs, days, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
 
   // Simplified payment success check - no longer needed but keeping for potential future use
   useEffect(() => {
@@ -410,13 +429,15 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       console.log("=== SETTING STEP TO SUMMARY ===");
       console.log("Time window:", timeWindow);
       console.log("Goals:", goalsToUse);
+      
+      saveState({ step: "summary" });
       setStep("summary");
-      setTimeout(() => saveStateImmediately(), 0);
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
+      
+      saveState({ step: "summary" });
       setStep("summary");
-      setTimeout(() => saveStateImmediately(), 0);
     } finally {
       setGenerating(false);
     }
@@ -427,8 +448,9 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     console.log("Current goals before regenerate:", goals);
     console.log("Current regeneration count:", regenerationCount);
     trackButtonClick('regenerate_route');
+    
+    saveState({ step: "generating" });
     setStep("generating");
-    setTimeout(() => saveStateImmediately(), 0);
     fetchPlacesWithGoals(goals, true);
   }
 
@@ -486,12 +508,12 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
         newIsRouteGenerated = false;
     }
     
+    // Save with new values BEFORE state update
+    saveState({ step: newStep, isRouteGenerated: newIsRouteGenerated });
+    
     setStep(newStep);
     setChatVisible(newChatVisible);
     setIsRouteGenerated(newIsRouteGenerated);
-    
-    // Save immediately after state change
-    setTimeout(() => saveStateImmediately(), 0);
   }
 
   function handleBuyButtonClick(location: string, placesCount: number) {
@@ -578,11 +600,11 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     
     trackRoutePurchase(location, places.length);
     
+    saveState({ step: "purchase", isRouteGenerated: true });
+    
     setPurchaseRoute(routeData);
     setStep("purchase");
     setIsRouteGenerated(true);
-    
-    setTimeout(() => saveStateImmediately(), 0);
   }
 
   // Handler for location exit tracking
@@ -667,17 +689,37 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
     console.log("=== DEBUG: Chat completed ===");
     console.log("Data received:", data);
     
-    // Update scenario state
-    setScenario(data.scenario);
-    
     // Handle onsite scenario
     if (data.scenario === "onsite" && data.location && data.timeMinutes && data.categories) {
+      const isCoords = /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(data.location);
+      
+      console.log("=== Starting route with ===");
+      console.log("Origin:", data.location);
+      console.log("Origin Coordinates:", isCoords ? data.location : "none");
+      console.log("Destination:", data.destination);
+      console.log("Destination Type:", data.destinationType);
+      
+      // Save BEFORE state updates
+      saveState({
+        scenario: data.scenario,
+        location: data.location,
+        origin: data.location,
+        originCoordinates: isCoords ? data.location : "",
+        destination: data.destination || "",
+        destinationType: data.destinationType || "none",
+        timeWindow: data.timeMinutes,
+        goals: data.categories,
+        travelType: data.travelType || null,
+        prefs: data.additionalSettings || [],
+        step: "generating"
+      });
+      
+      // Update state
+      setScenario(data.scenario);
       setLocation(data.location);
       setOrigin(data.location);
-      // Store coordinates if location is in coordinate format
-      if (/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(data.location)) {
+      if (isCoords) {
         setOriginCoordinates(data.location);
-        console.log("Stored origin coordinates:", data.location);
       }
       setDestination(data.destination || "");
       setDestinationType(data.destinationType || "none");
@@ -688,21 +730,25 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       setChatVisible(false);
       setStep("generating");
       
-      console.log("=== Starting route with ===");
-      console.log("Origin:", data.location);
-      console.log("Origin Coordinates:", /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(data.location) ? data.location : "none");
-      console.log("Destination:", data.destination);
-      console.log("Destination Type:", data.destinationType);
-      
-      // Save immediately before generating
-      setTimeout(() => saveStateImmediately(), 0);
-      
       // Start generating places
       fetchPlacesWithGoals(data.categories);
     } else if (data.scenario === "planning" && data.city && data.days && data.categories) {
+      // Save BEFORE state updates
+      saveState({
+        scenario: data.scenario,
+        location: data.city,
+        origin: data.accommodation || data.city,
+        timeWindow: data.days,
+        days: data.days,
+        goals: data.categories,
+        travelType: data.travelType || null,
+        prefs: data.additionalSettings || [],
+        step: "generating"
+      });
+      
       // Handle planning scenario
+      setScenario(data.scenario);
       setLocation(data.city);
-      // Use accommodation address if provided, otherwise fall back to city center
       setOrigin(data.accommodation || data.city);
       setTimeWindow(data.days);
       setDays(data.days);
@@ -712,9 +758,6 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       setChatVisible(false);
       setStep("generating");
       
-      // Save immediately before generating
-      setTimeout(() => saveStateImmediately(), 0);
-      
       // Start generating places for trip planning
       fetchPlacesWithGoals(data.categories);
     } else {
@@ -723,9 +766,9 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
   };
 
   const handleShowMap = () => {
+    saveState({ step: "detailed-map" });
     setChatVisible(false);
     setStep("detailed-map");
-    setTimeout(() => saveStateImmediately(), 0);
   };
 
   const handleShowDayMap = (dayPlaces: LLMPlace[]) => {
@@ -790,8 +833,8 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
                 days={days}
                 onContinue={() => {
                   console.log("=== Let's Go button clicked ===");
+                  saveState({ step: "detailed-map" });
                   setStep("detailed-map");
-                  setTimeout(() => saveStateImmediately(), 0);
                 }}
                 onRegenerate={regenerate}
               />
@@ -813,8 +856,8 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
                 onRatingSubmit={handleRouteRating}
                 RouteRatingComponent={RouteRating}
                 onViewDetailed={() => {
+                  saveState({ step: "detailed-map" });
                   setStep("detailed-map");
-                  setTimeout(() => saveStateImmediately(), 0);
                 }}
               />
             </>
@@ -829,9 +872,9 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
                 places={selectedDayPlaces || places || []}
                 origin={location}
                 onBack={() => {
+                  saveState({ step: "summary" });
                   setSelectedDayPlaces(null);
                   setStep("summary");
-                  setTimeout(() => saveStateImmediately(), 0);
                 }}
                 onReset={reset}
                 onFeedbackSubmit={handleTextFeedback}
