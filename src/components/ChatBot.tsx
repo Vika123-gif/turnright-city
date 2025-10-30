@@ -167,14 +167,71 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     scrollToBottom();
   }, [messages]);
 
+  // Save chat state to localStorage
   useEffect(() => {
-    // Initialize with welcome message
+    const chatState = {
+      messages,
+      currentStep,
+      userInput,
+      destinationInput,
+      locationInput,
+      selectedScenario,
+      travelType,
+      selectedTime,
+      customMinutes,
+      selectedCategories,
+      additionalSettings,
+      locationConsent,
+      destinationType,
+      selectedDays,
+      hasAccommodation,
+      collectedData,
+    };
+    localStorage.setItem('chatBotState', JSON.stringify(chatState));
+  }, [messages, currentStep, userInput, destinationInput, locationInput, selectedScenario, travelType, selectedTime, customMinutes, selectedCategories, additionalSettings, locationConsent, destinationType, selectedDays, hasAccommodation, collectedData]);
+
+  // Restore chat state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('chatBotState');
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        // Only restore if there's actual progress (more than initial messages)
+        if (state.messages && state.messages.length > 0) {
+          setMessages(state.messages);
+          setCurrentStep(state.currentStep);
+          setUserInput(state.userInput || "");
+          setDestinationInput(state.destinationInput || "");
+          setLocationInput(state.locationInput || "");
+          setSelectedScenario(state.selectedScenario);
+          setTravelType(state.travelType);
+          setSelectedTime(state.selectedTime);
+          setCustomMinutes(state.customMinutes || "");
+          setSelectedCategories(state.selectedCategories || []);
+          setAdditionalSettings(state.additionalSettings || []);
+          setLocationConsent(state.locationConsent || false);
+          setDestinationType(state.destinationType);
+          setSelectedDays(state.selectedDays);
+          setHasAccommodation(state.hasAccommodation);
+          setCollectedData(state.collectedData || { scenario: "onsite" });
+          return; // Skip initialization
+        }
+      } catch (error) {
+        console.error('Error restoring chat state:', error);
+      }
+    }
+    
+    // Initialize with welcome message only if no saved state
     addBotMessage("👋 Hi! I'm TurnRight, your personal city guide.");
     setTimeout(() => {
       addBotMessage("Choose your travel type.");
       setCurrentStep("travel_type");
     }, 1000);
   }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Step navigation mapping
   const stepFlow = {
@@ -209,6 +266,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
   const startNewDialog = () => {
     console.log("=== DEBUG: startNewDialog called ===");
+    // Clear saved state
+    localStorage.removeItem('chatBotState');
+    
     // Reset all states
     setMessages([]);
     setCurrentStep("travel_type"); // Go to travel type selection instead of welcome
