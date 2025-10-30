@@ -642,7 +642,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
   }, [chatVisible, step, onHeaderVisibilityChange]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#F3FCF8]">
+    <div className="w-full h-full flex flex-col bg-[#F3FCF8] min-h-0">
       <ChatBot
         onComplete={handleChatComplete}
         onShowMap={handleShowMap}

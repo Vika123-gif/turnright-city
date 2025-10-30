@@ -36,7 +36,7 @@ const Index = () => {
   }
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
       {/* Header with user info and credits - Fixed at top */}
       {headerVisible && (
         <header className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200 p-4 flex-shrink-0">
@@ -87,7 +87,7 @@ const Index = () => {
       )}
       
       {/* Main content - Fills remaining space */}
-      <div className="flex-1 w-full relative overflow-hidden">
+      <div className="flex-1 w-full relative overflow-hidden min-h-0">
         <ChatFlow onHeaderVisibilityChange={setHeaderVisible} />
       </div>
     </div>

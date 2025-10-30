@@ -741,7 +741,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   }
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col overflow-hidden">
+    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col min-h-0">
       {/* Header */}
       {isRouteGenerated && (
         <div className="flex justify-between items-center p-4 bg-white/80 backdrop-blur-sm border-b border-gray-100 shadow-sm flex-shrink-0">
