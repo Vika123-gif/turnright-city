@@ -1607,7 +1607,7 @@ serve(async (req) => {
       totalWalkMin += walkMinutes({ lat: lastPlace.lat, lon: lastPlace.lon }, { lat, lon: lng });
     }
     
-    const totalMin = totalWalkMin + totalDwellMin;
+    let totalMin = totalWalkMin + totalDwellMin;
     
     // Sanity checks
     if (totalMin > MAX_TOTAL_MINUTES) {
