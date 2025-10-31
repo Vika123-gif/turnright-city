@@ -1259,7 +1259,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {/* Error state when route generation fails */}
-      {currentStep === "route_error" && (
+      {(currentStep === "route_error" || (currentStep === "route_preview" && (!places || places.length === 0))) && (
         <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
           <div className="text-center py-8">
             <div className="text-4xl mb-4">❌</div>
