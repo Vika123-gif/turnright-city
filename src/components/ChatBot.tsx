@@ -51,6 +51,7 @@ type ChatStep =
   | "generating"
   | "summary"
   | "route_preview"
+  | "route_error"
   | "route_results"
   | "detailed-map"
   // Scenario B (planning) steps  
@@ -786,7 +787,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       
       setError(e.message || "Could not generate route.");
       addBotMessage("❌ Sorry, I couldn't generate a route. Please try again with different settings.");
-      setCurrentStep("route_preview");
+      setCurrentStep("route_error"); // Use special error step instead of route_preview
     } finally {
       setGenerating(false);
     }
@@ -1254,6 +1255,41 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             totalExploringTime={routeTimeData?.totalExploringTime}
             onContinue={() => setCurrentStep("detailed-map")}
           />
+        </div>
+      )}
+
+      {/* Error state when route generation fails */}
+      {currentStep === "route_error" && (
+        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4">❌</div>
+            <div className="text-lg font-semibold text-gray-700 mb-2">
+              Couldn't generate route
+            </div>
+            <div className="text-sm text-gray-500 mb-6">
+              {error || "Please try again with different settings."}
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  // Go back to settings step based on scenario
+                  const settingsStep = collectedData.scenario === "planning" ? "trip_settings" : "additional_settings";
+                  setCurrentStep(settingsStep);
+                  setError(null);
+                  setPlaces(null);
+                }}
+                className="w-full py-3 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+              >
+                ← Change Settings
+              </button>
+              <button
+                onClick={startNewDialog}
+                className="w-full py-3 px-6 bg-white border-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))] font-semibold rounded-2xl text-base transition-all duration-200 hover:bg-green-50 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Start New Route
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
