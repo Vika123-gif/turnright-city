@@ -159,6 +159,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { getLLMPlaces } = useOpenAI();
   const { searchPlacesByName } = useGooglePlaces();
+  const [isRestoringState, setIsRestoringState] = useState(true);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -168,66 +169,111 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     scrollToBottom();
   }, [messages]);
 
-  // Save chat state to localStorage
+  // Save chat state to localStorage (improved with timestamp and error handling)
   useEffect(() => {
-    const chatState = {
-      messages,
-      currentStep,
-      userInput,
-      destinationInput,
-      locationInput,
-      selectedScenario,
-      travelType,
-      selectedTime,
-      customMinutes,
-      selectedCategories,
-      additionalSettings,
-      locationConsent,
-      destinationType,
-      selectedDays,
-      hasAccommodation,
-      collectedData,
-    };
-    localStorage.setItem('chatBotState', JSON.stringify(chatState));
-  }, [messages, currentStep, userInput, destinationInput, locationInput, selectedScenario, travelType, selectedTime, customMinutes, selectedCategories, additionalSettings, locationConsent, destinationType, selectedDays, hasAccommodation, collectedData]);
+    // Don't save during restoration to avoid overwriting
+    if (isRestoringState) return;
+    
+    try {
+      const chatState = {
+        messages: messages.map(msg => ({
+          ...msg,
+          timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp
+        })),
+        currentStep,
+        userInput,
+        destinationInput,
+        locationInput,
+        selectedScenario,
+        travelType,
+        selectedTime,
+        customMinutes,
+        selectedCategories,
+        additionalSettings,
+        locationConsent,
+        destinationType,
+        selectedDays,
+        hasAccommodation,
+        collectedData,
+        savedAt: Date.now(), // Add timestamp for debugging
+      };
+      localStorage.setItem('chatBotState', JSON.stringify(chatState));
+      console.log('💾 Chat state saved:', { 
+        step: currentStep, 
+        messagesCount: messages.length,
+        hasCollectedData: !!collectedData.location || !!collectedData.city
+      });
+    } catch (error) {
+      console.error('❌ Error saving chat state:', error);
+    }
+  }, [isRestoringState, messages, currentStep, userInput, destinationInput, locationInput, selectedScenario, travelType, selectedTime, customMinutes, selectedCategories, additionalSettings, locationConsent, destinationType, selectedDays, hasAccommodation, collectedData]);
 
-  // Restore chat state from localStorage on mount
+  // Restore chat state from localStorage on mount (improved)
   useEffect(() => {
+    console.log('🔄 Attempting to restore chat state from localStorage...');
     const savedState = localStorage.getItem('chatBotState');
+    let hasRestoredState = false;
+    
     if (savedState) {
       try {
         const state = JSON.parse(savedState);
-        // Only restore if there's actual progress (more than initial messages)
-        if (state.messages && state.messages.length > 0) {
-          setMessages(state.messages);
-          setCurrentStep(state.currentStep);
-          setUserInput(state.userInput || "");
-          setDestinationInput(state.destinationInput || "");
-          setLocationInput(state.locationInput || "");
-          setSelectedScenario(state.selectedScenario);
-          setTravelType(state.travelType);
-          setSelectedTime(state.selectedTime);
-          setCustomMinutes(state.customMinutes || "");
-          setSelectedCategories(state.selectedCategories || []);
-          setAdditionalSettings(state.additionalSettings || []);
-          setLocationConsent(state.locationConsent || false);
-          setDestinationType(state.destinationType);
-          setSelectedDays(state.selectedDays);
-          setHasAccommodation(state.hasAccommodation);
-          setCollectedData(state.collectedData || { scenario: "onsite" });
-          return; // Skip initialization
+        console.log('📦 Found saved state:', {
+          step: state.currentStep,
+          messagesCount: state.messages?.length || 0,
+          hasCollectedData: !!(state.collectedData?.location || state.collectedData?.city),
+          savedAt: state.savedAt ? new Date(state.savedAt).toLocaleString() : 'unknown'
+        });
+        
+        // Restore messages with proper Date objects
+        if (state.messages && Array.isArray(state.messages) && state.messages.length > 0) {
+          const restoredMessages = state.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date()
+          }));
+          setMessages(restoredMessages);
+          hasRestoredState = true;
+        }
+        
+        // Restore all state
+        if (state.currentStep) setCurrentStep(state.currentStep);
+        if (state.userInput !== undefined) setUserInput(state.userInput);
+        if (state.destinationInput !== undefined) setDestinationInput(state.destinationInput);
+        if (state.locationInput !== undefined) setLocationInput(state.locationInput);
+        if (state.selectedScenario !== undefined) setSelectedScenario(state.selectedScenario);
+        if (state.travelType !== undefined) setTravelType(state.travelType);
+        if (state.selectedTime !== undefined) setSelectedTime(state.selectedTime);
+        if (state.customMinutes !== undefined) setCustomMinutes(state.customMinutes);
+        if (state.selectedCategories) setSelectedCategories(state.selectedCategories);
+        if (state.additionalSettings) setAdditionalSettings(state.additionalSettings);
+        if (state.locationConsent !== undefined) setLocationConsent(state.locationConsent);
+        if (state.destinationType !== undefined) setDestinationType(state.destinationType);
+        if (state.selectedDays !== undefined) setSelectedDays(state.selectedDays);
+        if (state.hasAccommodation !== undefined) setHasAccommodation(state.hasAccommodation);
+        if (state.collectedData) setCollectedData(state.collectedData);
+        
+        if (hasRestoredState) {
+          console.log('✅ Chat state restored successfully');
         }
       } catch (error) {
-        console.error('Error restoring chat state:', error);
+        console.error('❌ Error restoring chat state:', error);
+        // Clear corrupted state
+        localStorage.removeItem('chatBotState');
       }
+    } else {
+      console.log('ℹ️ No saved chat state found');
     }
     
-    // Initialize with welcome message only if no saved state
-    addBotMessage("👋 Hi! I'm TurnRight, your personal city guide.");
-    setTimeout(() => {
-      addBotMessage("Choose your travel type.");
-      setCurrentStep("travel_type");
-    }, 1000);
+    // Mark restoration as complete
+    setIsRestoringState(false);
+    
+    // Initialize with welcome message only if no saved state was restored
+    if (!hasRestoredState) {
+      addBotMessage("👋 Hi! I'm TurnRight, your personal city guide.");
+      setTimeout(() => {
+        addBotMessage("Choose your travel type.");
+        setCurrentStep("travel_type");
+      }, 1000);
+    }
   }, []);
 
   useEffect(() => {
@@ -290,6 +336,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     setUserInput("");
     setDestinationInput("");
     setLocationInput("");
+    setIsRestoringState(false); // Ensure restoration flag is reset
     
     // Reload credits from database to show updated count
     refreshCredits();
