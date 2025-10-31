@@ -235,8 +235,17 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
           hasRestoredState = true;
         }
         
-        // Restore all state
-        if (state.currentStep) setCurrentStep(state.currentStep);
+        // Restore all state, but check for invalid states
+        if (state.currentStep) {
+          // If trying to restore route_preview without places, show error instead
+          if (state.currentStep === "route_preview" && (!state.places || state.places.length === 0)) {
+            console.log('⚠️ Invalid state: route_preview without places, showing error screen');
+            setCurrentStep("route_error");
+            setError("Route generation failed. Please try again.");
+          } else {
+            setCurrentStep(state.currentStep);
+          }
+        }
         if (state.userInput !== undefined) setUserInput(state.userInput);
         if (state.destinationInput !== undefined) setDestinationInput(state.destinationInput);
         if (state.locationInput !== undefined) setLocationInput(state.locationInput);
