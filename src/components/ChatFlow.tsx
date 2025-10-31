@@ -189,10 +189,17 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
 
   // Auto-save state whenever important data changes
   useEffect(() => {
-    if (!isRestoringState) {
-      saveState();
+    // Don't save if restoring state
+    if (isRestoringState) return;
+    
+    // Don't save empty places during active generation - wait for completion
+    if (generating && !places) {
+      console.log('⏸️ Skipping save: generation in progress with no places yet');
+      return;
     }
-  }, [isRestoringState, step, location, coordinates, timeWindow, scenario, goals, travelType, prefs, days, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
+    
+    saveState();
+  }, [isRestoringState, generating, step, location, coordinates, timeWindow, scenario, goals, travelType, prefs, days, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
 
   // Simplified payment success check - no longer needed but keeping for potential future use
   useEffect(() => {
