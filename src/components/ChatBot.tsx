@@ -175,6 +175,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     // Don't save during restoration to avoid overwriting
     if (isRestoringState) return;
     
+    // Don't save error states - they shouldn't persist after page reload
+    if (currentStep === "route_error") return;
+    
     try {
       const chatState = {
         messages: messages.map(msg => ({
