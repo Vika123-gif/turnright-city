@@ -806,15 +806,8 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
 
   // Notify parent about header visibility
   useEffect(() => {
-    // Hide header on summary (Your route is ready), route_preview, and detailed-map steps
-    const shouldHideHeader = !chatVisible && (step === "summary" || step === "route_preview" || step === "detailed-map");
+    const shouldHideHeader = !chatVisible && (step === "route_preview" || step === "detailed-map");
     onHeaderVisibilityChange?.(!shouldHideHeader);
-    console.log('📱 Header visibility:', { 
-      step, 
-      chatVisible, 
-      shouldHideHeader, 
-      headerVisible: !shouldHideHeader 
-    });
   }, [chatVisible, step, onHeaderVisibilityChange]);
 
   return (
