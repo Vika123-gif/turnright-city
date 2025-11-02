@@ -37,7 +37,7 @@ const Index = () => {
   }
 
   return (
-    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
+    <div className={`h-[100dvh] bg-background flex flex-col ${currentStep !== 'summary' ? 'overflow-hidden' : ''}`}>
       {/* Header with user info and credits - Always fixed at top */}
       <header className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200 p-4 flex-shrink-0 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
@@ -86,7 +86,7 @@ const Index = () => {
       </header>
       
       {/* Main content - Fills remaining space */}
-      <div className="flex-1 w-full relative overflow-hidden">
+      <div className={`flex-1 w-full relative ${currentStep !== 'summary' ? 'overflow-hidden' : ''}`}>
         <ChatFlow 
           key={currentStep === "summary" ? "summary" : "chat"}
           onHeaderVisibilityChange={setHeaderVisible}
