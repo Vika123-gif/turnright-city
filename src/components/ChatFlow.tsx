@@ -56,12 +56,6 @@ export default function ChatFlow({
   const [regenerationCount, setRegenerationCount] = useState(0);
   const [chatVisible, setChatVisible] = useState(true);
   const [isRouteGenerated, setIsRouteGenerated] = useState(false);
-  const [routeTimeData, setRouteTimeData] = useState<{
-    requestedMinutes?: number;
-    computedMinutes?: number;
-    totalWalkingTime?: number;
-    totalExploringTime?: number;
-  } | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
   const { searchPlacesByName } = useGooglePlaces();
@@ -726,54 +720,9 @@ export default function ChatFlow({
     days?: number;
     accommodation?: string;
     hasAccommodation?: boolean;
-    // Generated route data from ChatBot
-    places?: LLMPlace[];
-    routeTimeData?: {
-      requestedMinutes?: number;
-      computedMinutes?: number;
-      totalWalkingTime?: number;
-      totalExploringTime?: number;
-    };
   }) => {
     console.log("=== DEBUG: Chat completed ===");
     console.log("Data received:", data);
-    console.log("Has places:", !!data.places);
-    console.log("Has routeTimeData:", !!data.routeTimeData);
-    
-    // If places are already generated, go straight to summary
-    if (data.places && data.places.length > 0) {
-      console.log("=== Places already generated, showing summary ===");
-      
-      // Update state with received data
-      setScenario(data.scenario);
-      setLocation(data.location || data.city || "");
-      setTimeWindow(data.scenario === "planning" ? (data.days || 0) : (data.timeMinutes || 0));
-      setDays(data.days);
-      setGoals(data.categories || []);
-      setTravelType(data.travelType || null);
-      setPrefs(data.additionalSettings || []);
-      setPlaces(data.places);
-      setRouteTimeData(data.routeTimeData || null); // Store time data
-      
-      // Important: Save with step="summary" before setting it
-      saveState({ 
-        step: "summary",
-        scenario: data.scenario,
-        location: data.location || data.city || "",
-        timeWindow: data.scenario === "planning" ? (data.days || 0) : (data.timeMinutes || 0),
-        days: data.days,
-        goals: data.categories || [],
-        travelType: data.travelType || null,
-        prefs: data.additionalSettings || [],
-        places: data.places,
-        isRouteGenerated: true
-      });
-      
-      setChatVisible(false);
-      setStep("summary");
-      setIsRouteGenerated(true);
-      return;
-    }
     
     // Handle onsite scenario
     if (data.scenario === "onsite" && data.location && data.timeMinutes && data.categories) {
@@ -944,10 +893,6 @@ export default function ChatFlow({
               prefs={prefs}
               scenario={scenario}
               days={days}
-              requestedMinutes={routeTimeData?.requestedMinutes}
-              computedMinutes={routeTimeData?.computedMinutes}
-              totalWalkingTime={routeTimeData?.totalWalkingTime}
-              totalExploringTime={routeTimeData?.totalExploringTime}
               onContinue={() => {
                 saveState({ step: "detailed-map" });
                 setStep("detailed-map");
