@@ -469,10 +469,16 @@ export default function ChatFlow({
       console.log("=== SETTING STEP TO SUMMARY ===");
       console.log("Time window:", timeWindow);
       console.log("Goals:", goalsToUse);
+      console.log("Places count:", optimizedPlaces?.length);
+      console.log("About to call setStep('summary') and setChatVisible(false)");
       
       saveState({ step: "summary" });
       setStep("summary");
       setChatVisible(false); // Hide chat to show summary as full screen
+      
+      console.log("=== AFTER STATE UPDATES ===");
+      console.log("Step should now be 'summary'");
+      console.log("ChatVisible should now be false");
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
@@ -892,6 +898,10 @@ export default function ChatFlow({
 
   // Early return for summary - completely separate fullscreen page with portal overlay
   if (step === "summary") {
+    console.log("🎉 RENDERING SUMMARY STEP");
+    console.log("Places:", places?.length);
+    console.log("Goals:", goals);
+    console.log("ChatVisible:", chatVisible);
     return (
       <BodyPortal>
         <FullscreenOverlay>
@@ -926,6 +936,8 @@ export default function ChatFlow({
     );
   }
 
+  console.log("🔄 ChatFlow MAIN RENDER - step:", step, "chatVisible:", chatVisible);
+  
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
       {chatVisible && (
