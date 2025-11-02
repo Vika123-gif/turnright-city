@@ -71,6 +71,16 @@ export default function RouteSummaryStep({
   const dwellMin = totalExploringTime || 0;
   const totalMin = computedMinutes || (walkMin + dwellMin);
   const requestedMin = requestedMinutes || timeWindow || 0;
+  
+  // Debug logging for summary step
+  console.log("=== ROUTE SUMMARY TIME DEBUG ===");
+  console.log("totalWalkingTime prop:", totalWalkingTime);
+  console.log("totalExploringTime prop:", totalExploringTime);
+  console.log("computed walkMin:", walkMin);
+  console.log("computed dwellMin:", dwellMin);
+  console.log("Places count:", places.length);
+  console.log("Places walking times:", places.map(p => `${p.name}: ${p.walkingTime}min`));
+  console.log("=================================");
 
   // Helper function to format time (show minutes if < 60, otherwise hours and minutes)
   const formatTime = (minutes: number): string => {

@@ -308,6 +308,17 @@ export function useOpenAI() {
       const calculatedExploringTime = places.reduce((sum, place) => sum + (place.visitDuration || 0), 0);
       const calculatedWalkingTime = places.reduce((sum, place) => sum + (place.walkingTime || 0), 0);
       
+      // Detailed logging for walking time calculation
+      console.log("=== WALKING TIME CALCULATION DEBUG ===");
+      console.log("Number of places:", places.length);
+      console.log("Individual walking times:");
+      places.forEach((place, i) => {
+        console.log(`  Place ${i + 1} (${place.name}): ${place.walkingTime} minutes`);
+      });
+      console.log("Total walking time (sum):", calculatedWalkingTime);
+      console.log("Backend provided totalWalkingTime:", tripAdvisorData.totalWalkingTime);
+      console.log("===================================");
+      
       const timeData: RouteTimeData = {
         requestedMinutes: tripAdvisorData.requestedMinutes,
         computedMinutes: calculatedWalkingTime + calculatedExploringTime, // Recalculate based on actual places
