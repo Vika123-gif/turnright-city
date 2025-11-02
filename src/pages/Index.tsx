@@ -38,54 +38,52 @@ const Index = () => {
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
-      {/* Header with user info and credits - Fixed at top */}
-      {headerVisible && (
-        <header className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200 p-4 flex-shrink-0">
-          <div className="max-w-6xl mx-auto flex justify-between items-center">
-            {/* Logo - Hidden on mobile */}
-            <div className="flex items-center">
-              <img 
-                src={turnrightLogo} 
-                alt="TurnRight Logo" 
-                className="h-8 w-auto hidden md:block"
-              />
-            </div>
-            
-            {/* User info and credits */}
-            <div className="flex items-center gap-4">
-              {/* Credits display - TEMPORARILY HIDDEN */}
-              {false && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full">
-                  <Zap className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-700">
-                    {getRemainingGenerations()}/{getTotalGenerations()} credits
-                  </span>
-                </div>
-              )}
-              
-              {/* User email */}
-              {user && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-full">
-                  <User className="h-4 w-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {user.email}
-                  </span>
-                </div>
-              )}
-              
-              {/* Sign out button */}
-              <Button
-                onClick={handleSignOut}
-                variant="ghost"
-                size="sm"
-                className="text-gray-600 hover:text-gray-800"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
+      {/* Header with user info and credits - Always fixed at top */}
+      <header className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200 p-4 flex-shrink-0 sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          {/* Logo - Hidden on mobile */}
+          <div className="flex items-center">
+            <img 
+              src={turnrightLogo} 
+              alt="TurnRight Logo" 
+              className="h-8 w-auto hidden md:block"
+            />
           </div>
-        </header>
-      )}
+          
+          {/* User info and credits */}
+          <div className="flex items-center gap-4">
+            {/* Credits display - TEMPORARILY HIDDEN */}
+            {false && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full">
+                <Zap className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700">
+                  {getRemainingGenerations()}/{getTotalGenerations()} credits
+                </span>
+              </div>
+            )}
+            
+            {/* User email */}
+            {user && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-full">
+                <User className="h-4 w-4 text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">
+                  {user.email}
+                </span>
+              </div>
+            )}
+            
+            {/* Sign out button */}
+            <Button
+              onClick={handleSignOut}
+              variant="ghost"
+              size="sm"
+              className="text-gray-600 hover:text-gray-800"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </header>
       
       {/* Main content - Fills remaining space */}
       <div className="flex-1 w-full relative min-h-0">

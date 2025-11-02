@@ -862,27 +862,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   }
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col min-h-0">
-      {/* Header */}
-      {isRouteGenerated && (
-        <div className="flex justify-between items-center p-4 bg-white/80 backdrop-blur-sm border-b border-gray-100 shadow-sm flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
-            </div>
-            <h3 className="font-semibold text-gray-800">TurnRight</h3>
-          </div>
-          <button
-            onClick={onToggleVisibility}
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Minimize chat"
-          >
-            <ChevronDown className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-      )}
-      
-      {/* Chat Messages */}
+    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-white z-40 flex flex-col">
+      {/* Chat Messages - Scrollable */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
         {messages.map((message, index) => (
           <div
@@ -922,9 +903,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Current Step Component */}
+      {/* Current Step Component - Fixed Footer */}
       {currentStep === "travel_type" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="relative py-4">
             <div className="text-sm font-semibold text-gray-700 mb-3 text-center">Travel type</div>
             {/* Checkbox-style list (single-select behavior) */}
@@ -961,7 +942,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "scenario_fork" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between mb-2">
               <BackButton onClick={handleGoBack} />
@@ -991,7 +972,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "city_dates" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1035,7 +1016,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "accommodation" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1057,7 +1038,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "accommodation_input" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1086,7 +1067,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "location" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1095,7 +1076,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "time" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1111,7 +1092,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "destination" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1139,7 +1120,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "destination_input" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1168,7 +1149,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "interests" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1177,7 +1158,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "additional_settings" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1189,7 +1170,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "trip_interests" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1206,7 +1187,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "trip_settings" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
           </div>
@@ -1218,7 +1199,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "route_results" && places && places.length > 0 && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 sticky bottom-0 z-10">
           <div className="flex flex-col gap-3">
             <button
               onClick={() => {
@@ -1238,7 +1219,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "generating" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="text-center py-8">
             <div className="animate-spin w-8 h-8 border-2 border-[hsl(var(--primary))] border-t-transparent rounded-full mx-auto mb-4"></div>
             <div className="text-lg font-semibold text-gray-700">
@@ -1252,7 +1233,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "summary" && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <RouteSummaryStep
             timeWindow={collectedData.scenario === "planning" ? (collectedData.days || null) : (collectedData.timeMinutes || null)}
             goals={collectedData.categories || []}
@@ -1272,7 +1253,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
       {/* Error state when route generation fails */}
       {(currentStep === "route_error" || (currentStep === "route_preview" && (!places || places.length === 0))) && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="text-center py-8">
             <div className="text-4xl mb-4">❌</div>
             <div className="text-lg font-semibold text-gray-700 mb-2">
@@ -1358,7 +1339,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       )}
 
       {currentStep === "route_results" && places && places.length > 0 && (
-        <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0 sticky bottom-0 z-10">
           <div className="flex flex-col gap-3">
             <button
               onClick={() => {
