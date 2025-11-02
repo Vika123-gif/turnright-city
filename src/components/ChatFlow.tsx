@@ -871,6 +871,25 @@ export default function ChatFlow({
     }
   }, [step]);
 
+  // Manage header visibility and body scroll based on step
+  useEffect(() => {
+    // Header is visible only in chat step
+    onHeaderVisibilityChange?.(step === "chat");
+    
+    // Prevent body scroll when in chat to ensure only middle section scrolls
+    if (step === "chat") {
+      const html = document.documentElement;
+      const body = document.body;
+      html.style.overflow = "hidden";
+      body.style.overflow = "hidden";
+      
+      return () => {
+        html.style.overflow = "";
+        body.style.overflow = "";
+      };
+    }
+  }, [step, onHeaderVisibilityChange]);
+
   // Notify parent about step changes for key-based remounting
   useEffect(() => {
     onStepChange?.(step);
