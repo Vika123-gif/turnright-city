@@ -281,11 +281,11 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     
     // Initialize with welcome message only if no saved state was restored
     if (!hasRestoredState) {
-      addBotMessage("👋 Hi! I'm TurnRight, your personal city guide.");
-      setTimeout(() => {
-        addBotMessage("Choose your travel type.");
-        setCurrentStep("travel_type");
-      }, 1000);
+    addBotMessage("👋 Hi! I'm TurnRight, your personal city guide.");
+    setTimeout(() => {
+      addBotMessage("Choose your travel type.");
+      setCurrentStep("travel_type");
+    }, 1000);
     }
   }, []);
 
@@ -610,17 +610,17 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       // Track route generation start (with error handling)
       try {
         console.log("=== DEBUG: Calling trackRouteGeneration ===");
-        const routeGenerationId = await trackRouteGeneration({
-          scenario: data.scenario,
-          location: data.location || data.city || "",
-          timeWindow: data.timeMinutes || (data.days ? data.days * 480 : undefined),
-          goals: data.categories || [],
-          additionalSettings: data.additionalSettings || [],
-          destinationType: data.destinationType,
-          destination: data.destination,
-          days: data.days,
-          generationStartedAt: generationStartTime
-        });
+      const routeGenerationId = await trackRouteGeneration({
+        scenario: data.scenario,
+        location: data.location || data.city || "",
+        timeWindow: data.timeMinutes || (data.days ? data.days * 480 : undefined),
+        goals: data.categories || [],
+        additionalSettings: data.additionalSettings || [],
+        destinationType: data.destinationType,
+        destination: data.destination,
+        days: data.days,
+        generationStartedAt: generationStartTime
+      });
         console.log("=== DEBUG: trackRouteGeneration completed ===", routeGenerationId);
       } catch (trackError) {
         console.error("=== DEBUG: trackRouteGeneration failed ===", trackError);
@@ -1277,7 +1277,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             <div className="text-4xl mb-4">❌</div>
             <div className="text-lg font-semibold text-gray-700 mb-2">
               Couldn't generate route
-            </div>
+        </div>
             <div className="text-sm text-gray-500 mb-6">
               {error || "Please try again with different settings."}
             </div>
@@ -1287,7 +1287,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
                   // Go back to settings step based on scenario
                   const settingsStep = collectedData.scenario === "planning" ? "trip_settings" : "additional_settings";
                   setCurrentStep(settingsStep);
-                  setError(null);
+              setError(null);
                   setPlaces(null);
                 }}
                 className="w-full py-3 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"

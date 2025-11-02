@@ -13,6 +13,8 @@ import RoutePreviewStep from "./steps/RoutePreviewStep";
 import PurchaseStep from "./steps/PurchaseStep";
 import DetailedMapStep from "./steps/DetailedMapStep";
 import RouteRating from "./RouteRating";
+import FullscreenOverlay from "./FullscreenOverlay";
+import BodyPortal from "./BodyPortal";
 
 type Step =
   | "chat"
@@ -22,7 +24,13 @@ type Step =
   | "detailed-map"
   | "route_preview";
 
-export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibilityChange?: (visible: boolean) => void }) {
+export default function ChatFlow({ 
+  onHeaderVisibilityChange,
+  onStepChange 
+}: { 
+  onHeaderVisibilityChange?: (visible: boolean) => void;
+  onStepChange?: (step: Step) => void;
+}) {
   const [step, setStep] = useState<Step>("chat");
   const [location, setLocation] = useState("");
   const [coordinates, setCoordinates] = useState(""); // Store coordinates separately for map
@@ -458,6 +466,7 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
       
       saveState({ step: "summary" });
       setStep("summary");
+      setChatVisible(false); // Hide chat to show summary as full screen
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
@@ -806,24 +815,115 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
 
   // Notify parent about header visibility
   useEffect(() => {
-    const shouldHideHeader = !chatVisible && (step === "route_preview" || step === "detailed-map");
+    const shouldHideHeader = step === "summary" || (!chatVisible && (step === "route_preview" || step === "detailed-map"));
     onHeaderVisibilityChange?.(!shouldHideHeader);
   }, [chatVisible, step, onHeaderVisibilityChange]);
 
+  // Reset scroll when entering summary
+  useEffect(() => {
+    if (step === "summary") {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    }
+  }, [step]);
+
+  // Block background scroll when summary is open
+  useEffect(() => {
+    if (step === "summary") {
+      const { style: html } = document.documentElement;
+      const { style: body } = document.body;
+      const prevHtml = { overflow: html.overflow };
+      const prevBody = { overflow: body.overflow, position: body.position, width: body.width };
+      html.overflow = "hidden";
+      body.overflow = "hidden";
+      body.position = "relative";
+      body.width = "100%";
+      
+      // Diagnostic: find scroll containers and transformed ancestors
+      console.log("🔍 Summary scroll diagnostics:");
+      let node: HTMLElement | null = document.querySelector("#root") || document.body;
+      while (node) {
+        const s = getComputedStyle(node);
+        const scrollable =
+          /(auto|scroll)/.test(s.overflow) ||
+          /(auto|scroll)/.test(s.overflowY) ||
+          /(auto|scroll)/.test(s.overflowX);
+        const transformed = s.transform !== "none" || s.perspective !== "none" || s.filter !== "none";
+        if (scrollable || transformed) {
+          console.log(node.className || node.tagName, { 
+            scrollable, 
+            transformed, 
+            overflow: s.overflow, 
+            transform: s.transform, 
+            filter: s.filter 
+          });
+        }
+        node = node.parentElement;
+      }
+      
+      return () => {
+        html.overflow = prevHtml.overflow || "";
+        body.overflow = prevBody.overflow || "";
+        body.position = prevBody.position || "";
+        body.width = prevBody.width || "";
+      };
+    }
+  }, [step]);
+
+  // Notify parent about step changes for key-based remounting
+  useEffect(() => {
+    onStepChange?.(step);
+  }, [step, onStepChange]);
+
+  // Early return for summary - completely separate fullscreen page with portal overlay
+  if (step === "summary") {
+    return (
+      <BodyPortal>
+        <FullscreenOverlay>
+          <div className="relative">
+            <div className="absolute top-4 left-4 z-10">
+              <BackButton onClick={goBack} />
+            </div>
+            <RouteSummaryStep
+              timeWindow={timeWindow}
+              goals={goals}
+              places={places || []}
+              travelType={travelType}
+              prefs={prefs}
+              scenario={scenario}
+              days={days}
+              onContinue={() => {
+                saveState({ step: "detailed-map" });
+                setStep("detailed-map");
+                if (typeof window !== "undefined") {
+                  window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+                }
+              }}
+              onRegenerate={regenerate}
+            />
+          </div>
+        </FullscreenOverlay>
+      </BodyPortal>
+    );
+  }
+
   return (
-    <div className="w-full h-full flex flex-col bg-[#F3FCF8] min-h-0">
-      <ChatBot
-        onComplete={handleChatComplete}
-        onShowMap={handleShowMap}
-        isVisible={chatVisible}
-        onToggleVisibility={() => setChatVisible(!chatVisible)}
-        isRouteGenerated={isRouteGenerated}
-      />
+    <div className="w-full min-h-[100dvh] flex flex-col bg-[#F3FCF8]">
+      {chatVisible && (
+        <ChatBot
+          onComplete={handleChatComplete}
+          onShowMap={handleShowMap}
+          isVisible={chatVisible}
+          onToggleVisibility={() => setChatVisible(!chatVisible)}
+          isRouteGenerated={isRouteGenerated}
+        />
+      )}
       
       {!chatVisible && (
         <div className={`w-full mx-auto bg-white shadow-md px-6 py-8 relative ${
-          step === "route_preview" || step === "detailed-map" 
-            ? "absolute inset-0 overflow-y-auto rounded-none" 
+          step === "route_preview" || step === "detailed-map"
+            ? "absolute inset-0 overflow-y-auto rounded-none"
             : "max-w-md rounded-2xl"
         }`}>
           {step === "generating" && (
@@ -842,29 +942,6 @@ export default function ChatFlow({ onHeaderVisibilityChange }: { onHeaderVisibil
                 onStartNew={reset}
               />
             </>
-          )}
-
-          {step === "summary" && (
-            <div className="h-full overflow-y-auto pb-20">
-              <div className="absolute top-4 left-4 z-10">
-                <BackButton onClick={goBack} />
-              </div>
-              <RouteSummaryStep
-                timeWindow={timeWindow}
-                goals={goals}
-                places={places || []}
-                travelType={travelType}
-                prefs={prefs}
-                scenario={scenario}
-                days={days}
-                onContinue={() => {
-                  console.log("=== Let's Go button clicked ===");
-                  saveState({ step: "detailed-map" });
-                  setStep("detailed-map");
-                }}
-                onRegenerate={regenerate}
-              />
-            </div>
           )}
 
           {step === "purchase" && (

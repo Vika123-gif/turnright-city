@@ -3,6 +3,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global mobile viewport fixes */
+html, body, #root { 
+  height: 100%; 
+}
+
+:root { 
+  --safe-bottom: env(safe-area-inset-bottom, 0px); 
+}
+
+@supports (height: 100dvh) {
+  .min-h-100dvh { 
+    min-height: 100dvh; 
+  }
+}
+
 :root {
   /* Core Brand Colors - #00BC72 */
   --background: 0 0% 100%;

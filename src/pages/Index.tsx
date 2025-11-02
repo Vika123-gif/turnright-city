@@ -13,6 +13,7 @@ const Index = () => {
   const { getRemainingGenerations, getTotalGenerations } = useGenerationLimit();
   const navigate = useNavigate();
   const [headerVisible, setHeaderVisible] = useState(true);
+  const [currentStep, setCurrentStep] = useState<"chat" | "summary" | "route_preview" | "detailed-map" | "generating" | "purchase">("chat");
 
   const handleSignOut = async () => {
     try {
@@ -36,7 +37,7 @@ const Index = () => {
   }
 
   return (
-    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
       {/* Header with user info and credits - Fixed at top */}
       {headerVisible && (
         <header className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200 p-4 flex-shrink-0">
@@ -87,8 +88,12 @@ const Index = () => {
       )}
       
       {/* Main content - Fills remaining space */}
-      <div className="flex-1 w-full relative overflow-hidden min-h-0">
-        <ChatFlow onHeaderVisibilityChange={setHeaderVisible} />
+      <div className="flex-1 w-full relative min-h-0">
+        <ChatFlow 
+          key={currentStep === "summary" ? "summary" : "chat"}
+          onHeaderVisibilityChange={setHeaderVisible}
+          onStepChange={setCurrentStep}
+        />
       </div>
     </div>
   );
