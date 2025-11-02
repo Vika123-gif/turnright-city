@@ -131,12 +131,14 @@ export default function RouteSummaryStep({
   return (
     <div
       className="
+        fixed inset-0 z-[100]
+        bg-background
         flex flex-col items-center text-center
         px-4 pt-2
         pb-[calc(env(safe-area-inset-bottom,0px)+6rem)]
-        min-h-[100dvh]
+        h-[100dvh]
         justify-start md:justify-center
-        overflow-visible
+        overflow-y-auto
       "
     >
       <div className="max-w-2xl w-full space-y-6 pb-16">
