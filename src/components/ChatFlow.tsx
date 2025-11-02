@@ -56,6 +56,12 @@ export default function ChatFlow({
   const [regenerationCount, setRegenerationCount] = useState(0);
   const [chatVisible, setChatVisible] = useState(true);
   const [isRouteGenerated, setIsRouteGenerated] = useState(false);
+  const [routeTimeData, setRouteTimeData] = useState<{
+    requestedMinutes?: number;
+    computedMinutes?: number;
+    totalWalkingTime?: number;
+    totalExploringTime?: number;
+  } | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
   const { searchPlacesByName } = useGooglePlaces();
@@ -123,6 +129,7 @@ export default function ChatFlow({
         setCurrentRouteGenerationId(parsed.currentRouteGenerationId || null);
         setRegenerationCount(parsed.regenerationCount || 0);
         setIsRouteGenerated(parsed.isRouteGenerated || false);
+        setRouteTimeData(parsed.routeTimeData || null);
         if (parsed.step !== 'chat') {
           setChatVisible(false); // Hide chat to show the route
         }
@@ -178,6 +185,7 @@ export default function ChatFlow({
       currentRouteGenerationId: overrides.currentRouteGenerationId ?? currentRouteGenerationId,
       regenerationCount: overrides.regenerationCount ?? regenerationCount,
       isRouteGenerated: overrides.isRouteGenerated ?? isRouteGenerated,
+      routeTimeData: routeTimeData,
       timestamp: Date.now(),
     };
     
@@ -439,6 +447,23 @@ export default function ChatFlow({
       const optimizedPlaces = optimizeRouteOrder(placesWithPhotos, originToUse);
       console.log("=== DEBUG: Route optimized for minimal travel ===");
       console.log("Optimized places:", optimizedPlaces.map(p => p.name));
+      
+      // Recalculate time data based on optimized route
+      const totalWalkingTime = optimizedPlaces.reduce((sum, place) => sum + (place.walkingTime || 0), 0);
+      const totalExploringTime = optimizedPlaces.reduce((sum, place) => sum + (place.visitDuration || 0), 0);
+      const computedMinutes = totalWalkingTime + totalExploringTime;
+      
+      console.log("=== RECALCULATED TIME DATA AFTER OPTIMIZATION ===");
+      console.log("Total walking time:", totalWalkingTime, "minutes");
+      console.log("Total exploring time:", totalExploringTime, "minutes");
+      console.log("Computed total:", computedMinutes, "minutes");
+      
+      setRouteTimeData({
+        requestedMinutes: timeWindow,
+        computedMinutes,
+        totalWalkingTime,
+        totalExploringTime
+      });
       
       setPlaces(optimizedPlaces);
       
@@ -893,6 +918,10 @@ export default function ChatFlow({
               prefs={prefs}
               scenario={scenario}
               days={days}
+              requestedMinutes={routeTimeData?.requestedMinutes}
+              computedMinutes={routeTimeData?.computedMinutes}
+              totalWalkingTime={routeTimeData?.totalWalkingTime}
+              totalExploringTime={routeTimeData?.totalExploringTime}
               onContinue={() => {
                 saveState({ step: "detailed-map" });
                 setStep("detailed-map");
