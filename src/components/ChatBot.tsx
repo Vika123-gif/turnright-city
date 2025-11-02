@@ -1232,24 +1232,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         </div>
       )}
 
-      {currentStep === "summary" && (
-        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
-          <RouteSummaryStep
-            timeWindow={collectedData.scenario === "planning" ? (collectedData.days || null) : (collectedData.timeMinutes || null)}
-            goals={collectedData.categories || []}
-            places={places || []}
-            travelType={travelType || (collectedData as any).travelType}
-            prefs={(collectedData.additionalSettings || additionalSettings) as string[]}
-            scenario={collectedData.scenario}
-            days={collectedData.days}
-            requestedMinutes={routeTimeData?.requestedMinutes}
-            computedMinutes={routeTimeData?.computedMinutes}
-            totalWalkingTime={routeTimeData?.totalWalkingTime}
-            totalExploringTime={routeTimeData?.totalExploringTime}
-            onContinue={() => setCurrentStep("detailed-map")}
-          />
-        </div>
-      )}
+      {/* Summary step is now rendered in ChatFlow.tsx via FullscreenOverlay */}
 
       {/* Error state when route generation fails */}
       {(currentStep === "route_error" || (currentStep === "route_preview" && (!places || places.length === 0))) && (
