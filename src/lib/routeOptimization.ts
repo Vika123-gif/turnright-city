@@ -95,7 +95,7 @@ export function optimizeRouteOrder(
   const unvisited = [...validPlaces];
   const optimized: LLMPlace[] = [];
   
-  // Nearest-neighbor algorithm
+  // Nearest-neighbor algorithm with walking time recalculation
   while (unvisited.length > 0) {
     let nearestIndex = 0;
     let shortestDistance = Infinity;
@@ -120,10 +120,21 @@ export function optimizeRouteOrder(
     
     // Move to nearest place
     const nearestPlace = unvisited[nearestIndex];
-    optimized.push(nearestPlace);
+    
+    // Recalculate walking time based on actual distance in the new order
+    // Average walking speed: 5 km/h = ~12 min/km
+    const walkingTimeMinutes = Math.ceil(shortestDistance * 12);
+    
+    // Update the place with correct walking time for the new route order
+    const updatedPlace = {
+      ...nearestPlace,
+      walkingTime: walkingTimeMinutes
+    };
+    
+    optimized.push(updatedPlace);
     
     const nearestCoords = extractCoordinates(nearestPlace);
-    console.log(`Selected: ${nearestPlace.name} (${shortestDistance.toFixed(2)}km from current)`);
+    console.log(`Selected: ${nearestPlace.name} (${shortestDistance.toFixed(2)}km, ~${walkingTimeMinutes}min walk from current)`);
     
     if (nearestCoords) {
       currentCoords = nearestCoords;
