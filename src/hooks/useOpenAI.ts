@@ -304,12 +304,22 @@ export function useOpenAI() {
       }
       
       // Extract time data from backend response
+      // Calculate totalExploringTime from actual places instead of backend value
+      const calculatedExploringTime = places.reduce((sum, place) => sum + (place.visitDuration || 0), 0);
+      const calculatedWalkingTime = places.reduce((sum, place) => sum + (place.walkingTime || 0), 0);
+      
       const timeData: RouteTimeData = {
         requestedMinutes: tripAdvisorData.requestedMinutes,
-        computedMinutes: tripAdvisorData.computedMinutes,
-        totalWalkingTime: tripAdvisorData.totalWalkingTime,
-        totalExploringTime: tripAdvisorData.totalExploringTime,
+        computedMinutes: calculatedWalkingTime + calculatedExploringTime, // Recalculate based on actual places
+        totalWalkingTime: calculatedWalkingTime, // Use calculated value
+        totalExploringTime: calculatedExploringTime, // Use calculated value from places
       };
+      
+      console.log("=== TIME DATA DEBUG ===");
+      console.log("Backend provided totalExploringTime:", tripAdvisorData.totalExploringTime);
+      console.log("Calculated totalExploringTime from places:", calculatedExploringTime);
+      console.log("Individual place visitDurations:", places.map(p => p.visitDuration));
+      console.log("Final timeData:", timeData);
       
       return {
         places,
