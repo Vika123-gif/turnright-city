@@ -98,6 +98,31 @@ export default function ChatFlow({
   
   useEffect(() => {
     console.log('🔄 Starting state restoration from localStorage...');
+    
+    // FIRST check chatBotState - it has priority if it exists with a summary step
+    const chatBotState = localStorage.getItem('chatBotState');
+    if (chatBotState) {
+      try {
+        const chatParsed = JSON.parse(chatBotState);
+        console.log('🤖 Found chatBotState:', {
+          step: chatParsed.currentStep,
+          hasCollectedData: !!chatParsed.collectedData
+        });
+        
+        // If ChatBot has summary step, it means route generation completed
+        if (chatParsed.currentStep === 'summary' && chatParsed.collectedData) {
+          console.log('✅ Restoring from ChatBot summary state');
+          setStep('chat'); // We'll show chat, but ChatBot will display summary
+          setChatVisible(true); // ChatBot handles the summary display
+          setIsRestoringState(false);
+          return;
+        }
+      } catch (error) {
+        console.error('❌ Error parsing chatBotState:', error);
+      }
+    }
+    
+    // Otherwise, check savedRouteState for route generation state
     const savedState = localStorage.getItem('savedRouteState');
     console.log('📦 Raw savedState from localStorage:', savedState ? 'EXISTS' : 'NOT FOUND');
     
