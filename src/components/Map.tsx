@@ -88,6 +88,8 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
 
       // Add origin location as start point
       let originCoords = null;
+      let isCityName = false; // Track if origin is a city name (not coordinates)
+      
       if (origin) {
         console.log('Processing origin:', origin);
         
@@ -99,25 +101,60 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
           originCoords = { lat, lng };
           console.log('Origin is coordinates:', originCoords);
         } else {
-          // Origin is a location name, try to geocode it
-          try {
-            console.log('Geocoding origin location:', origin);
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(origin)}&format=json&limit=1&accept-language=en`
-            );
-            const data = await response.json();
-            if (data.length > 0) {
-              originCoords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-              console.log('Geocoded origin to:', originCoords);
+          // Origin is a location name (city), try to geocode it with multiple attempts
+          isCityName = true;
+          console.log('Geocoding origin location (city name):', origin);
+          
+          // Try geocoding with different query formats for better results
+          const geocodeAttempts = [
+            origin, // Original city name
+            `${origin}, France`, // Add country for better matching
+            `${origin}, Europe`, // Regional context
+          ];
+          
+          for (const query of geocodeAttempts) {
+            try {
+              const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=en`,
+                {
+                  headers: {
+                    'User-Agent': 'TurnRight-City-App/1.0'
+                  }
+                }
+              );
+              
+              if (!response.ok) continue;
+              
+              const data = await response.json();
+              if (data.length > 0 && data[0].lat && data[0].lon) {
+                originCoords = { 
+                  lat: parseFloat(data[0].lat), 
+                  lng: parseFloat(data[0].lon) 
+                };
+                console.log(`Geocoded "${query}" to:`, originCoords);
+                break; // Success, stop trying
+              }
+            } catch (error) {
+              console.error(`Error geocoding "${query}":`, error);
+              continue; // Try next attempt
             }
-          } catch (error) {
-            console.error('Error geocoding origin:', error);
+          }
+          
+          if (!originCoords) {
+            console.warn('Failed to geocode origin city:', origin);
+            // Don't use userLocation fallback for city names - it would be wrong location
+            // Instead, try to use center of first place if available
+            if (places.length > 0 && places[0].lat && places[0].lon) {
+              console.log('Using first place as fallback origin');
+              originCoords = { lat: places[0].lat, lng: places[0].lon };
+            }
           }
         }
       }
 
-      // Use origin coordinates or user location as start point
-      const startCoords = originCoords || (userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null);
+      // Use origin coordinates or (only if not a city name) user location as start point
+      // For city names, we must use geocoded coordinates, not user's current location
+      const startCoords = originCoords || (!isCityName && userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : null);
       if (startCoords) {
         routeCoordinates.push([startCoords.lng, startCoords.lat]);
         console.log('Added start point to route:', startCoords);

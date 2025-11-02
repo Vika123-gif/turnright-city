@@ -840,22 +840,22 @@ export default function ChatFlow({
 
   // Notify parent about header visibility
   useEffect(() => {
-    const shouldHideHeader = step === "summary" || (!chatVisible && (step === "route_preview" || step === "detailed-map"));
+    const shouldHideHeader = step === "summary" || step === "detailed-map" || (!chatVisible && step === "route_preview");
     onHeaderVisibilityChange?.(!shouldHideHeader);
   }, [chatVisible, step, onHeaderVisibilityChange]);
 
-  // Reset scroll when entering summary
+  // Reset scroll when entering summary or detailed-map
   useEffect(() => {
-    if (step === "summary") {
+    if (step === "summary" || step === "detailed-map") {
       document.documentElement.scrollTop = 0;
       document.body.scrollTop = 0;
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     }
   }, [step]);
 
-  // Block background scroll when summary is open
+  // Block background scroll when summary or detailed-map is open
   useEffect(() => {
-    if (step === "summary") {
+    if (step === "summary" || step === "detailed-map") {
       const { style: html } = document.documentElement;
       const { style: body } = document.body;
       const prevHtml = { overflow: html.overflow };
@@ -901,12 +901,17 @@ export default function ChatFlow({
     onStepChange?.(step);
   }, [step, onStepChange]);
 
-  // Early return for summary - completely separate fullscreen page with portal overlay
+  // Early returns for summary and detailed-map - completely separate fullscreen pages with portal overlay
   if (step === "summary") {
+    // Ensure chat is hidden
+    if (chatVisible) {
+      setChatVisible(false);
+    }
+    
     return (
       <BodyPortal>
         <FullscreenOverlay>
-          <div className="relative">
+          <div className="relative w-full min-h-full" style={{ margin: 0, padding: 0 }}>
             <div className="absolute top-4 left-4 z-10">
               <BackButton onClick={goBack} />
             </div>
@@ -937,6 +942,38 @@ export default function ChatFlow({
     );
   }
 
+  if (step === "detailed-map") {
+    // Ensure chat is hidden
+    if (chatVisible) {
+      setChatVisible(false);
+    }
+    
+    return (
+      <BodyPortal>
+        <FullscreenOverlay>
+          <div className="relative w-full min-h-full" style={{ margin: 0, padding: 0 }}>
+            <div className="absolute top-4 left-4 z-10">
+              <BackButton onClick={goBack} />
+            </div>
+            <DetailedMapStep
+              places={selectedDayPlaces || places || []}
+              origin={location}
+              scenario={scenario}
+              days={days}
+              onBack={() => {
+                saveState({ step: "summary" });
+                setSelectedDayPlaces(null);
+                setStep("summary");
+              }}
+              onReset={reset}
+              onFeedbackSubmit={handleTextFeedback}
+            />
+          </div>
+        </FullscreenOverlay>
+      </BodyPortal>
+    );
+  }
+
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
       {chatVisible && (
@@ -951,7 +988,7 @@ export default function ChatFlow({
       
       {!chatVisible && (
         <div className={`w-full mx-auto bg-white shadow-md px-6 py-8 relative ${
-          step === "route_preview" || step === "detailed-map"
+          step === "route_preview"
             ? "absolute inset-0 overflow-y-auto rounded-none"
             : "max-w-md rounded-2xl"
         }`}>
@@ -995,35 +1032,6 @@ export default function ChatFlow({
             </>
           )}
 
-          {step === "detailed-map" && (
-            <>
-              <div className="absolute top-4 left-4">
-                <BackButton onClick={goBack} />
-              </div>
-              <DetailedMapStep
-                places={selectedDayPlaces || places || []}
-                origin={location}
-                onBack={() => {
-                  saveState({ step: "summary" });
-                  setSelectedDayPlaces(null);
-                  setStep("summary");
-                }}
-                onReset={reset}
-                onFeedbackSubmit={handleTextFeedback}
-              />
-              {console.log("=== DEBUG: DetailedMapStep rendered ===")}
-              {console.log("Enhanced Origin Data - Location String:", location)}
-              {console.log("Enhanced Origin Data - Coordinates:", coordinates)}
-              {console.log("Places with all data:", places?.map(p => ({ 
-                name: p.name, 
-                address: p.address, 
-                lat: p.lat, 
-                lon: p.lon, 
-                hasCoordinates: !!(p.lat && p.lon),
-                photoUrl: p.photoUrl ? 'present' : 'missing'
-              })))}
-            </>
-          )}
         </div>
       )}
     </div>

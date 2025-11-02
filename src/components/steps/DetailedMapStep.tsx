@@ -53,6 +53,21 @@ const DetailedMapStep: React.FC<Props> = ({
 
   const availableDays = Object.keys(placesByDay).map(Number).sort((a, b) => a - b);
   const currentDayPlaces = placesByDay[selectedDay] || [];
+  
+  // Debug logging for place distribution
+  React.useEffect(() => {
+    if (scenario === 'planning' && days && days > 1) {
+      console.log('📅 Places distribution by day:', {
+        totalPlaces: places.length,
+        expectedDays: days,
+        placesPerDay: Object.entries(placesByDay).map(([day, dayPlaces]) => ({
+          day: Number(day),
+          count: dayPlaces.length
+        })),
+        availableDays
+      });
+    }
+  }, [places, days, scenario, placesByDay, availableDays]);
 
   // Track page view when component mounts
   React.useEffect(() => {
@@ -698,7 +713,13 @@ const DetailedMapStep: React.FC<Props> = ({
       </div>
 
       {/* Map */}
-      <Map places={currentDayPlaces} origin={origin} destinationType={destinationType} destination={destination} className="flex-1 min-h-0 w-full rounded-lg border-2 border-primary/20 shadow-lg" />
+      <Map 
+        places={currentDayPlaces} 
+        origin={origin} 
+        destinationType={destinationType} 
+        destination={destination} 
+        className="flex-1 min-h-0 w-full rounded-lg border-2 border-primary/20 shadow-lg"
+      />
 
       {/* Action bar */}
       <div className="mt-3 flex gap-2 flex-shrink-0">
