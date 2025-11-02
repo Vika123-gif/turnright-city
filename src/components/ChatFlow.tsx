@@ -56,6 +56,12 @@ export default function ChatFlow({
   const [regenerationCount, setRegenerationCount] = useState(0);
   const [chatVisible, setChatVisible] = useState(true);
   const [isRouteGenerated, setIsRouteGenerated] = useState(false);
+  const [routeTimeData, setRouteTimeData] = useState<{
+    requestedMinutes?: number;
+    computedMinutes?: number;
+    totalWalkingTime?: number;
+    totalExploringTime?: number;
+  } | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
   const { searchPlacesByName } = useGooglePlaces();
@@ -720,6 +726,12 @@ export default function ChatFlow({
     days?: number;
     accommodation?: string;
     hasAccommodation?: boolean;
+    routeTimeData?: {
+      requestedMinutes?: number;
+      computedMinutes?: number;
+      totalWalkingTime?: number;
+      totalExploringTime?: number;
+    };
   }) => {
     console.log("=== DEBUG: Chat completed ===");
     console.log("Data received:", data);
@@ -762,6 +774,7 @@ export default function ChatFlow({
       setGoals(data.categories);
       setTravelType(data.travelType || null);
       setPrefs(data.additionalSettings || []);
+      setRouteTimeData(data.routeTimeData || null);
       setChatVisible(false);
       setStep("generating");
       
@@ -790,6 +803,7 @@ export default function ChatFlow({
       setGoals(data.categories);
       setTravelType(data.travelType || null);
       setPrefs(data.additionalSettings || []);
+      setRouteTimeData(data.routeTimeData || null);
       setChatVisible(false);
       setStep("generating");
       
@@ -893,6 +907,10 @@ export default function ChatFlow({
               prefs={prefs}
               scenario={scenario}
               days={days}
+              requestedMinutes={routeTimeData?.requestedMinutes}
+              computedMinutes={routeTimeData?.computedMinutes}
+              totalWalkingTime={routeTimeData?.totalWalkingTime}
+              totalExploringTime={routeTimeData?.totalExploringTime}
               onContinue={() => {
                 saveState({ step: "detailed-map" });
                 setStep("detailed-map");

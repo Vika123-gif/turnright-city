@@ -84,6 +84,12 @@ type Props = {
     days?: number;
     accommodation?: string;
     hasAccommodation?: boolean;
+    routeTimeData?: {
+      requestedMinutes?: number;
+      computedMinutes?: number;
+      totalWalkingTime?: number;
+      totalExploringTime?: number;
+    };
   }) => void;
   onShowMap?: () => void; // New callback for showing map
   isVisible: boolean;
@@ -816,7 +822,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     console.log("=== DEBUG: handleBuyRoute called ===");
     // Complete the flow - show the route
     setCurrentStep("complete");
-    onComplete(collectedData);
+    onComplete({ ...collectedData, routeTimeData });
   };
 
   const handleAccommodationSubmit = () => {
@@ -1207,7 +1213,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
                   onShowMap();
                 } else {
                   setCurrentStep("complete");
-                  onComplete(collectedData);
+                  onComplete({ ...collectedData, routeTimeData });
                 }
               }}
               className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
@@ -1276,11 +1282,11 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             onRegenerate={handleRegenerate}
             onBuy={() => {
               if (onShowMap) {
-                onShowMap();
-              } else {
-                setCurrentStep("complete");
-                onComplete(collectedData);
-              }
+                  onShowMap();
+                } else {
+                  setCurrentStep("complete");
+                  onComplete({ ...collectedData, routeTimeData });
+                }
             }}
             purchasing={false}
             location={collectedData.location || collectedData.city || ''}
@@ -1330,7 +1336,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
                   onShowMap();
                 } else {
                   setCurrentStep("complete");
-                  onComplete(collectedData);
+                  onComplete({ ...collectedData, routeTimeData });
                 }
               }}
               className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
