@@ -212,7 +212,12 @@ export default function ChatFlow({
       return;
     }
     
-    saveState();
+    // Add a small delay to let state updates settle before saving
+    const timeoutId = setTimeout(() => {
+      saveState();
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [isRestoringState, generating, step, location, coordinates, timeWindow, scenario, goals, travelType, prefs, days, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
 
   // Simplified payment success check - no longer needed but keeping for potential future use
@@ -470,15 +475,22 @@ export default function ChatFlow({
       console.log("Time window:", timeWindow);
       console.log("Goals:", goalsToUse);
       console.log("Places count:", optimizedPlaces?.length);
-      console.log("About to call setStep('summary') and setChatVisible(false)");
       
-      saveState({ step: "summary" });
+      // Set state first, then save with explicit new values to avoid closure issues
       setStep("summary");
       setChatVisible(false); // Hide chat to show summary as full screen
       
-      console.log("=== AFTER STATE UPDATES ===");
-      console.log("Step should now be 'summary'");
-      console.log("ChatVisible should now be false");
+      // Save with explicit new values (not relying on state that hasn't updated yet)
+      setTimeout(() => {
+        saveState({ 
+          step: "summary",
+          places: optimizedPlaces,
+          isRouteGenerated: true
+        });
+        console.log("💾 Chat state saved: step=summary, places=", optimizedPlaces?.length);
+      }, 0);
+      
+      console.log("=== STATE UPDATES TRIGGERED ===");
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
@@ -898,10 +910,6 @@ export default function ChatFlow({
 
   // Early return for summary - completely separate fullscreen page with portal overlay
   if (step === "summary") {
-    console.log("🎉 RENDERING SUMMARY STEP");
-    console.log("Places:", places?.length);
-    console.log("Goals:", goals);
-    console.log("ChatVisible:", chatVisible);
     return (
       <BodyPortal>
         <FullscreenOverlay>
@@ -936,8 +944,6 @@ export default function ChatFlow({
     );
   }
 
-  console.log("🔄 ChatFlow MAIN RENDER - step:", step, "chatVisible:", chatVisible);
-  
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
       {chatVisible && (
