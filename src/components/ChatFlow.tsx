@@ -201,7 +201,8 @@ export default function ChatFlow({
     }
   };
 
-  // Auto-save state whenever important data changes
+  // Auto-save state whenever important data changes  
+  // But SKIP auto-save when step is being set to 'summary' - we save explicitly there
   useEffect(() => {
     // Don't save if restoring state
     if (isRestoringState) return;
@@ -212,12 +213,13 @@ export default function ChatFlow({
       return;
     }
     
-    // Add a small delay to let state updates settle before saving
-    const timeoutId = setTimeout(() => {
-      saveState();
-    }, 100);
+    // Don't auto-save during summary step change - it's handled explicitly
+    if (step === 'summary' && !places) {
+      console.log('⏸️ Skipping save: summary step without places (will save explicitly)');
+      return;
+    }
     
-    return () => clearTimeout(timeoutId);
+    saveState();
   }, [isRestoringState, generating, step, location, coordinates, timeWindow, scenario, goals, travelType, prefs, days, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
 
   // Simplified payment success check - no longer needed but keeping for potential future use
@@ -476,21 +478,25 @@ export default function ChatFlow({
       console.log("Goals:", goalsToUse);
       console.log("Places count:", optimizedPlaces?.length);
       
-      // Set state first, then save with explicit new values to avoid closure issues
-      setStep("summary");
-      setChatVisible(false); // Hide chat to show summary as full screen
+      // Update places FIRST, then step - this ensures saveState has correct data
+      setPlaces(optimizedPlaces);
+      setIsRouteGenerated(true);
       
-      // Save with explicit new values (not relying on state that hasn't updated yet)
+      // Small delay to ensure state updates are processed
       setTimeout(() => {
-        saveState({ 
-          step: "summary",
-          places: optimizedPlaces,
-          isRouteGenerated: true
-        });
-        console.log("💾 Chat state saved: step=summary, places=", optimizedPlaces?.length);
-      }, 0);
-      
-      console.log("=== STATE UPDATES TRIGGERED ===");
+        setStep("summary");
+        setChatVisible(false);
+        
+        // Save with explicit values after a short delay to ensure React state has updated
+        setTimeout(() => {
+          saveState({ 
+            step: "summary",
+            places: optimizedPlaces,
+            isRouteGenerated: true
+          });
+          console.log("💾 Saved summary state with", optimizedPlaces?.length, "places");
+        }, 50);
+      }, 10);
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
