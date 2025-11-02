@@ -171,7 +171,7 @@ export default function RouteSummaryStep({
 
       {/* Places Preview Section - Moved outside for better visibility */}
       {places && places.length > 0 && (
-        <div className="w-full max-w-6xl px-4 mt-8 pb-8 overflow-y-visible">
+        <div className="w-full max-w-6xl px-4 mt-4 pb-8 overflow-y-visible">
           {/* Day switching buttons for planning scenario */}
           {scenario === 'planning' && availableDays.length > 1 && (
             <div className="mb-6 flex justify-center gap-2">
