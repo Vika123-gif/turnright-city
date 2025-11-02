@@ -145,6 +145,7 @@ export default function RouteSummaryStep({
         px-4 pt-2
         pb-[calc(env(safe-area-inset-bottom,0px)+6rem)]
         h-[100dvh]
+        w-full
         justify-start md:justify-center
         overflow-y-auto
       "
