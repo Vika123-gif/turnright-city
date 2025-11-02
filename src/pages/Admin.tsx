@@ -87,10 +87,40 @@ const Admin = () => {
   const [visitorSessions, setVisitorSessions] = useState<VisitorSession[]>([]);
   const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('=== ADMIN AUTH CHECK ===');
+        console.log('Session:', session);
+        console.log('User email:', session?.user?.email);
+        
+        if (session?.user) {
+          setIsAuthenticated(true);
+        } else {
+          console.log('No session - redirecting to auth');
+          navigate('/auth');
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        navigate('/auth');
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (isAuthenticated && !checkingAuth) {
+      fetchData();
+    }
+  }, [isAuthenticated, checkingAuth]);
 
   const fetchData = async () => {
     try {
@@ -327,6 +357,25 @@ const Admin = () => {
     }
   };
 
+  if (checkingAuth) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">Checking authentication...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">
+          <p className="mb-4">You must be logged in to access the admin panel.</p>
+          <Button onClick={() => navigate('/auth')}>Go to Login</Button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -363,6 +412,16 @@ const Admin = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <div className="flex gap-2">
+          <Button 
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate('/auth');
+            }} 
+            variant="outline"
+            className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+          >
+            Sign Out
+          </Button>
           <Button 
             onClick={() => exportActions('json')} 
             variant="outline"
