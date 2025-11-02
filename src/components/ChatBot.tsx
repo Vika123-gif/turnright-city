@@ -916,7 +916,10 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
                   <label
                     key={label}
                     className={`flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 transition-all duration-200 ${active ? 'border-[hsl(var(--primary))] bg-green-50' : 'border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50'}`}
-                    onClick={() => setTravelType(label)}
+                    onClick={() => {
+                      trackButtonClickDB(`travel_type_${label.toLowerCase().replace(/\s+/g, '_').replace(/\//g, '')}`);
+                      setTravelType(label);
+                    }}
                   >
                     <span className={`h-5 w-5 rounded-full border-2 flex-shrink-0 ${active ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]' : 'border-gray-300'}`} />
                     <span className="text-sm font-medium text-gray-700">{label}</span>
@@ -928,6 +931,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             <div className="mt-4">
               <button
                 onClick={() => {
+                  trackButtonClickDB('travel_type_next');
                   setCollectedData(prev => ({ ...prev, travelType }));
                   setCurrentStep("scenario_fork");
                 }}
