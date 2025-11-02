@@ -131,8 +131,6 @@ export default function RouteSummaryStep({
   return (
     <div
       className="
-        fixed inset-0 z-[100]
-        bg-background
         flex flex-col items-center text-center
         px-4 pt-2
         pb-[calc(env(safe-area-inset-bottom,0px)+6rem)]
