@@ -82,8 +82,15 @@ type Props = {
     // Planning scenario data
     city?: string;
     days?: number;
-    accommodation?: string;
-    hasAccommodation?: boolean;
+    travelType?: string;
+    // Generated route data
+    places?: LLMPlace[];
+    routeTimeData?: {
+      requestedMinutes?: number;
+      computedMinutes?: number;
+      totalWalkingTime?: number;
+      totalExploringTime?: number;
+    };
   }) => void;
   onShowMap?: () => void; // New callback for showing map
   isVisible: boolean;
@@ -779,9 +786,16 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       
       setPlaces(placesWithPhotos);
       
-      // Store places and transition to summary step first
+      // Store places and transition to summary - notify parent
       setPlaces(placesWithPhotos);
       setCurrentStep("summary");
+      
+      // Notify ChatFlow to show summary with complete data including time info
+      onComplete({
+        ...collectedData,
+        places: placesWithPhotos,
+        routeTimeData: response.timeData
+      });
       
     } catch (e: any) {
       console.error("=== DEBUG: Error in generateRoute ===", e);
@@ -1232,24 +1246,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         </div>
       )}
 
-      {currentStep === "summary" && (
-        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
-          <RouteSummaryStep
-            timeWindow={collectedData.scenario === "planning" ? (collectedData.days || null) : (collectedData.timeMinutes || null)}
-            goals={collectedData.categories || []}
-            places={places || []}
-            travelType={travelType || (collectedData as any).travelType}
-            prefs={(collectedData.additionalSettings || additionalSettings) as string[]}
-            scenario={collectedData.scenario}
-            days={collectedData.days}
-            requestedMinutes={routeTimeData?.requestedMinutes}
-            computedMinutes={routeTimeData?.computedMinutes}
-            totalWalkingTime={routeTimeData?.totalWalkingTime}
-            totalExploringTime={routeTimeData?.totalExploringTime}
-            onContinue={() => setCurrentStep("detailed-map")}
-          />
-        </div>
-      )}
+      {/* Summary step is handled by ChatFlow via FullscreenOverlay, not rendered here */}
 
       {/* Error state when route generation fails */}
       {(currentStep === "route_error" || (currentStep === "route_preview" && (!places || places.length === 0))) && (
