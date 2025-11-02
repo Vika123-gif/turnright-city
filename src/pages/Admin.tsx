@@ -490,8 +490,9 @@ const Admin = () => {
       </div>
 
       <Tabs defaultValue="analytics" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="analytics">Аналитика</TabsTrigger>
+          <TabsTrigger value="comments">Comments</TabsTrigger>
           <TabsTrigger value="savedRoutes">Saved Routes</TabsTrigger>
           <TabsTrigger value="visitors">Visitors</TabsTrigger>
           <TabsTrigger value="generations">Generations</TabsTrigger>
@@ -501,6 +502,57 @@ const Admin = () => {
         
         <TabsContent value="analytics">
           <AdminAnalytics />
+        </TabsContent>
+        
+        <TabsContent value="comments" className="space-y-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">User Comments</h2>
+            <Badge variant="secondary">{feedback.filter(f => f.text_feedback && f.text_feedback.trim().length > 0).length} comments</Badge>
+          </div>
+          {feedback.filter(f => f.text_feedback && f.text_feedback.trim().length > 0).length === 0 ? (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-gray-500">No comments yet.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            feedback
+              .filter(f => f.text_feedback && f.text_feedback.trim().length > 0)
+              .map((item) => (
+                <Card key={item.id} className="border-l-4 border-l-blue-500">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        {item.location || 'Unknown Location'}
+                        {item.rating && (
+                          <div className="flex items-center">
+                            <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                            <span className="ml-1 text-sm font-normal">{item.rating}/5</span>
+                          </div>
+                        )}
+                      </CardTitle>
+                      <Badge variant="outline" className="text-xs">
+                        {new Date(item.submitted_at).toLocaleDateString()}
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(item.submitted_at).toLocaleTimeString()} • Session: {item.user_session_id.substring(0, 8)}...
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{item.text_feedback}</p>
+                    </div>
+                    <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+                      <span>Places: {item.places_count || 'N/A'}</span>
+                      {item.route_generation_id && (
+                        <span>Route ID: {item.route_generation_id.substring(0, 8)}...</span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+          )}
         </TabsContent>
         
         <TabsContent value="savedRoutes" className="space-y-4">
@@ -663,41 +715,53 @@ const Admin = () => {
         </TabsContent>
         
         <TabsContent value="feedback" className="space-y-4">
-          <h2 className="text-xl font-semibold">User Feedback</h2>
-          {feedback.map((item) => (
-            <Card key={item.id}>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  {item.location || 'Unknown Location'}
-                  {item.rating && (
-                    <div className="flex items-center">
-                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <span className="ml-1">{item.rating}/5</span>
-                    </div>
-                  )}
-                </CardTitle>
-                <div className="text-sm text-gray-500">
-                  {new Date(item.submitted_at).toLocaleString()}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {item.text_feedback && (
-                    <div>
-                      <strong>Feedback:</strong>
-                      <p className="mt-1 p-2 bg-gray-50 rounded">{item.text_feedback}</p>
-                    </div>
-                  )}
-                  <div>
-                    <strong>Places Count:</strong> {item.places_count}
-                  </div>
-                  <div>
-                    <strong>Session ID:</strong> {item.user_session_id}
-                  </div>
-                </div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">All Feedback (Ratings & Comments)</h2>
+            <div className="flex gap-2">
+              <Badge variant="secondary">Total: {feedback.length}</Badge>
+              <Badge variant="outline">Avg Rating: {stats.averageRating}</Badge>
+            </div>
+          </div>
+          {feedback.length === 0 ? (
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-gray-500">No feedback yet.</p>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            feedback.map((item) => (
+              <Card key={item.id}>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    {item.location || 'Unknown Location'}
+                    {item.rating && (
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="ml-1">{item.rating}/5</span>
+                      </div>
+                    )}
+                  </CardTitle>
+                  <div className="text-sm text-gray-500">
+                    {new Date(item.submitted_at).toLocaleString()}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {item.text_feedback && (
+                      <div>
+                        <strong>Comment:</strong>
+                        <p className="mt-1 p-3 bg-blue-50 rounded-lg border border-blue-100">{item.text_feedback}</p>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span><strong>Places:</strong> {item.places_count || 'N/A'}</span>
+                      <span><strong>Session:</strong> {item.user_session_id.substring(0, 12)}...</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </TabsContent>
         
         <TabsContent value="purchases" className="space-y-4">
