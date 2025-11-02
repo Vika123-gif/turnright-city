@@ -139,11 +139,11 @@ export default function RouteSummaryStep({
         overflow-y-auto
       "
     >
-      <div className="max-w-2xl w-full space-y-6 pb-16">
+      <div className="max-w-2xl w-full space-y-4 pb-8">
         <h1 className="text-3xl md:text-4xl font-bold">Your route is ready 🎉</h1>
         <div className="text-lg md:text-xl text-foreground/80">{subtitle}</div>
 
-        <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
+        <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
           <Button
             onClick={onContinue}
             size="lg"
@@ -169,7 +169,7 @@ export default function RouteSummaryStep({
 
       {/* Places Preview Section - Moved outside for better visibility */}
       {places && places.length > 0 && (
-        <div className="w-full max-w-6xl px-4 mt-4 pb-8 overflow-y-visible">
+        <div className="w-full max-w-6xl px-4 mt-2 pb-8 overflow-y-visible">
           {/* Day switching buttons for planning scenario */}
           {scenario === 'planning' && availableDays.length > 1 && (
             <div className="mb-6 flex justify-center gap-2">
