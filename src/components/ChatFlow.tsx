@@ -909,7 +909,7 @@ export default function ChatFlow({
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-[#F3FCF8]">
+    <div className="w-full h-full flex flex-col">
       {chatVisible && (
         <ChatBot
           onComplete={handleChatComplete}
