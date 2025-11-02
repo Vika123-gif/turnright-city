@@ -84,12 +84,6 @@ type Props = {
     days?: number;
     accommodation?: string;
     hasAccommodation?: boolean;
-    routeTimeData?: {
-      requestedMinutes?: number;
-      computedMinutes?: number;
-      totalWalkingTime?: number;
-      totalExploringTime?: number;
-    };
   }) => void;
   onShowMap?: () => void; // New callback for showing map
   isVisible: boolean;
@@ -822,7 +816,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     console.log("=== DEBUG: handleBuyRoute called ===");
     // Complete the flow - show the route
     setCurrentStep("complete");
-    onComplete({ ...collectedData, routeTimeData });
+    onComplete(collectedData);
   };
 
   const handleAccommodationSubmit = () => {
@@ -1213,7 +1207,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
                   onShowMap();
                 } else {
                   setCurrentStep("complete");
-                  onComplete({ ...collectedData, routeTimeData });
+                  onComplete(collectedData);
                 }
               }}
               className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
@@ -1238,7 +1232,24 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         </div>
       )}
 
-      {/* Summary step is now rendered in ChatFlow.tsx via FullscreenOverlay */}
+      {currentStep === "summary" && (
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+          <RouteSummaryStep
+            timeWindow={collectedData.scenario === "planning" ? (collectedData.days || null) : (collectedData.timeMinutes || null)}
+            goals={collectedData.categories || []}
+            places={places || []}
+            travelType={travelType || (collectedData as any).travelType}
+            prefs={(collectedData.additionalSettings || additionalSettings) as string[]}
+            scenario={collectedData.scenario}
+            days={collectedData.days}
+            requestedMinutes={routeTimeData?.requestedMinutes}
+            computedMinutes={routeTimeData?.computedMinutes}
+            totalWalkingTime={routeTimeData?.totalWalkingTime}
+            totalExploringTime={routeTimeData?.totalExploringTime}
+            onContinue={() => setCurrentStep("detailed-map")}
+          />
+        </div>
+      )}
 
       {/* Error state when route generation fails */}
       {(currentStep === "route_error" || (currentStep === "route_preview" && (!places || places.length === 0))) && (
@@ -1282,11 +1293,11 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             onRegenerate={handleRegenerate}
             onBuy={() => {
               if (onShowMap) {
-                  onShowMap();
-                } else {
-                  setCurrentStep("complete");
-                  onComplete({ ...collectedData, routeTimeData });
-                }
+                onShowMap();
+              } else {
+                setCurrentStep("complete");
+                onComplete(collectedData);
+              }
             }}
             purchasing={false}
             location={collectedData.location || collectedData.city || ''}
@@ -1336,7 +1347,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
                   onShowMap();
                 } else {
                   setCurrentStep("complete");
-                  onComplete({ ...collectedData, routeTimeData });
+                  onComplete(collectedData);
                 }
               }}
               className="w-full py-4 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"

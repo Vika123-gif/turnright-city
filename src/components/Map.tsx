@@ -3,7 +3,6 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { LLMPlace } from '@/hooks/useOpenAI';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { Maximize2, X } from 'lucide-react';
 
 type MapProps = {
   places: LLMPlace[];
@@ -639,7 +638,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
             className="bg-white/90 hover:bg-white p-2 rounded-lg shadow-lg transition-colors"
             title="Expand map to fullscreen"
           >
-            <Maximize2 className="w-5 h-5 text-gray-700" />
+            🔍
           </button>
         </div>
         
@@ -667,7 +666,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
               className="absolute top-4 right-4 bg-white/90 hover:bg-white p-3 rounded-lg shadow-lg transition-colors z-10"
               title="Close fullscreen"
             >
-              <X className="w-6 h-6 text-gray-700" />
+              ✕
             </button>
             
             {/* Fullscreen indicator */}

@@ -56,12 +56,6 @@ export default function ChatFlow({
   const [regenerationCount, setRegenerationCount] = useState(0);
   const [chatVisible, setChatVisible] = useState(true);
   const [isRouteGenerated, setIsRouteGenerated] = useState(false);
-  const [routeTimeData, setRouteTimeData] = useState<{
-    requestedMinutes?: number;
-    computedMinutes?: number;
-    totalWalkingTime?: number;
-    totalExploringTime?: number;
-  } | null>(null);
 
   const { getLLMPlaces } = useOpenAI();
   const { searchPlacesByName } = useGooglePlaces();
@@ -98,31 +92,6 @@ export default function ChatFlow({
   
   useEffect(() => {
     console.log('🔄 Starting state restoration from localStorage...');
-    
-    // FIRST check chatBotState - it has priority if it exists with a summary step
-    const chatBotState = localStorage.getItem('chatBotState');
-    if (chatBotState) {
-      try {
-        const chatParsed = JSON.parse(chatBotState);
-        console.log('🤖 Found chatBotState:', {
-          step: chatParsed.currentStep,
-          hasCollectedData: !!chatParsed.collectedData
-        });
-        
-        // If ChatBot has summary step, it means route generation completed
-        if (chatParsed.currentStep === 'summary' && chatParsed.collectedData) {
-          console.log('✅ Restoring from ChatBot summary state');
-          setStep('chat'); // We'll show chat, but ChatBot will display summary
-          setChatVisible(true); // ChatBot handles the summary display
-          setIsRestoringState(false);
-          return;
-        }
-      } catch (error) {
-        console.error('❌ Error parsing chatBotState:', error);
-      }
-    }
-    
-    // Otherwise, check savedRouteState for route generation state
     const savedState = localStorage.getItem('savedRouteState');
     console.log('📦 Raw savedState from localStorage:', savedState ? 'EXISTS' : 'NOT FOUND');
     
@@ -226,8 +195,7 @@ export default function ChatFlow({
     }
   };
 
-  // Auto-save state whenever important data changes  
-  // But SKIP auto-save when step is being set to 'summary' - we save explicitly there
+  // Auto-save state whenever important data changes
   useEffect(() => {
     // Don't save if restoring state
     if (isRestoringState) return;
@@ -235,12 +203,6 @@ export default function ChatFlow({
     // Don't save empty places during active generation - wait for completion
     if (generating && !places) {
       console.log('⏸️ Skipping save: generation in progress with no places yet');
-      return;
-    }
-    
-    // Don't auto-save during summary step change - it's handled explicitly
-    if (step === 'summary' && !places) {
-      console.log('⏸️ Skipping save: summary step without places (will save explicitly)');
       return;
     }
     
@@ -501,27 +463,10 @@ export default function ChatFlow({
       console.log("=== SETTING STEP TO SUMMARY ===");
       console.log("Time window:", timeWindow);
       console.log("Goals:", goalsToUse);
-      console.log("Places count:", optimizedPlaces?.length);
       
-      // Update places FIRST, then step - this ensures saveState has correct data
-      setPlaces(optimizedPlaces);
-      setIsRouteGenerated(true);
-      
-      // Small delay to ensure state updates are processed
-      setTimeout(() => {
-        setStep("summary");
-        setChatVisible(false);
-        
-        // Save with explicit values after a short delay to ensure React state has updated
-        setTimeout(() => {
-          saveState({ 
-            step: "summary",
-            places: optimizedPlaces,
-            isRouteGenerated: true
-          });
-          console.log("💾 Saved summary state with", optimizedPlaces?.length, "places");
-        }, 50);
-      }, 10);
+      saveState({ step: "summary" });
+      setStep("summary");
+      setChatVisible(false); // Hide chat to show summary as full screen
     } catch (e: any) {
       console.error("=== DEBUG: Error in fetchPlacesWithGoals ===", e);
       setError(e.message || "Could not generate route.");
@@ -775,12 +720,6 @@ export default function ChatFlow({
     days?: number;
     accommodation?: string;
     hasAccommodation?: boolean;
-    routeTimeData?: {
-      requestedMinutes?: number;
-      computedMinutes?: number;
-      totalWalkingTime?: number;
-      totalExploringTime?: number;
-    };
   }) => {
     console.log("=== DEBUG: Chat completed ===");
     console.log("Data received:", data);
@@ -823,7 +762,6 @@ export default function ChatFlow({
       setGoals(data.categories);
       setTravelType(data.travelType || null);
       setPrefs(data.additionalSettings || []);
-      setRouteTimeData(data.routeTimeData || null);
       setChatVisible(false);
       setStep("generating");
       
@@ -852,7 +790,6 @@ export default function ChatFlow({
       setGoals(data.categories);
       setTravelType(data.travelType || null);
       setPrefs(data.additionalSettings || []);
-      setRouteTimeData(data.routeTimeData || null);
       setChatVisible(false);
       setStep("generating");
       
@@ -956,10 +893,6 @@ export default function ChatFlow({
               prefs={prefs}
               scenario={scenario}
               days={days}
-              requestedMinutes={routeTimeData?.requestedMinutes}
-              computedMinutes={routeTimeData?.computedMinutes}
-              totalWalkingTime={routeTimeData?.totalWalkingTime}
-              totalExploringTime={routeTimeData?.totalExploringTime}
               onContinue={() => {
                 saveState({ step: "detailed-map" });
                 setStep("detailed-map");
