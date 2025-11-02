@@ -862,9 +862,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   }
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-white flex flex-col">
+    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-white flex flex-col overflow-hidden">
       {/* Chat Messages - Scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {messages.map((message, index) => (
           <div
             key={message.id}
