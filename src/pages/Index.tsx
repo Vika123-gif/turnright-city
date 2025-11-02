@@ -37,11 +37,11 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
       {/* Header with user info and credits - Fixed at top */}
       {headerVisible && (
-        <header className="fixed top-0 left-0 right-0 z-50 h-[var(--header-h)] bg-white/90 backdrop-blur-sm border-b border-gray-200 flex items-center px-4">
-          <div className="max-w-6xl mx-auto w-full flex justify-between items-center">
+        <header className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200 p-4 flex-shrink-0">
+          <div className="max-w-6xl mx-auto flex justify-between items-center">
             {/* Logo - Hidden on mobile */}
             <div className="flex items-center">
               <img 
@@ -87,8 +87,8 @@ const Index = () => {
         </header>
       )}
       
-      {/* Main content with padding for fixed header */}
-      <div className={headerVisible ? "pt-[var(--header-h)]" : ""}>
+      {/* Main content - Fills remaining space */}
+      <div className="flex-1 w-full relative min-h-0">
         <ChatFlow 
           key={currentStep === "summary" ? "summary" : "chat"}
           onHeaderVisibilityChange={setHeaderVisible}

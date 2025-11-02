@@ -19,10 +19,6 @@ html, body, #root {
 }
 
 :root {
-  /* Layout heights */
-  --header-h: 64px;
-  --footer-h: 84px;
-  
   /* Core Brand Colors - #00BC72 */
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
@@ -68,13 +64,6 @@ html, body, #root {
   
   /* Animations */
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@media (max-width: 768px) {
-  :root {
-    --header-h: 56px;
-    --footer-h: 92px;
-  }
 }
 
 .dark {
