@@ -34,9 +34,19 @@ const PurchaseStep: React.FC<Props> = ({
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   const handleFeedbackSubmit = () => {
+    console.log("=== PurchaseStep: handleFeedbackSubmit called ===");
+    console.log("Feedback text:", feedback);
+    console.log("onFeedbackSubmit exists:", !!onFeedbackSubmit);
+    
     if (feedback.trim() && onFeedbackSubmit) {
+      console.log("=== PurchaseStep: Calling onFeedbackSubmit ===");
       onFeedbackSubmit(feedback.trim());
       setFeedbackSubmitted(true);
+    } else {
+      console.warn("=== PurchaseStep: Feedback submit blocked ===", {
+        hasFeedback: !!feedback.trim(),
+        hasCallback: !!onFeedbackSubmit
+      });
     }
   };
 
