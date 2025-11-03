@@ -452,8 +452,9 @@ export type Database = {
           updated_at: string
           user_agent: string | null
           user_comment: string | null
-          user_email: string
-          user_id: string
+          user_email: string | null
+          user_id: string | null
+          user_session_id: string | null
         }
         Insert: {
           action_name: string
@@ -481,8 +482,9 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           user_comment?: string | null
-          user_email: string
-          user_id: string
+          user_email?: string | null
+          user_id?: string | null
+          user_session_id?: string | null
         }
         Update: {
           action_name?: string
@@ -510,8 +512,9 @@ export type Database = {
           updated_at?: string
           user_agent?: string | null
           user_comment?: string | null
-          user_email?: string
-          user_id?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_session_id?: string | null
         }
         Relationships: []
       }
