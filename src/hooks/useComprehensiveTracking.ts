@@ -114,7 +114,7 @@ export const useComprehensiveTracking = () => {
   const trackRouteGeneration = async (details: RouteGenerationDetails) => {
     if (!isTrackingEnabled || !userSessionId) return;
 
-    // Use local tracking instead of database
+    // Use local tracking
     localTracking.trackRouteGeneration({
       scenario: details.scenario,
       location: details.location,
@@ -128,8 +128,40 @@ export const useComprehensiveTracking = () => {
       debugInfo: details.debugInfo || {}
     });
 
-    console.log('📊 Route generation tracked locally:', details);
-    return { id: 'local_' + Date.now() };
+    // Save to database
+    try {
+      const { data, error } = await supabase
+        .from('user_interactions')
+        .insert({
+          user_id: user?.id || null,
+          user_email: user?.email || null,
+          user_session_id: userSessionId,
+          action_type: 'route_generation',
+          action_name: 'generate_route',
+          scenario: details.scenario,
+          location: details.location,
+          time_minutes: details.timeWindow,
+          categories: details.goals,
+          days: details.days,
+          places_found: details.placesFound || 0,
+          generation_successful: details.generationCompletedAt ? true : null,
+          page_url: window.location.pathname,
+          user_agent: navigator.userAgent
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error saving route generation to user_interactions:', error);
+        return { id: 'local_' + Date.now() };
+      } else {
+        console.log('✅ Route generation saved to user_interactions table');
+        return { id: data?.id || 'local_' + Date.now() };
+      }
+    } catch (err) {
+      console.error('Exception saving route generation:', err);
+      return { id: 'local_' + Date.now() };
+    }
   };
 
   // Track page view
