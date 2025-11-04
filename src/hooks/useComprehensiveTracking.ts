@@ -206,6 +206,31 @@ export const useComprehensiveTracking = () => {
         rating: routeData?.rating,
         ...routeData
       });
+      
+      // Also save comment to user_interactions table
+      try {
+        const { error } = await supabase
+          .from('user_interactions')
+          .insert({
+            user_id: user?.id || null,
+            user_email: user?.email || null,
+            user_session_id: userSessionId,
+            action_type: 'comment',
+            action_name: 'route_comment',
+            user_comment: routeData?.commentText || routeData?.comment || '',
+            rating: routeData?.rating || null,
+            page_url: window.location.pathname,
+            user_agent: navigator.userAgent
+          });
+
+        if (error) {
+          console.error('Error saving comment to user_interactions:', error);
+        } else {
+          console.log('✅ Comment saved to user_interactions table');
+        }
+      } catch (err) {
+        console.error('Exception saving comment:', err);
+      }
     } else if (actionType === 'save') {
       localTracking.trackSaveRoute({
         format: routeData?.format || 'html',

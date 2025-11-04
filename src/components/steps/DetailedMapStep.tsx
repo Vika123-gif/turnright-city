@@ -864,6 +864,7 @@ const DetailedMapStep: React.FC<Props> = ({
                 className="px-3 py-1.5 rounded-md bg-primary text-white text-sm" 
                 onClick={() => { 
                   trackRouteAction('comment', { 
+                    commentText: commentText,
                     commentLength: commentText.length,
                     hasComment: commentText.trim().length > 0
                   }, 'DetailedMapStep');
