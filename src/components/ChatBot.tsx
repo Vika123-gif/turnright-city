@@ -917,7 +917,9 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
                     key={label}
                     className={`flex items-center space-x-3 cursor-pointer p-3 rounded-xl border-2 transition-all duration-200 ${active ? 'border-[hsl(var(--primary))] bg-green-50' : 'border-gray-200 hover:border-[hsl(var(--primary))] hover:bg-green-50'}`}
                     onClick={() => {
-                      trackButtonClickDB(`travel_type_${label.toLowerCase().replace(/\s+/g, '_').replace(/\//g, '')}`);
+                      const eventName = `travel_type_${label.toLowerCase().replace(/\s+/g, '_').replace(/\//g, '')}`;
+                      trackButtonClickDB(eventName);
+                      trackButtonClick(eventName, 'ChatBot'); // Google Analytics
                       setTravelType(label);
                     }}
                   >
