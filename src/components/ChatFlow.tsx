@@ -217,6 +217,30 @@ export default function ChatFlow({
     saveState();
   }, [isRestoringState, generating, step, location, coordinates, timeWindow, scenario, goals, travelType, prefs, days, origin, originCoordinates, destination, destinationType, places, currentRouteGenerationId, regenerationCount, isRouteGenerated]);
 
+  // Force-save when entering summary or detailed-map (extra safety)
+  useEffect(() => {
+    if (isRestoringState) return;
+    if (step === "summary" || step === "detailed-map") {
+      saveState();
+    }
+  }, [step, isRestoringState]);
+
+  // Save on page unload/refresh (as last resort)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      try { saveState(); } catch {}
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        try { saveState(); } catch {}
+      }
+    });
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   // Simplified payment success check - no longer needed but keeping for potential future use
   useEffect(() => {
     console.log("=== DEBUG: Payment success check (disabled) ===");
@@ -444,7 +468,20 @@ export default function ChatFlow({
       
       // Optimize route order using nearest-neighbor algorithm
       const { optimizeRouteOrder } = await import("@/lib/routeOptimization");
-      const optimizedPlaces = optimizeRouteOrder(placesWithPhotos, originToUse);
+      let optimizedPlaces = optimizeRouteOrder(placesWithPhotos, originToUse);
+      
+      // For planning scenario: normalize day assignment to 1..days and distribute evenly when missing
+      if (scenario === "planning" && days && days > 0) {
+        const totalDays = Math.max(1, days);
+        optimizedPlaces = optimizedPlaces.map((place, index) => {
+          const existingDay = (place as any).day;
+          let normalizedDay = typeof existingDay === "number" ? existingDay : undefined;
+          if (!normalizedDay || normalizedDay < 1 || normalizedDay > totalDays) {
+            normalizedDay = (index % totalDays) + 1; // cycle to guarantee coverage and balance
+          }
+          return { ...place, day: normalizedDay } as typeof place;
+        });
+      }
       console.log("=== DEBUG: Route optimized for minimal travel ===");
       console.log("Optimized places:", optimizedPlaces.map(p => p.name));
       
