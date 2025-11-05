@@ -782,6 +782,28 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       
       setPlaces(placesWithPhotos);
       
+      // Save route to Storage after successful generation
+      try {
+        const db = useDatabase();
+        await db.saveRouteToStorage(generateSessionId(), {
+          scenario: data.scenario,
+          location: data.location || data.city || "",
+          timeWindow: data.timeMinutes,
+          goals: data.categories || [],
+          places: placesWithPhotos,
+          days: data.days,
+          additionalSettings: data.additionalSettings,
+          travelType: collectedData.travelType,
+          destinationType: data.destinationType,
+          destination: data.destination,
+          totalWalkingTime: response.timeData?.totalWalkingTime,
+          totalExploringTime: response.timeData?.totalExploringTime
+        });
+      } catch (storageError) {
+        console.error("Failed to save route to storage:", storageError);
+        // Don't block the user flow if storage fails
+      }
+      
       // Store places and transition to summary step first
       setPlaces(placesWithPhotos);
       setCurrentStep("summary");
