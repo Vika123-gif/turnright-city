@@ -19,6 +19,8 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { useComprehensiveTracking } from "@/hooks/useComprehensiveTracking";
 import { useGenerationLimit } from "@/hooks/useGenerationLimit";
 import GenerationOptionsModal from "./GenerationOptionsModal";
+import { useDatabase } from "@/hooks/useDatabase";
+import { supabase } from "@/integrations/supabase/client";
 
 const CATEGORIES = [
   "Restaurants", "Cafés", "Bars", "Viewpoints", "Parks", "Museums",
@@ -158,6 +160,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { generateSessionId } = useDatabase();
   const { getLLMPlaces } = useOpenAI();
   const { searchPlacesByName } = useGooglePlaces();
   const [isRestoringState, setIsRestoringState] = useState(true);
@@ -921,6 +924,25 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
                       trackButtonClickDB(eventName);
                       trackButtonClick(eventName, 'ChatBot'); // Google Analytics
                       setTravelType(label);
+                      // Persist exact travel type click to user_interactions (dedicated column)
+                      void (async () => {
+                        try {
+                          const userSessionId = generateSessionId();
+                          const { error } = await supabase
+                            .from('user_interactions')
+                            .insert({
+                              action_type: 'button_click',
+                              action_name: 'select_travel_type',
+                              travel_type: label,
+                              user_session_id: userSessionId,
+                              page_url: window.location.pathname,
+                              user_agent: navigator.userAgent,
+                            });
+                          if (error) console.warn('Failed to log travel type click:', error);
+                        } catch (e) {
+                          console.warn('Failed to log travel type click:', e);
+                        }
+                      })();
                     }}
                   >
                     <span className={`h-5 w-5 rounded-full border-2 flex-shrink-0 ${active ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]' : 'border-gray-300'}`} />

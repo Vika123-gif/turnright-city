@@ -477,7 +477,16 @@ export default function ChatFlow({
       // Save route generation to database
       console.log("=== ATTEMPTING TO SAVE ROUTE GENERATION ===");
       console.log("Session ID for save:", userSessionId);
-      const savedGeneration = await saveRouteGeneration(locationForSearch, timeWindow?.toString(), goalsToUse, response, userSessionId);
+      const savedGeneration = await saveRouteGeneration(
+        locationForSearch,
+        timeWindow?.toString(),
+        goalsToUse,
+        response,
+        userSessionId,
+        scenario,
+        days,
+        prefs
+      );
       if (savedGeneration) {
         console.log("Route generation saved with ID:", savedGeneration.id);
         setCurrentRouteGenerationId(savedGeneration.id);
@@ -786,6 +795,8 @@ export default function ChatFlow({
       setTimeWindow(data.timeMinutes);
       setGoals(data.categories);
       setTravelType(data.travelType || null);
+
+      // Travel type clicks will be logged to a dedicated column in future (not via user_comment)
       setPrefs(data.additionalSettings || []);
       setChatVisible(false);
       setStep("generating");
@@ -814,6 +825,8 @@ export default function ChatFlow({
       setDays(data.days);
       setGoals(data.categories);
       setTravelType(data.travelType || null);
+
+      // Travel type clicks will be logged to a dedicated column in future (not via user_comment)
       setPrefs(data.additionalSettings || []);
       setChatVisible(false);
       setStep("generating");

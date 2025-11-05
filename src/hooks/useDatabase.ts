@@ -173,7 +173,10 @@ export const useDatabase = () => {
     timeWindow: string | null,
     goals: string[],
     places: LLMPlace[],
-    userSessionId: string
+    userSessionId: string,
+    scenario?: 'onsite' | 'planning',
+    days?: number,
+    additionalSettings?: string[]
   ) => {
     try {
       console.log('=== SAVE ROUTE GENERATION ATTEMPT ===');
@@ -218,10 +221,70 @@ export const useDatabase = () => {
 
       console.log('=== ROUTE GENERATION SAVED SUCCESSFULLY ===');
       console.log('Saved data:', data);
+
+      // Also log to user_interactions with full details for analytics
+      try {
+        const { error: uiError } = await supabase
+          .from('user_interactions')
+          .insert({
+            user_id: null,
+            user_email: null,
+            user_session_id: userSessionId,
+            action_type: 'route_generate',
+            action_name: 'generate_route',
+            scenario: scenario ?? null,
+            location,
+            time_minutes: timeWindow ? parseInt(timeWindow as string, 10) : null,
+            categories: goals,
+            days: days ?? null,
+            additional_settings: additionalSettings ?? null,
+            places_found: places.length,
+            places_data: places,
+            generation_successful: true,
+            error_message: null,
+            page_url: typeof window !== 'undefined' ? window.location.pathname : null,
+            user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+          });
+
+        if (uiError) {
+          console.warn('Non-fatal: failed to insert into user_interactions:', uiError);
+        }
+      } catch (uiEx) {
+        console.warn('Non-fatal: exception inserting into user_interactions:', uiEx);
+      }
       return data;
     } catch (err) {
       console.error('=== ROUTE GENERATION SAVE EXCEPTION ===');
       console.error('Exception details:', err);
+      // Best-effort log failure into user_interactions
+      try {
+        const { error: uiError } = await supabase
+          .from('user_interactions')
+          .insert({
+            user_id: null,
+            user_email: null,
+            user_session_id: userSessionId,
+            action_type: 'route_generate',
+            action_name: 'generate_route',
+            scenario: scenario ?? null,
+            location,
+            time_minutes: timeWindow ? (typeof timeWindow === 'string' ? parseInt(timeWindow, 10) : timeWindow) : null,
+            categories: goals,
+            days: days ?? null,
+            additional_settings: additionalSettings ?? null,
+            places_found: 0,
+            places_data: null,
+            generation_successful: false,
+            error_message: err instanceof Error ? err.message : String(err),
+            page_url: typeof window !== 'undefined' ? window.location.pathname : null,
+            user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+          });
+        if (uiError) {
+          console.warn('Non-fatal: failed to insert error into user_interactions:', uiError);
+        }
+      } catch (uiEx) {
+        console.warn('Non-fatal: exception inserting error into user_interactions:', uiEx);
+      }
       return null;
     }
   };
