@@ -18,6 +18,29 @@ export const useDatabase = () => {
     return newSessionId;
   };
 
+  const saveRouteSessionToStorage = async (
+    userSessionId: string,
+    payload: Record<string, any>
+  ) => {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const path = `${userSessionId}/${timestamp}.json`;
+      const jsonString = JSON.stringify(payload, null, 2);
+      const { error } = await supabase
+        .storage
+        .from('routes')
+        .upload(path, new Blob([jsonString], { type: 'application/json' }), { upsert: true });
+      if (error) {
+        console.warn('Failed to upload route session JSON to storage:', error);
+        return null;
+      }
+      return { path };
+    } catch (err) {
+      console.warn('Exception uploading route session JSON:', err);
+      return null;
+    }
+  };
+
   const testConnection = async () => {
     try {
       console.log('=== TESTING DATABASE CONNECTION ===');
@@ -252,6 +275,23 @@ export const useDatabase = () => {
       } catch (uiEx) {
         console.warn('Non-fatal: exception inserting into user_interactions:', uiEx);
       }
+
+      // Save full session JSON to Storage (best-effort)
+      void saveRouteSessionToStorage(userSessionId, {
+        sessionId: userSessionId,
+        createdAt: new Date().toISOString(),
+        scenario: scenario ?? null,
+        location,
+        time_minutes: timeWindow ? (typeof timeWindow === 'string' ? parseInt(timeWindow, 10) : timeWindow) : null,
+        categories: goals,
+        days: days ?? null,
+        additional_settings: additionalSettings ?? [],
+        generation_successful: true,
+        error_message: null,
+        places,
+        page_url: typeof window !== 'undefined' ? window.location.pathname : null,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      });
       return data;
     } catch (err) {
       console.error('=== ROUTE GENERATION SAVE EXCEPTION ===');
@@ -285,6 +325,23 @@ export const useDatabase = () => {
       } catch (uiEx) {
         console.warn('Non-fatal: exception inserting error into user_interactions:', uiEx);
       }
+
+      // Save failure session JSON to Storage (best-effort)
+      void saveRouteSessionToStorage(userSessionId, {
+        sessionId: userSessionId,
+        createdAt: new Date().toISOString(),
+        scenario: scenario ?? null,
+        location,
+        time_minutes: timeWindow ? (typeof timeWindow === 'string' ? parseInt(timeWindow, 10) : timeWindow) : null,
+        categories: goals,
+        days: days ?? null,
+        additional_settings: additionalSettings ?? [],
+        generation_successful: false,
+        error_message: err instanceof Error ? err.message : String(err),
+        places: null,
+        page_url: typeof window !== 'undefined' ? window.location.pathname : null,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      });
       return null;
     }
   };
@@ -596,6 +653,7 @@ export const useDatabase = () => {
     trackVisitorSession,
     trackLocationExit,
     saveRouteGeneration,
+    saveRouteSessionToStorage,
     saveBuyButtonClick,
     saveRoutePurchase,
     saveFeedback,
