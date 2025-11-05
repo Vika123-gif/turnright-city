@@ -111,7 +111,14 @@ export const useComprehensiveTracking = () => {
   };
 
   // Track route generation details
-  const trackRouteGeneration = async (details: RouteGenerationDetails) => {
+  const trackRouteGeneration = async (
+    details: RouteGenerationDetails & {
+      places?: any[];
+      travelType?: string;
+      destinationType?: string;
+      destination?: string;
+    }
+  ) => {
     if (!isTrackingEnabled || !userSessionId) return;
 
     // Use local tracking
@@ -144,6 +151,7 @@ export const useComprehensiveTracking = () => {
           categories: details.goals,
           days: details.days,
           places_found: details.placesFound || 0,
+          places_data: details.places || null,
           generation_successful: details.generationCompletedAt ? true : null,
           page_url: window.location.pathname,
           user_agent: navigator.userAgent
@@ -153,11 +161,32 @@ export const useComprehensiveTracking = () => {
 
       if (error) {
         console.error('Error saving route generation to user_interactions:', error);
-        return { id: 'local_' + Date.now() };
       } else {
         console.log('✅ Route generation saved to user_interactions table');
-        return { id: data?.id || 'local_' + Date.now() };
       }
+
+      // Also save complete route data to Storage as JSON
+      if (details.places && details.places.length > 0) {
+        const { useDatabase } = await import('./useDatabase');
+        const db = useDatabase();
+        
+        await db.saveRouteToStorage(userSessionId, {
+          scenario: details.scenario,
+          location: details.location,
+          timeWindow: details.timeWindow,
+          goals: details.goals,
+          places: details.places,
+          days: details.days,
+          additionalSettings: details.debugInfo?.additionalSettings,
+          travelType: details.travelType,
+          destinationType: details.destinationType,
+          destination: details.destination,
+          totalWalkingTime: details.totalWalkingTime,
+          totalExploringTime: details.totalVisitTime
+        });
+      }
+
+      return { id: data?.id || 'local_' + Date.now() };
     } catch (err) {
       console.error('Exception saving route generation:', err);
       return { id: 'local_' + Date.now() };

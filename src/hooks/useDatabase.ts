@@ -512,6 +512,85 @@ export const useDatabase = () => {
     }
   };
 
+  const saveRouteToStorage = async (
+    userSessionId: string,
+    routeData: {
+      scenario: 'onsite' | 'planning';
+      location: string;
+      timeWindow?: number;
+      goals: string[];
+      places: LLMPlace[];
+      days?: number;
+      additionalSettings?: string[];
+      travelType?: string;
+      destinationType?: string;
+      destination?: string;
+      totalWalkingTime?: number;
+      totalExploringTime?: number;
+    }
+  ) => {
+    try {
+      console.log('=== SAVE ROUTE TO STORAGE ATTEMPT ===');
+      
+      // Create JSON data with all route information
+      const jsonData = {
+        userSessionId,
+        timestamp: new Date().toISOString(),
+        routeData: {
+          scenario: routeData.scenario,
+          location: routeData.location,
+          timeWindow: routeData.timeWindow,
+          goals: routeData.goals,
+          places: routeData.places,
+          days: routeData.days,
+          additionalSettings: routeData.additionalSettings,
+          travelType: routeData.travelType,
+          destinationType: routeData.destinationType,
+          destination: routeData.destination,
+          totalWalkingTime: routeData.totalWalkingTime,
+          totalExploringTime: routeData.totalExploringTime,
+          placesCount: routeData.places.length
+        }
+      };
+
+      // Create filename with timestamp and session ID
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `${userSessionId}_${timestamp}.json`;
+      const filePath = `routes/${filename}`;
+
+      console.log('Saving route JSON to storage:', filePath);
+      console.log('JSON data:', JSON.stringify(jsonData, null, 2));
+
+      // Convert to blob
+      const jsonBlob = new Blob([JSON.stringify(jsonData, null, 2)], {
+        type: 'application/json'
+      });
+
+      // Upload to storage
+      const { data, error } = await supabase.storage
+        .from('routes')
+        .upload(filePath, jsonBlob, {
+          contentType: 'application/json',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('=== STORAGE UPLOAD ERROR ===');
+        console.error('Error code:', error.message);
+        console.error('Full error:', error);
+        return null;
+      }
+
+      console.log('=== ROUTE JSON SAVED TO STORAGE SUCCESSFULLY ===');
+      console.log('Storage path:', data.path);
+      return data;
+    } catch (err) {
+      console.error('=== SAVE ROUTE TO STORAGE EXCEPTION ===');
+      console.error('Exception details:', err);
+      return null;
+    }
+  };
+
   return {
     generateSessionId,
     trackVisitorSession,
@@ -522,6 +601,7 @@ export const useDatabase = () => {
     saveFeedback,
     saveUserRoute,
     getSavedRoutes,
+    saveRouteToStorage,
     testConnection,
   };
 };
