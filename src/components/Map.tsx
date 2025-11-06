@@ -106,16 +106,22 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
           console.log('Geocoding origin location (city name):', origin);
           
           // Try geocoding with different query formats for better results
+          // Start with exact name, then try with common country suffixes
           const geocodeAttempts = [
             origin, // Original city name
-            `${origin}, France`, // Add country for better matching
-            `${origin}, Europe`, // Regional context
+            `${origin}, Spain`, // Common countries
+            `${origin}, France`,
+            `${origin}, Italy`,
+            `${origin}, Germany`,
+            `${origin}, Portugal`,
+            `${origin}, UK`,
+            `${origin}, United Kingdom`,
           ];
           
           for (const query of geocodeAttempts) {
             try {
               const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=en`,
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=en&type=city,town`,
                 {
                   headers: {
                     'User-Agent': 'TurnRight-City-App/1.0'
@@ -131,7 +137,7 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
                   lat: parseFloat(data[0].lat), 
                   lng: parseFloat(data[0].lon) 
                 };
-                console.log(`Geocoded "${query}" to:`, originCoords);
+                console.log(`✅ Geocoded "${query}" to:`, originCoords);
                 break; // Success, stop trying
               }
             } catch (error) {
@@ -141,12 +147,14 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
           }
           
           if (!originCoords) {
-            console.warn('Failed to geocode origin city:', origin);
+            console.warn('❌ Failed to geocode origin city:', origin);
             // Don't use userLocation fallback for city names - it would be wrong location
             // Instead, try to use center of first place if available
             if (places.length > 0 && places[0].lat && places[0].lon) {
               console.log('Using first place as fallback origin');
               originCoords = { lat: places[0].lat, lng: places[0].lon };
+            } else {
+              console.error('⚠️ No fallback coordinates available for city:', origin);
             }
           }
         }

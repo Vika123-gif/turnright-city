@@ -589,6 +589,15 @@ export const useDatabase = () => {
     try {
       console.log('=== SAVE ROUTE TO STORAGE ATTEMPT ===');
       
+      // Normalize day values for places to be within 1..days range
+      const maxDay = Math.max(1, Math.floor(routeData.days || 1));
+      const normalizedPlaces = routeData.places.map((place: any, idx: number) => {
+        const rawDay = Number(place.day);
+        let day = Number.isFinite(rawDay) && rawDay > 0 ? rawDay : ((idx % maxDay) + 1);
+        if (day > maxDay) day = maxDay;
+        return { ...place, day };
+      });
+      
       // Create JSON data with all route information
       const jsonData = {
         userSessionId,
@@ -598,7 +607,7 @@ export const useDatabase = () => {
           location: routeData.location,
           timeWindow: routeData.timeWindow,
           goals: routeData.goals,
-          places: routeData.places,
+          places: normalizedPlaces,
           days: routeData.days,
           additionalSettings: routeData.additionalSettings,
           travelType: routeData.travelType,
@@ -606,7 +615,7 @@ export const useDatabase = () => {
           destination: routeData.destination,
           totalWalkingTime: routeData.totalWalkingTime,
           totalExploringTime: routeData.totalExploringTime,
-          placesCount: routeData.places.length
+          placesCount: normalizedPlaces.length
         }
       };
 

@@ -600,8 +600,13 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
   const generateRoute = async (data: any) => {
     console.log("=== DEBUG: generateRoute function called ===");
-    setGenerating(true);
+    
+    // Clear previous route state before starting new generation
+    console.log("🧹 Clearing previous route state...");
+    setPlaces(null);
     setError(null);
+    
+    setGenerating(true);
     
     const generationStartTime = new Date();
     
@@ -644,11 +649,76 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         const days = data.days || 1;
         timeWindow = days; // keep as days; conversion happens in useOpenAI
         categories = data.categories || [];
+        
+        // Geocode city name to ensure we have valid coordinates
+        if (location && !/^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location)) {
+          console.log("Geocoding city name for planning:", location);
+          try {
+            const geocodeAttempts = [
+              location,
+              `${location}, Spain`,
+              `${location}, France`,
+              `${location}, Italy`,
+              `${location}, Germany`,
+              `${location}, Portugal`,
+              `${location}, UK`,
+              `${location}, United Kingdom`,
+            ];
+            
+            let geocoded = false;
+            for (const query of geocodeAttempts) {
+              try {
+                const response = await fetch(
+                  `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=en&type=city,town`,
+                  {
+                    headers: {
+                      'User-Agent': 'TurnRight-City-App/1.0'
+                    }
+                  }
+                );
+                
+                if (response.ok) {
+                  const geoData = await response.json();
+                  if (geoData.length > 0 && geoData[0].lat && geoData[0].lon) {
+                    const lat = parseFloat(geoData[0].lat);
+                    const lng = parseFloat(geoData[0].lon);
+                    originForApi = { lat, lon: lng };
+                    console.log(`✅ Geocoded "${query}" to:`, originForApi);
+                    geocoded = true;
+                    break;
+                  }
+                }
+              } catch (err) {
+                console.warn(`Geocoding attempt failed for "${query}":`, err);
+                continue;
+              }
+            }
+            
+            if (!geocoded) {
+              throw new Error(`Could not geocode city "${location}". Please try a more specific location (e.g., "Barcelona, Spain").`);
+            }
+          } catch (geoError: any) {
+            console.error("Geocoding error:", geoError);
+            throw geoError; // Re-throw to show error to user
+          }
+        } else if (location && /^-?\d+\.?\d*,-?\d+\.?\d*$/.test(location)) {
+          // Location is already coordinates
+          const m = location.trim().match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
+          if (m) {
+            const olat = parseFloat(m[1]);
+            const olon = parseFloat(m[2]);
+            if (!Number.isNaN(olat) && !Number.isNaN(olon)) {
+              originForApi = { lat: olat, lon: olon };
+            }
+          }
+        }
+        
         userPrompt = `Generate a ${days}-day trip plan for ${location} with interests: ${categories.join(", ")}`;
         
         console.log("Planning scenario - City:", location);
         console.log("Planning scenario - Days:", timeWindow);
         console.log("Planning scenario - Categories:", categories);
+        console.log("Planning scenario - Origin coordinates:", originForApi);
       } else {
         // Onsite scenario: use location and time in minutes
         location = data.location || "";
