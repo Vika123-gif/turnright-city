@@ -160,7 +160,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
   } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { generateSessionId } = useDatabase();
+  const { generateSessionId, saveRouteToStorage } = useDatabase();
   const { getLLMPlaces } = useOpenAI();
   const { searchPlacesByName } = useGooglePlaces();
   const [isRestoringState, setIsRestoringState] = useState(true);
@@ -784,8 +784,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
       
       // Save route to Storage after successful generation
       try {
-        const db = useDatabase();
-        await db.saveRouteToStorage(generateSessionId(), {
+        await saveRouteToStorage(generateSessionId(), {
           scenario: data.scenario,
           location: data.location || data.city || "",
           timeWindow: data.timeMinutes,
