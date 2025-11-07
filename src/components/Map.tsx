@@ -237,8 +237,8 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
             <h3 style="margin: 0; font-weight: bold; color: #008457; font-size: 16px; text-align: center;">${place.name}</h3>
             ${place.visitDuration ? `<div style="margin-top: 6px; text-align: center; color: #6b7280; font-size: 14px;">⏱️ ${place.visitDuration} min at location</div>` : ''}
             
-            <!-- Audio button -->
-            <div style="margin-top: 8px; text-align: center;">
+            <!-- Audio buttons -->
+            <div style="margin-top: 8px; text-align: center; display: flex; gap: 8px; justify-content: center;">
               <button 
                 onclick="
                   if ('speechSynthesis' in window) {
@@ -269,7 +269,32 @@ const Map: React.FC<MapProps> = ({ places, className = "", origin, destinationTy
                 onmouseover="this.style.transform='scale(1.05)'"
                 onmouseout="this.style.transform='scale(1)'"
               >
-                🔊 Audio Guide
+                🔊 Play
+              </button>
+              <button 
+                onclick="
+                  if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                  }
+                "
+                style="
+                  background: #ef4444;
+                  color: white;
+                  border: none;
+                  padding: 6px 12px;
+                  border-radius: 20px;
+                  font-size: 12px;
+                  font-weight: 500;
+                  cursor: pointer;
+                  transition: all 0.2s ease;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 4px;
+                "
+                onmouseover="this.style.transform='scale(1.05)'"
+                onmouseout="this.style.transform='scale(1)'"
+              >
+                ⏹ Stop
               </button>
             </div>
           </div>
