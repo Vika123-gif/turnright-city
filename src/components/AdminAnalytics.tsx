@@ -70,24 +70,23 @@ const AdminAnalytics: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch all data in parallel
+      // Fetch all data in parallel (analytics tables removed)
       const [
         { data: routeGenerations },
-        { data: buyButtonClicks },
         { data: purchases },
-        { data: feedback },
         { data: visitorSessions },
-        { data: locationExits },
-        { data: buttonClicks }
+        { data: locationExits }
       ] = await Promise.all([
         supabase.from('route_generations').select('*'),
-        supabase.from('buy_button_clicks').select('*'),
         supabase.from('route_purchases').select('*'),
-        supabase.from('user_feedback').select('*'),
         supabase.from('visitor_sessions').select('*'),
-        supabase.from('location_exits').select('*'),
-        (supabase as any).from('button_clicks').select('*')
+        supabase.from('location_exits').select('*')
       ]);
+      
+      // Analytics disabled - tables removed
+      const buyButtonClicks: any[] = [];
+      const feedback: any[] = [];
+      const buttonClicks: any[] = [];
 
       // Process analytics data
       const analyticsData = processAnalyticsData({

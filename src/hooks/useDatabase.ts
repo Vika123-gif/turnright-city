@@ -352,44 +352,9 @@ export const useDatabase = () => {
     placesCount: number,
     userSessionId: string
   ) => {
-    try {
-      console.log('=== SAVE BUY BUTTON CLICK ATTEMPT ===');
-      console.log('Connection test before insert...');
-      await testConnection();
-      
-      const insertData = {
-        route_generation_id: routeGenerationId,
-        location,
-        places_count: placesCount,
-        user_session_id: userSessionId,
-      };
-
-      console.log('Buy button click insert data:', insertData);
-
-      const { data, error } = await supabase
-        .from('buy_button_clicks')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('=== BUY BUTTON CLICK INSERT ERROR ===');
-        console.error('Error code:', error.code);
-        console.error('Error message:', error.message);
-        console.error('Error details:', error.details);
-        console.error('Error hint:', error.hint);
-        console.error('Full error object:', error);
-        return null;
-      }
-
-      console.log('=== BUY BUTTON CLICK SAVED SUCCESSFULLY ===');
-      console.log('Saved data:', data);
-      return data;
-    } catch (err) {
-      console.error('=== BUY BUTTON CLICK SAVE EXCEPTION ===');
-      console.error('Exception details:', err);
-      return null;
-    }
+    // Analytics disabled - table removed
+    console.log('Buy button click tracking disabled');
+    return null;
   };
 
   const saveRoutePurchase = async (
@@ -446,46 +411,9 @@ export const useDatabase = () => {
     placesCount: number,
     userSessionId: string
   ) => {
-    try {
-      console.log('=== SAVE FEEDBACK ATTEMPT ===');
-      console.log('Connection test before insert...');
-      await testConnection();
-      
-      const insertData = {
-        route_generation_id: routeGenerationId,
-        rating,
-        text_feedback: textFeedback,
-        location,
-        places_count: placesCount,
-        user_session_id: userSessionId,
-      };
-
-      console.log('Feedback insert data:', insertData);
-
-      const { data, error } = await supabase
-        .from('user_feedback')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('=== FEEDBACK INSERT ERROR ===');
-        console.error('Error code:', error.code);
-        console.error('Error message:', error.message);
-        console.error('Error details:', error.details);
-        console.error('Error hint:', error.hint);
-        console.error('Full error object:', error);
-        return null;
-      }
-
-      console.log('=== FEEDBACK SAVED SUCCESSFULLY ===');
-      console.log('Saved data:', data);
-      return data;
-    } catch (err) {
-      console.error('=== FEEDBACK SAVE EXCEPTION ===');
-      console.error('Exception details:', err);
-      return null;
-    }
+    // Feedback disabled - table removed
+    console.log('Feedback tracking disabled');
+    return null;
   };
 
   const saveUserRoute = async (

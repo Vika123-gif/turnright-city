@@ -92,12 +92,9 @@ const DataAnalyticsDashboard: React.FC = () => {
         setRouteGenerations(routes as any || []); // Type will be fixed when Supabase types are regenerated
       }
 
-      // Fetch button clicks
-      const { data: clicks, error: clicksError } = await supabase
-        .from('button_clicks')
-        .select('*')
-        .order('clicked_at', { ascending: false })
-        .limit(100);
+      // Analytics disabled - table removed
+      const clicks: any[] = [];
+      const clicksError = null;
 
       if (clicksError) {
         console.error('Error fetching clicks:', clicksError);

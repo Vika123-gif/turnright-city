@@ -162,11 +162,9 @@ const Admin = () => {
       }
       console.log('Fetched purchases:', purchaseData);
 
-      // Fetch buy button clicks
-      const { data: buyClickData, error: buyClickError } = await supabase
-        .from('buy_button_clicks')
-        .select('*')
-        .order('clicked_at', { ascending: false });
+      // Analytics disabled - table removed
+      const buyClickData: any[] = [];
+      const buyClickError = null;
 
       if (buyClickError) {
         console.error('Error fetching buy button clicks:', buyClickError);
