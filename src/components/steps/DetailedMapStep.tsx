@@ -733,7 +733,7 @@ const DetailedMapStep: React.FC<Props> = ({
             trackButtonClick('leave_comment', 'Leave a comment', 'DetailedMapStep');
             setShowCommentModal(true);
           }}
-        >💬 Comment</button>
+        >💬 Give feedback</button>
         <button 
           className="flex-1 border px-3 py-2 rounded-md text-xs hover:bg-gray-50" 
           onClick={() => {
@@ -849,7 +849,7 @@ const DetailedMapStep: React.FC<Props> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowCommentModal(false)}></div>
           <div className="relative bg-white rounded-lg shadow-lg p-4 w-[92vw] max-w-md border">
-            <div className="font-semibold mb-1">Leave a comment</div>
+            <div className="font-semibold mb-1">Give us your feedback</div>
             <div className="text-sm text-gray-600 mb-3">We really want to know if you liked the route and what you'd like to add!</div>
             <textarea className="w-full h-28 border rounded p-2 text-sm" placeholder="Your feedback..." value={commentText} onChange={(e) => setCommentText(e.target.value)} />
             <div className="flex justify-end gap-2 mt-3">
