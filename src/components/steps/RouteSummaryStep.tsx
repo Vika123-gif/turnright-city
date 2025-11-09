@@ -104,7 +104,7 @@ export default function RouteSummaryStep({
 
   const timeLabel = scenario === 'planning' 
     ? `${days} day${(days||0) !== 1 ? 's' : ''}` 
-    : formatTime(requestedMin);
+    : formatTime(totalMin);
   const totalLabel = scenario === 'planning'
     ? `${(days ?? 1)} day${(days ?? 1) !== 1 ? 's' : ''}`
     : `${formatTime(totalMin)} (${formatTime(walkMin)} walk, ${formatTime(dwellMin)} explore)`;
