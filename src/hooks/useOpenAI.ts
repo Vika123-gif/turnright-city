@@ -275,7 +275,13 @@ export function useOpenAI() {
       }));
       
       // Filter places to ensure minimum viable data
-      const places = allPlaces.filter(place => place.name && (place.address || (place.lat && place.lon)));
+      let places = allPlaces.filter(place => place.name && (place.address || (place.lat && place.lon)));
+      
+      // For planning scenario, strictly limit to maxPlaces (6 per day)
+      if (scenario === 'planning' && places.length > actualMaxPlaces) {
+        console.log(`⚠️ Planning: Backend returned ${places.length} places, limiting to ${actualMaxPlaces} (${timeWindow} days × 6 places)`);
+        places = places.slice(0, actualMaxPlaces);
+      }
       
       console.log("=== DEBUG: Final Places from TripAdvisor ===", places);
       console.log("=== FINAL DESCRIPTION CHECK ===");
