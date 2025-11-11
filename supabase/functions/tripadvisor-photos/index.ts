@@ -469,11 +469,11 @@ async function collectCandidatesForGoal(
     };
   }
 
-  const GOOGLE_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY");
+  const GOOGLE_KEY = Deno.env.get("GOOGLE_API_KEY") || Deno.env.get("GOOGLE_PLACES_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY");
   
   if (!GOOGLE_KEY) {
-    console.error("No Google API key found in environment variables");
-    return { candidates: [], diagnostics: { error: "No API key" } };
+    console.error("❌ No Google API key found in environment variables");
+    return { candidates: [], diagnostics: { error: "No API key configured" } };
   }
 
   const allCandidates: Place[] = [...cachedCandidates]; // Start with cached results
@@ -483,7 +483,8 @@ async function collectCandidatesForGoal(
     new: { status: "not_tested", error: null, count: 0 },
     textsearch: { status: "not_tested", error: null, count: 0 },
     radiusProgression: [],
-    cached: cachedCandidates.length
+    cached: cachedCandidates.length,
+    criticalError: null // Track critical API errors
   };
 
   // Ensure higher target for Specialty coffee
@@ -555,9 +556,13 @@ async function collectCandidatesForGoal(
             await cacheSearchResults(lat, lng, radius, `${goal}_${type}`, newPlaces, 'nearby');
           }
         } else if (data.status === "REQUEST_DENIED") {
-          console.error("Bad API key or restrictions");
+          console.error("❌ Google API key error - REQUEST_DENIED:", data.error_message);
+          diagnostics.criticalError = { type: 'REQUEST_DENIED', message: data.error_message || 'Invalid API key or restrictions' };
+          return { candidates: allCandidates, diagnostics };
         } else if (data.status === "OVER_QUERY_LIMIT") {
-          console.error("Quota exceeded");
+          console.error("❌ Google API quota exceeded - OVER_QUERY_LIMIT");
+          diagnostics.criticalError = { type: 'OVER_QUERY_LIMIT', message: 'Google Places API quota exceeded' };
+          return { candidates: allCandidates, diagnostics };
         } else if (data.status === "ZERO_RESULTS") {
           console.log(`Zero results for ${goal} at ${radius/1000}km`);
         }
@@ -710,7 +715,7 @@ async function enrichPlace(place: Place): Promise<Place> {
     };
   }
 
-  const GOOGLE_KEY = Deno.env.get("GOOGLE_PLACES_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY");
+  const GOOGLE_KEY = Deno.env.get("GOOGLE_API_KEY") || Deno.env.get("GOOGLE_PLACES_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY");
   const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,geometry,types,rating,user_ratings_total,photos,editorial_summary,business_status,opening_hours,price_level,vicinity,formatted_address&key=${GOOGLE_KEY}`;
   
   try {
@@ -1168,6 +1173,7 @@ serve(async (req) => {
     const buckets: Record<string, Place[]> = {};
     const allCandidates: Place[] = [];
     const seenPlaceIds = new Set<string>();
+    let apiError: { type: string; message: string } | null = null;
 
     // Collect candidates for each goal
     for (const goal of goalsNormalized) {
@@ -1175,6 +1181,13 @@ serve(async (req) => {
       
       // Google Places collection with diagnostics
       const { candidates: googleCandidates, diagnostics } = await collectCandidatesForGoal(goal, lat, lng, locale, minPerGoal, targetRaw, debugMode);
+      
+      // Check for critical API errors
+      if (diagnostics.criticalError) {
+        apiError = diagnostics.criticalError;
+        console.error(`❌ Critical API error for ${goal}:`, apiError);
+        break; // Stop processing on critical error
+      }
       
       if (debugMode) {
         googleDiagnostics[goal] = diagnostics;
@@ -1246,6 +1259,33 @@ serve(async (req) => {
       }
 
       buckets[goal] = goalMatches;
+    }
+
+    // Handle critical API errors
+    if (apiError) {
+      const statusCode = apiError.type === 'OVER_QUERY_LIMIT' ? 429 : 
+                        apiError.type === 'REQUEST_DENIED' ? 403 : 500;
+      const userMessage = apiError.type === 'OVER_QUERY_LIMIT' 
+        ? 'Google Places API quota exceeded. Please try again later.'
+        : apiError.type === 'REQUEST_DENIED'
+        ? 'Google Places API access denied. Please check API key configuration.'
+        : 'Error accessing Google Places API.';
+      
+      console.error(`❌ Returning error to user: ${statusCode} - ${userMessage}`);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: userMessage,
+          errorDetails: apiError,
+          places: [],
+          debug: { apiError, googleDiagnostics }
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: statusCode
+        }
+      );
     }
 
     // Enrich only top candidates to reduce API calls
@@ -1824,7 +1864,7 @@ serve(async (req) => {
         day: (place as any).day,
         webUrl: `https://maps.google.com/?cid=${place.place_id}`,
         photoUrl: place.photos?.[0] ? 
-          `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${place.photos[0].photo_reference}&key=${Deno.env.get("GOOGLE_PLACES_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY")}` : 
+          `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${place.photos[0].photo_reference}&key=${Deno.env.get("GOOGLE_API_KEY") || Deno.env.get("GOOGLE_PLACES_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY")}` : 
           null,
         photoUrls: (place as any).photoUrls || [],
         reason: `${primaryGoal} - 30 min visit`,

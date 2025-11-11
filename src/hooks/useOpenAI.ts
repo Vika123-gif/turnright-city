@@ -138,8 +138,18 @@ export function useOpenAI() {
       if (error) {
         console.error("TripAdvisor API error:", error);
         
+        // Check for Google API quota exceeded (429)
+        if (error.message?.includes('quota exceeded') || error.status === 429) {
+          throw new Error("Google Places API quota exceeded. Please try again later.");
+        }
+        
+        // Check for Google API access denied (403)
+        if (error.message?.includes('access denied') || error.status === 403) {
+          throw new Error("Google Places API access error. Please contact support.");
+        }
+        
         // Check if it's a rate limiting error
-        if (error.message?.includes('RATE_LIMIT_EXCEEDED') || error.status === 429) {
+        if (error.message?.includes('RATE_LIMIT_EXCEEDED')) {
           throw new Error("RATE_LIMIT_EXCEEDED");
         }
         
@@ -149,6 +159,12 @@ export function useOpenAI() {
       // Check for rate limiting in response data
       if (tripAdvisorData?.error === 'RATE_LIMIT_EXCEEDED') {
         throw new Error("RATE_LIMIT_EXCEEDED");
+      }
+      
+      // Check for API errors in response
+      if (tripAdvisorData?.error) {
+        console.error("API error in response:", tripAdvisorData.error);
+        throw new Error(tripAdvisorData.error);
       }
       
       if (!tripAdvisorData?.success || !Array.isArray(tripAdvisorData.places)) {
