@@ -17,6 +17,13 @@ const Index = () => {
 
   const handleSignOut = async () => {
     try {
+      // Clear all chat and route state when exiting
+      localStorage.removeItem('savedRouteState');
+      localStorage.removeItem('chatBotState');
+      localStorage.removeItem('pendingRouteData');
+      localStorage.removeItem('pendingRouteGenerationId');
+      localStorage.removeItem('pendingUserSessionId');
+      
       await signOut();
       navigate('/');
     } catch (error) {
