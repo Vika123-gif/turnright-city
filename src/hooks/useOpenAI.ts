@@ -136,7 +136,7 @@ export function useOpenAI() {
       });
       
       if (error) {
-        console.error("TripAdvisor API error:", error);
+        console.error("Google Places API error:", error);
         
         // Check for Google API quota exceeded (429)
         if (error.message?.includes('quota exceeded') || error.status === 429) {
@@ -153,7 +153,7 @@ export function useOpenAI() {
           throw new Error("RATE_LIMIT_EXCEEDED");
         }
         
-        throw new Error("Failed to fetch places from TripAdvisor: " + error.message);
+        throw new Error("Failed to fetch places from Google Places API: " + error.message);
       }
       
       // Check for rate limiting in response data
@@ -168,11 +168,11 @@ export function useOpenAI() {
       }
       
       if (!tripAdvisorData?.success || !Array.isArray(tripAdvisorData.places)) {
-        console.error("Invalid TripAdvisor response:", tripAdvisorData);
-        throw new Error("Invalid response from TripAdvisor API");
+        console.error("Invalid Google Places API response:", tripAdvisorData);
+        throw new Error("Invalid response from Google Places API");
       }
       
-      console.log("=== DEBUG: TripAdvisor Places ===", tripAdvisorData.places);
+      console.log("=== DEBUG: Google Places Results ===", tripAdvisorData.places);
       
       // Convert TripAdvisor response to LLMPlace format and generate OpenAI descriptions
       const allPlaces = await Promise.all(tripAdvisorData.places.map(async (place: any, index: number) => {
@@ -299,7 +299,7 @@ export function useOpenAI() {
         places = places.slice(0, actualMaxPlaces);
       }
       
-      console.log("=== DEBUG: Final Places from TripAdvisor ===", places);
+      console.log("=== DEBUG: Final Places from Google Places API ===", places);
       console.log("=== FINAL DESCRIPTION CHECK ===");
       places.forEach((place, i) => {
         console.log(`\n🔍 Place ${i + 1} - ${place.name}:`);
