@@ -585,6 +585,244 @@ export const useDatabase = () => {
     }
   };
 
+  const getRoutesFromStorage = async (userSessionId: string) => {
+    try {
+      console.log('=== GET ROUTES FROM STORAGE ATTEMPT ===');
+      console.log('User session ID:', userSessionId);
+      
+      const allRoutes: Array<{ id: string; name: string; path: string; createdAt: string; size: number }> = [];
+      
+      // Check format 1: routes/{userSessionId}_{timestamp}.json (in routes subfolder)
+      // Note: Supabase Storage list() with a path returns files in that folder
+      // But files saved with path "routes/filename.json" might be in root with full path as name
+      try {
+        console.log('Checking routes/ subfolder...');
+        const { data: routesFiles, error: routesError } = await supabase.storage
+          .from('routes')
+          .list('routes', {
+            limit: 100,
+            sortBy: { column: 'created_at', order: 'desc' }
+          });
+
+        console.log('Routes subfolder result:', { 
+          files: routesFiles?.length, 
+          error: routesError,
+          errorMessage: routesError?.message 
+        });
+        
+        if (!routesError && routesFiles) {
+          console.log('All files in routes/ folder:', routesFiles.map(f => ({ 
+            name: f.name, 
+            id: f.id, 
+            isFolder: !!f.id,
+            created: f.created_at 
+          })));
+          const filtered = routesFiles
+            .filter(file => {
+              // In Supabase Storage, files can have id (UUID), but folders typically don't
+              // Files with .json extension are definitely files, not folders
+              // Also check if it's not a folder by checking metadata or if name ends with .json
+              const isJson = file.name.endsWith('.json');
+              const matchesSession = file.name.startsWith(userSessionId);
+              // If it has .json extension and matches session, it's a file we want
+              const isFile = isJson && matchesSession;
+              console.log(`File ${file.name}: isJson=${isJson}, matchesSession=${matchesSession}, hasId=${!!file.id}, isFile=${isFile}`);
+              return isFile;
+            })
+            .map(file => ({
+              id: file.name,
+              name: file.name,
+              path: `routes/${file.name}`,
+              createdAt: file.created_at || file.updated_at || new Date().toISOString(),
+              size: file.metadata?.size || 0
+            }));
+          console.log(`Found ${filtered.length} matching files in routes/ folder`);
+          allRoutes.push(...filtered);
+        } else if (routesError) {
+          console.warn('Error listing routes subfolder:', routesError);
+          console.log('Error details:', JSON.stringify(routesError, null, 2));
+          // If routes/ folder doesn't exist, files might be in root with full path
+          console.log('Routes subfolder not found, will check root for files with routes/ prefix');
+        }
+      } catch (e) {
+        console.warn('Exception listing routes subfolder:', e);
+      }
+
+      // Check format 2: {userSessionId}/{timestamp}.json (in userSessionId subfolder)
+      try {
+        console.log(`Checking ${userSessionId}/ subfolder...`);
+        const { data: folderFiles, error: folderError } = await supabase.storage
+          .from('routes')
+          .list(userSessionId, {
+            limit: 100,
+            sortBy: { column: 'created_at', order: 'desc' }
+          });
+
+        console.log('UserSessionId subfolder result:', { files: folderFiles?.length, error: folderError });
+        
+        if (!folderError && folderFiles) {
+          console.log(`All files in ${userSessionId}/ folder:`, folderFiles.map(f => ({ name: f.name, id: f.id })));
+          const filtered = folderFiles
+            .filter(file => file.name.endsWith('.json'))
+            .map(file => ({
+              id: `${userSessionId}/${file.name}`,
+              name: file.name,
+              path: `${userSessionId}/${file.name}`,
+              createdAt: file.created_at || file.updated_at || new Date().toISOString(),
+              size: file.metadata?.size || 0
+            }));
+          console.log(`Found ${filtered.length} matching files in ${userSessionId}/ folder`);
+          allRoutes.push(...filtered);
+        } else if (folderError) {
+          console.warn('Error listing userSessionId subfolder:', folderError);
+        }
+      } catch (e) {
+        console.warn('Exception listing userSessionId subfolder:', e);
+      }
+
+      // Check format 3: root level files (if any)
+      // Also check for files with "routes/" prefix in their name (Supabase might store full path as filename)
+      try {
+        console.log('Checking root folder...');
+        const { data: rootFiles, error: rootError } = await supabase.storage
+          .from('routes')
+          .list('', {
+            limit: 100,
+            sortBy: { column: 'created_at', order: 'desc' }
+          });
+
+        console.log('Root folder result:', { files: rootFiles?.length, error: rootError });
+        
+        if (!rootError && rootFiles) {
+          console.log('All files in root folder:', rootFiles.map(f => ({ name: f.name, id: f.id, isFolder: !!f.id })));
+          const filtered = rootFiles
+            .filter(file => {
+              // Files with .json extension are files, not folders
+              const isJson = file.name.endsWith('.json');
+              // Check both direct match and "routes/" prefix match
+              const matchesSession = file.name.startsWith(userSessionId) || 
+                                    file.name.startsWith(`routes/${userSessionId}`);
+              const isFile = isJson && matchesSession;
+              console.log(`File ${file.name}: isJson=${isJson}, matchesSession=${matchesSession}, isFile=${isFile}`);
+              return isFile;
+            })
+            .map(file => {
+              // If filename starts with "routes/", use it as-is, otherwise prepend "routes/"
+              const path = file.name.startsWith('routes/') ? file.name : `routes/${file.name}`;
+              const name = file.name.includes('/') ? file.name.split('/').pop() || file.name : file.name;
+              return {
+                id: file.name,
+                name: name,
+                path: path,
+                createdAt: file.created_at || file.updated_at || new Date().toISOString(),
+                size: file.metadata?.size || 0
+              };
+            });
+          console.log(`Found ${filtered.length} matching files in root folder`);
+          allRoutes.push(...filtered);
+        } else if (rootError) {
+          console.warn('Error listing root folder:', rootError);
+        }
+      } catch (e) {
+        console.warn('Exception listing root folder:', e);
+      }
+
+      // Sort by creation date (newest first) and remove duplicates
+      const uniqueRoutes = Array.from(
+        new Map(allRoutes.map(route => [route.path, route])).values()
+      ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      console.log(`Total routes found: ${uniqueRoutes.length}`);
+
+      // If no routes found, try to verify file exists by attempting to list all files recursively
+      if (uniqueRoutes.length === 0) {
+        console.log('⚠️ No routes found with standard search, trying alternative method...');
+        try {
+          // Try to list all files in bucket (this might require different permissions)
+          const { data: allFiles, error: allError } = await supabase.storage
+            .from('routes')
+            .list('', {
+              limit: 1000,
+              sortBy: { column: 'created_at', order: 'desc' }
+            });
+          
+          if (!allError && allFiles) {
+            console.log(`Found ${allFiles.length} total items in bucket`);
+            console.log('Sample items:', allFiles.slice(0, 10).map(f => ({ 
+              name: f.name, 
+              isFolder: !!f.id,
+              path: f.name 
+            })));
+            
+            // Look for files matching our pattern
+            const matchingFiles = allFiles.filter(f => {
+              // Files with .json extension are files
+              const matches = f.name.includes(userSessionId) && f.name.endsWith('.json');
+              if (matches) {
+                console.log(`✅ Found matching file: ${f.name}`);
+              }
+              return matches;
+            });
+            
+            if (matchingFiles.length > 0) {
+              console.log(`Found ${matchingFiles.length} matching files in alternative search`);
+              matchingFiles.forEach(file => {
+                const path = file.name.startsWith('routes/') ? file.name : `routes/${file.name}`;
+                const name = file.name.includes('/') ? file.name.split('/').pop() || file.name : file.name;
+                uniqueRoutes.push({
+                  id: file.name,
+                  name: name,
+                  path: path,
+                  createdAt: file.created_at || file.updated_at || new Date().toISOString(),
+                  size: file.metadata?.size || 0
+                });
+              });
+            }
+          } else if (allError) {
+            console.warn('Error listing all files:', allError);
+          }
+        } catch (e) {
+          console.warn('Exception in alternative search:', e);
+        }
+      }
+
+      console.log('=== FINAL RESULT ===');
+      console.log(`Total unique routes found: ${uniqueRoutes.length}`);
+      console.log('Routes:', uniqueRoutes.map(r => ({ path: r.path, name: r.name })));
+      return uniqueRoutes;
+    } catch (err) {
+      console.error('=== GET ROUTES FROM STORAGE EXCEPTION ===');
+      console.error('Exception details:', err);
+      return [];
+    }
+  };
+
+  const loadRouteFromStorage = async (filePath: string) => {
+    try {
+      console.log('=== LOAD ROUTE FROM STORAGE ATTEMPT ===');
+      console.log('File path:', filePath);
+      
+      const { data, error } = await supabase.storage
+        .from('routes')
+        .download(filePath);
+
+      if (error) {
+        console.error('Error downloading route from storage:', error);
+        return null;
+      }
+
+      const text = await data.text();
+      const routeData = JSON.parse(text);
+      
+      console.log('Route loaded successfully:', routeData);
+      return routeData;
+    } catch (err) {
+      console.error('=== LOAD ROUTE FROM STORAGE EXCEPTION ===');
+      console.error('Exception details:', err);
+      return null;
+    }
+  };
+
   return {
     generateSessionId,
     trackVisitorSession,
@@ -597,6 +835,8 @@ export const useDatabase = () => {
     saveUserRoute,
     getSavedRoutes,
     saveRouteToStorage,
+    getRoutesFromStorage,
+    loadRouteFromStorage,
     testConnection,
   };
 };

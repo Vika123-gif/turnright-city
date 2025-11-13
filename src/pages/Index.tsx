@@ -1,19 +1,33 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import ChatFlow from "@/components/ChatFlow";
 import { useAuth } from "@/components/AuthProvider";
 import { useGenerationLimit } from "@/hooks/useGenerationLimit";
-import { Zap, User, LogOut } from "lucide-react";
+import { useDatabase } from "@/hooks/useDatabase";
+import { Zap, User, LogOut, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import turnrightLogo from "@/assets/turnright-logo.png";
 import { useNavigate } from "react-router-dom";
+import SavedRoutesModal from "@/components/SavedRoutesModal";
 
 const Index = () => {
   const { user, signOut, loading } = useAuth();
   const { getRemainingGenerations, getTotalGenerations } = useGenerationLimit();
+  const { generateSessionId } = useDatabase();
   const navigate = useNavigate();
   const [headerVisible, setHeaderVisible] = useState(true);
   const [currentStep, setCurrentStep] = useState<"chat" | "summary" | "route_preview" | "detailed-map" | "generating" | "purchase">("chat");
+  const [routesModalOpen, setRoutesModalOpen] = useState(false);
+  const [userSessionId, setUserSessionId] = useState<string>("");
+  const loadRouteRef = useRef<((routeData: any) => void) | null>(null);
+
+  // Initialize user session ID
+  useEffect(() => {
+    const sessionId = generateSessionId();
+    console.log('=== Index.tsx: Initializing userSessionId ===');
+    console.log('Session ID:', sessionId);
+    setUserSessionId(sessionId);
+  }, [generateSessionId]);
 
   const handleSignOut = async () => {
     try {
@@ -28,6 +42,12 @@ const Index = () => {
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  const handleLoadRoute = (routeData: any) => {
+    if (loadRouteRef.current) {
+      loadRouteRef.current(routeData);
     }
   };
 
@@ -69,6 +89,21 @@ const Index = () => {
               </div>
             )}
             
+            {/* My Routes button */}
+            <Button
+              onClick={() => {
+                console.log('=== My Routes button clicked ===');
+                console.log('Current userSessionId:', userSessionId);
+                setRoutesModalOpen(true);
+              }}
+              variant="ghost"
+              size="sm"
+              className="text-gray-600 hover:text-gray-800"
+              title="My Routes"
+            >
+              <Map className="h-4 w-4" />
+            </Button>
+            
             {/* User email */}
             {user && (
               <div className="flex items-center gap-2 px-3 py-1 bg-gray-50 rounded-full">
@@ -98,8 +133,19 @@ const Index = () => {
           key={currentStep === "summary" ? "summary" : "chat"}
           onHeaderVisibilityChange={setHeaderVisible}
           onStepChange={setCurrentStep}
+          onLoadRoute={(loadFn) => {
+            loadRouteRef.current = loadFn;
+          }}
         />
       </div>
+
+      {/* Saved Routes Modal */}
+      <SavedRoutesModal
+        open={routesModalOpen}
+        onOpenChange={setRoutesModalOpen}
+        onSelectRoute={handleLoadRoute}
+        userSessionId={userSessionId}
+      />
     </div>
   );
 };

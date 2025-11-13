@@ -26,10 +26,12 @@ type Step =
 
 export default function ChatFlow({ 
   onHeaderVisibilityChange,
-  onStepChange 
+  onStepChange,
+  onLoadRoute
 }: { 
   onHeaderVisibilityChange?: (visible: boolean) => void;
   onStepChange?: (step: Step) => void;
+  onLoadRoute?: (routeData: any) => void;
 }) {
   const [step, setStep] = useState<Step>("chat");
   const [location, setLocation] = useState("");
@@ -56,6 +58,7 @@ export default function ChatFlow({
   const [regenerationCount, setRegenerationCount] = useState(0);
   const [chatVisible, setChatVisible] = useState(true);
   const [isRouteGenerated, setIsRouteGenerated] = useState(false);
+  const [routeLoadedDirectly, setRouteLoadedDirectly] = useState(false); // Track if route was loaded from "My Routes"
   const [routeTimeData, setRouteTimeData] = useState<{
     requestedMinutes?: number;
     computedMinutes?: number;
@@ -66,7 +69,7 @@ export default function ChatFlow({
   const { getLLMPlaces } = useOpenAI();
   const { searchPlacesByName } = useGooglePlaces();
   const { trackRouteGeneration, trackBuyRouteClick, trackRoutePurchase, trackRouteRating, trackTextFeedback } = useAnalytics();
-  const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, saveUserRoute, getSavedRoutes, testConnection } = useDatabase();
+  const { generateSessionId, trackVisitorSession, trackLocationExit, saveRouteGeneration, saveBuyButtonClick, saveRoutePurchase, saveFeedback, saveUserRoute, getSavedRoutes, saveRouteToStorage, testConnection } = useDatabase();
   const { trackButtonClick } = useButtonTracking();
 
   // REMOVED: Old saveStateNow function that used stale closure values
@@ -112,28 +115,46 @@ export default function ChatFlow({
           timestamp: new Date(parsed.timestamp).toLocaleString()
         });
         
-        setStep(parsed.step || 'chat');
-        setLocation(parsed.location || '');
-        setCoordinates(parsed.coordinates || '');
-        setTimeWindow(parsed.timeWindow);
-        setScenario(parsed.scenario || 'onsite');
-        setGoals(parsed.goals || []);
-        setOrigin(parsed.origin || '');
-        setOriginCoordinates(parsed.originCoordinates || '');
-        setDestination(parsed.destination || '');
-        setDestinationType(parsed.destinationType || 'none');
-        setPlaces(parsed.places || null);
-        setTravelType(parsed.travelType || null);
-        setPrefs(parsed.prefs || []);
-        setDays(parsed.days);
-        setCurrentRouteGenerationId(parsed.currentRouteGenerationId || null);
-        setRegenerationCount(parsed.regenerationCount || 0);
-        setIsRouteGenerated(parsed.isRouteGenerated || false);
-        setRouteTimeData(parsed.routeTimeData || null);
-        if (parsed.step !== 'chat') {
-          setChatVisible(false); // Hide chat to show the route
+        // Validate restored state - if step requires places but places are missing, reset to chat
+        const restoredStep = parsed.step || 'chat';
+        const restoredPlaces = parsed.places || null;
+        const hasValidPlaces = restoredPlaces && Array.isArray(restoredPlaces) && restoredPlaces.length > 0;
+        
+        // If step is summary or detailed-map but no places, reset to chat
+        if ((restoredStep === 'summary' || restoredStep === 'detailed-map') && !hasValidPlaces) {
+          console.warn('⚠️ Invalid restored state: step requires places but places are missing');
+          console.warn('Restored step:', restoredStep);
+          console.warn('Restored places:', restoredPlaces);
+          // Clear invalid state and start fresh
+          localStorage.removeItem('savedRouteState');
+          setStep('chat');
+          setChatVisible(true);
+          setPlaces(null);
+          console.log('✅ Reset to chat due to invalid state');
+        } else {
+          setStep(restoredStep);
+          setLocation(parsed.location || '');
+          setCoordinates(parsed.coordinates || '');
+          setTimeWindow(parsed.timeWindow);
+          setScenario(parsed.scenario || 'onsite');
+          setGoals(parsed.goals || []);
+          setOrigin(parsed.origin || '');
+          setOriginCoordinates(parsed.originCoordinates || '');
+          setDestination(parsed.destination || '');
+          setDestinationType(parsed.destinationType || 'none');
+          setPlaces(restoredPlaces);
+          setTravelType(parsed.travelType || null);
+          setPrefs(parsed.prefs || []);
+          setDays(parsed.days);
+          setCurrentRouteGenerationId(parsed.currentRouteGenerationId || null);
+          setRegenerationCount(parsed.regenerationCount || 0);
+          setIsRouteGenerated(parsed.isRouteGenerated || false);
+          setRouteTimeData(parsed.routeTimeData || null);
+          if (restoredStep !== 'chat') {
+            setChatVisible(false); // Hide chat to show the route
+          }
+          console.log('✅ Route state restored successfully to step:', restoredStep);
         }
-        console.log('✅ Route state restored successfully to step:', parsed.step);
       } catch (error) {
         console.error('❌ Error restoring state from localStorage:', error);
         localStorage.removeItem('savedRouteState');
@@ -240,6 +261,112 @@ export default function ChatFlow({
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
+
+  // Function to load route from JSON data
+  const loadRouteFromJSON = (routeData: any) => {
+    console.log('🔄 Loading route from JSON:', routeData);
+    
+    try {
+      if (!routeData) {
+        throw new Error('Route data is empty');
+      }
+      
+      const route = routeData.routeData || routeData;
+      
+      if (!route || !route.places || !Array.isArray(route.places)) {
+        throw new Error('Invalid route data: missing places');
+      }
+      
+      console.log('📋 Route data:', {
+        location: route.location,
+        placesCount: route.places.length,
+        scenario: route.scenario
+      });
+      
+      // Clear any previous errors first
+      setError(null);
+      setGenerating(false);
+      
+      // Set all state from route data
+      setLocation(route.location || '');
+      setCoordinates(route.location || ''); // Will be geocoded if needed
+      setTimeWindow(route.timeWindow || null);
+      setScenario(route.scenario || 'onsite');
+      setGoals(route.goals || []);
+      setTravelType(route.travelType || null);
+      setPrefs(route.additionalSettings || []);
+      setDays(route.days || undefined);
+      setDestination(route.destination || '');
+      setDestinationType(route.destinationType || 'none');
+      setPlaces(route.places || []);
+      setSelectedDayPlaces(null); // Clear selected day places
+      setRouteTimeData({
+        totalWalkingTime: route.totalWalkingTime,
+        totalExploringTime: route.totalExploringTime,
+        requestedMinutes: route.timeWindow
+      });
+      setIsRouteGenerated(true);
+      setChatVisible(false);
+      setRegenerationCount(0);
+      setCurrentRouteGenerationId(null);
+      setRouteLoadedDirectly(true); // Mark that route was loaded directly from "My Routes"
+      
+      // Navigate to detailed map
+      setStep('detailed-map');
+      if (onStepChange) {
+        onStepChange('detailed-map');
+      }
+      
+      // Save state immediately to prevent restoration issues
+      saveState({
+        step: 'detailed-map',
+        location: route.location || '',
+        coordinates: route.location || '',
+        timeWindow: route.timeWindow || null,
+        scenario: route.scenario || 'onsite',
+        goals: route.goals || [],
+        travelType: route.travelType || null,
+        prefs: route.additionalSettings || [],
+        days: route.days || undefined,
+        destination: route.destination || '',
+        destinationType: route.destinationType || 'none',
+        places: route.places || [],
+        isRouteGenerated: true,
+        regenerationCount: 0,
+        currentRouteGenerationId: null
+      });
+      
+      console.log('✅ Route loaded successfully');
+      console.log('📊 Final state after load:', {
+        step: 'detailed-map',
+        hasPlaces: !!route.places && route.places.length > 0,
+        placesCount: route.places?.length || 0,
+        location: route.location,
+        scenario: route.scenario,
+        routeLoadedDirectly: true
+      });
+    } catch (error) {
+      console.error('❌ Error loading route from JSON:', error);
+      console.error('Error details:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load route. Please try again.');
+      // Reset to chat on error
+      setStep('chat');
+      setChatVisible(true);
+      setRouteLoadedDirectly(false);
+      if (onStepChange) {
+        onStepChange('chat');
+      }
+    }
+  };
+
+  // Handle route loading from parent
+  useEffect(() => {
+    if (onLoadRoute) {
+      // Expose loadRouteFromJSON to parent via callback
+      onLoadRoute(loadRouteFromJSON);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onLoadRoute]);
 
   // Simplified payment success check - no longer needed but keeping for potential future use
   useEffect(() => {
@@ -531,6 +658,36 @@ export default function ChatFlow({
         console.error("Failed to save route generation to database");
       }
       
+      // Save route to Storage for "My Routes" feature
+      try {
+        console.log("=== SAVING ROUTE TO STORAGE ===");
+        console.log("User session ID for save:", userSessionId);
+        console.log("Route data:", {
+          scenario,
+          location: locationForSearch,
+          placesCount: optimizedPlaces.length,
+          days
+        });
+        await saveRouteToStorage(userSessionId, {
+          scenario: scenario,
+          location: locationForSearch,
+          timeWindow: timeWindow || undefined,
+          goals: goalsToUse,
+          places: optimizedPlaces,
+          days: days,
+          additionalSettings: prefs,
+          travelType: travelType,
+          destinationType: destinationType,
+          destination: destination,
+          totalWalkingTime: totalWalkingTime,
+          totalExploringTime: totalExploringTime
+        });
+        console.log("✅ Route saved to Storage successfully");
+      } catch (storageError) {
+        console.error("❌ Failed to save route to Storage:", storageError);
+        // Don't block the user flow if storage fails
+      }
+      
       console.log("=== SETTING STEP TO SUMMARY ===");
       console.log("Time window:", timeWindow);
       console.log("Goals:", goalsToUse);
@@ -567,17 +724,17 @@ export default function ChatFlow({
     setCoordinates("");
     setOriginCoordinates(""); // Clear original coordinates
     setTimeWindow(null);
-        setGoals([]);
-        setPlaces(null);
-        setError(null);
-        setPurchaseRoute(null);
-        setRouteRating(null);
-        setCurrentRouteGenerationId(null);
+    setGoals([]);
+    setPlaces(null);
+    setError(null);
+    setPurchaseRoute(null);
+    setRouteRating(null);
+    setCurrentRouteGenerationId(null);
         setRegenerationCount(0);
         setTravelType(null);
         setPrefs([]);
         setDays(undefined);
-        // Don't regenerate session ID on reset, keep the same browser session
+    // Don't regenerate session ID on reset, keep the same browser session
     localStorage.removeItem('pendingRouteData');
     localStorage.removeItem('pendingRouteGenerationId');
     localStorage.removeItem('pendingUserSessionId');
@@ -585,10 +742,18 @@ export default function ChatFlow({
     setStep("chat");
     setChatVisible(true);
     setIsRouteGenerated(false);
+    setRouteLoadedDirectly(false); // Reset flag
   }
 
   function goBack() {
     console.log("=== DEBUG: goBack called from step:", step);
+    console.log("Current state:", { 
+      hasPlaces: !!places, 
+      placesCount: places?.length, 
+      location, 
+      scenario,
+      routeLoadedDirectly 
+    });
     let newStep: Step = step;
     let newChatVisible = chatVisible;
     let newIsRouteGenerated = isRouteGenerated;
@@ -603,7 +768,24 @@ export default function ChatFlow({
         newStep = "generating";
         break;
       case "detailed-map":
-        newStep = "summary";
+        // If route was loaded directly from "My Routes", always go back to chat
+        // Otherwise, check if we have valid data for summary
+        if (routeLoadedDirectly) {
+          console.log("⚠️ Route was loaded directly, going back to chat");
+          newStep = "chat";
+          newChatVisible = true;
+          newIsRouteGenerated = false;
+          setRouteLoadedDirectly(false); // Reset flag
+        } else if (places && places.length > 0 && location) {
+          // We have valid data, can go to summary
+          newStep = "summary";
+        } else {
+          // No valid data for summary, go back to chat
+          console.log("⚠️ No valid data for summary, going back to chat instead");
+          newStep = "chat";
+          newChatVisible = true;
+          newIsRouteGenerated = false;
+        }
         break;
       case "purchase":
         newStep = "detailed-map";
@@ -613,6 +795,8 @@ export default function ChatFlow({
         newChatVisible = true;
         newIsRouteGenerated = false;
     }
+    
+    console.log("Navigating to step:", newStep);
     
     // Save with new values BEFORE state update
     saveState({ step: newStep, isRouteGenerated: newIsRouteGenerated });
@@ -953,9 +1137,41 @@ export default function ChatFlow({
 
   // Early returns for summary and detailed-map - completely separate fullscreen pages with portal overlay
   if (step === "summary") {
+    console.log('📋 Rendering summary step:', {
+      hasPlaces: !!places,
+      placesCount: places?.length || 0,
+      location,
+      scenario,
+      days
+    });
+    
     // Ensure chat is hidden
     if (chatVisible) {
       setChatVisible(false);
+    }
+    
+    // Safety check: if no places, reset to chat
+    if (!places || (Array.isArray(places) && places.length === 0)) {
+      console.warn('⚠️ No places available for summary, resetting to chat');
+      // Reset to chat if no places
+      if (!isRestoringState) {
+        setStep('chat');
+        setChatVisible(true);
+        setError('Route data is missing. Please generate a new route.');
+        // Clear invalid state
+        localStorage.removeItem('savedRouteState');
+      }
+  return (
+        <div className="w-full h-full flex flex-col items-center justify-center p-4">
+          <p className="text-red-600 mb-4">Route data is missing. Please generate a new route.</p>
+          <button
+            onClick={reset}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Start New Route
+          </button>
+        </div>
+      );
     }
     
     return (
@@ -993,10 +1209,41 @@ export default function ChatFlow({
   }
 
   if (step === "detailed-map") {
+    console.log('🗺️ Rendering detailed-map step:', {
+      hasPlaces: !!places,
+      placesCount: places?.length || 0,
+      hasSelectedDayPlaces: !!selectedDayPlaces,
+      selectedDayPlacesCount: selectedDayPlaces?.length || 0,
+      location,
+      scenario,
+      days,
+      chatVisible
+    });
+    
     // Ensure chat is hidden
     if (chatVisible) {
       setChatVisible(false);
     }
+    
+    // Safety check: if no places, show error or go back
+    const placesToShow = selectedDayPlaces || places;
+    if (!placesToShow || (Array.isArray(placesToShow) && placesToShow.length === 0)) {
+      console.warn('⚠️ No places available for detailed-map, going back to chat');
+      console.warn('Current state:', { places, selectedDayPlaces, step, location });
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center p-4">
+          <p className="text-red-600 mb-4">No places available. Please generate a route first.</p>
+          <button
+            onClick={reset}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Start New Route
+          </button>
+        </div>
+      );
+    }
+    
+    console.log('✅ Rendering DetailedMapStep with', placesToShow.length, 'places');
     
     return (
       <BodyPortal>
@@ -1006,14 +1253,42 @@ export default function ChatFlow({
               <BackButton onClick={goBack} />
             </div>
             <DetailedMapStep
-              places={selectedDayPlaces || places || []}
+              places={placesToShow}
               origin={location}
               scenario={scenario}
               days={days}
               onBack={() => {
-                saveState({ step: "summary" });
-                setSelectedDayPlaces(null);
-                setStep("summary");
+                console.log('← Back button clicked in detailed-map');
+                console.log('Current state for back navigation:', { 
+                  hasPlaces: !!places, 
+                  placesCount: places?.length, 
+                  location,
+                  routeLoadedDirectly 
+                });
+                // If route was loaded directly from "My Routes", always go back to chat
+                if (routeLoadedDirectly) {
+                  console.log('⚠️ Route was loaded directly, going back to chat');
+                  setSelectedDayPlaces(null);
+                  setChatVisible(true);
+                  setIsRouteGenerated(false);
+                  setRouteLoadedDirectly(false); // Reset flag
+                  saveState({ step: "chat", isRouteGenerated: false });
+                  setStep("chat");
+                } else if (places && places.length > 0 && location) {
+                  // We have valid data, can go to summary
+                  console.log('✅ Going to summary (valid data available)');
+                  saveState({ step: "summary" });
+                  setSelectedDayPlaces(null);
+                  setStep("summary");
+                } else {
+                  // No valid data for summary, go back to chat
+                  console.log('⚠️ No valid data for summary, going back to chat');
+                  setSelectedDayPlaces(null);
+                  setChatVisible(true);
+                  setIsRouteGenerated(false);
+                  saveState({ step: "chat", isRouteGenerated: false });
+                  setStep("chat");
+                }
               }}
               onReset={reset}
               onFeedbackSubmit={handleTextFeedback}
@@ -1027,13 +1302,13 @@ export default function ChatFlow({
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
       {chatVisible && (
-        <ChatBot
-          onComplete={handleChatComplete}
-          onShowMap={handleShowMap}
-          isVisible={chatVisible}
-          onToggleVisibility={() => setChatVisible(!chatVisible)}
-          isRouteGenerated={isRouteGenerated}
-        />
+      <ChatBot
+        onComplete={handleChatComplete}
+        onShowMap={handleShowMap}
+        isVisible={chatVisible}
+        onToggleVisibility={() => setChatVisible(!chatVisible)}
+        isRouteGenerated={isRouteGenerated}
+      />
       )}
       
       {!chatVisible && (
@@ -1082,6 +1357,33 @@ export default function ChatFlow({
             </>
           )}
 
+          {/* Fallback for unknown steps */}
+          {step !== "generating" && step !== "purchase" && step !== "route_preview" && (
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">Unknown step: {step}</p>
+              <button
+                onClick={reset}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Start New Route
+              </button>
+              </div>
+          )}
+
+        </div>
+      )}
+      
+      {/* Fallback: if nothing is rendered, show chat */}
+      {!chatVisible && step === "chat" && (
+        <div className="w-full h-full flex items-center justify-center">
+          <button
+            onClick={() => {
+              setChatVisible(true);
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Show Chat
+          </button>
         </div>
       )}
     </div>
