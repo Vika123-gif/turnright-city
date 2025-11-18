@@ -138,17 +138,8 @@ const Admin = () => {
       }
       console.log('Fetched generations:', generations);
 
-      // Fetch feedback
-      const { data: feedbackData, error: feedbackError } = await supabase
-        .from('user_feedback')
-        .select('*')
-        .order('submitted_at', { ascending: false });
-
-      if (feedbackError) {
-        console.error('Error fetching feedback:', feedbackError);
-        throw feedbackError;
-      }
-      console.log('Fetched feedback:', feedbackData);
+      // Feedback table doesn't exist yet
+      const feedbackData: any[] = [];
 
       // Fetch purchases
       const { data: purchaseData, error: purchaseError } = await supabase
@@ -237,29 +228,8 @@ const Admin = () => {
 
       console.log('Test generation inserted:', genData);
 
-      // Test feedback insert
-      const testFeedback = {
-        route_generation_id: genData.id,
-        rating: 5,
-        text_feedback: 'Test feedback',
-        location: 'Test Location',
-        places_count: 1,
-        user_session_id: testGeneration.user_session_id
-      };
-
-      const { data: feedbackData, error: feedbackError } = await supabase
-        .from('user_feedback')
-        .insert(testFeedback)
-        .select()
-        .single();
-
-      if (feedbackError) {
-        console.error('Test feedback insert error:', feedbackError);
-        alert('Feedback insert failed: ' + feedbackError.message);
-        return;
-      }
-
-      console.log('Test feedback inserted:', feedbackData);
+      // Feedback table doesn't exist yet - skipping feedback test
+      console.log('Skipping feedback test (table not created yet)');
 
       // Test purchase insert
       const testPurchase = {
