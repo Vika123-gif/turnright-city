@@ -331,47 +331,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_feedback: {
-        Row: {
-          id: string
-          location: string | null
-          places_count: number | null
-          rating: number | null
-          route_generation_id: string | null
-          submitted_at: string
-          text_feedback: string | null
-          user_session_id: string | null
-        }
-        Insert: {
-          id?: string
-          location?: string | null
-          places_count?: number | null
-          rating?: number | null
-          route_generation_id?: string | null
-          submitted_at?: string
-          text_feedback?: string | null
-          user_session_id?: string | null
-        }
-        Update: {
-          id?: string
-          location?: string | null
-          places_count?: number | null
-          rating?: number | null
-          route_generation_id?: string | null
-          submitted_at?: string
-          text_feedback?: string | null
-          user_session_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_feedback_route_generation_id_fkey"
-            columns: ["route_generation_id"]
-            isOneToOne: false
-            referencedRelation: "route_generations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_interactions: {
         Row: {
           action_name: string
@@ -465,57 +424,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_roles: {
-        Row: {
-          created_at: string | null
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_sessions: {
-        Row: {
-          created_at: string
-          first_generation_at: string | null
-          generation_count: number
-          id: string
-          last_generation_at: string | null
-          session_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          first_generation_at?: string | null
-          generation_count?: number
-          id?: string
-          last_generation_at?: string | null
-          session_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          first_generation_at?: string | null
-          generation_count?: number
-          id?: string
-          last_generation_at?: string | null
-          session_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       visitor_sessions: {
         Row: {
           anonymized_ip: string | null
@@ -549,36 +457,6 @@ export type Database = {
           user_agent?: string | null
           user_session_id?: string
           visit_count?: number
-        }
-        Relationships: []
-      }
-      waitlist: {
-        Row: {
-          desired_city: string
-          email: string
-          id: string
-          ip_address: string | null
-          submitted_at: string | null
-          user_agent: string | null
-          user_session_id: string | null
-        }
-        Insert: {
-          desired_city: string
-          email: string
-          id?: string
-          ip_address?: string | null
-          submitted_at?: string | null
-          user_agent?: string | null
-          user_session_id?: string | null
-        }
-        Update: {
-          desired_city?: string
-          email?: string
-          id?: string
-          ip_address?: string | null
-          submitted_at?: string | null
-          user_agent?: string | null
-          user_session_id?: string | null
         }
         Relationships: []
       }
