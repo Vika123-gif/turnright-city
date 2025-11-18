@@ -174,8 +174,8 @@ export function useOpenAI() {
       
       console.log("=== DEBUG: Google Places Results ===", tripAdvisorData.places);
       
-      // Convert TripAdvisor response to LLMPlace format and generate OpenAI descriptions
-      const allPlaces = await Promise.all(tripAdvisorData.places.map(async (place: any, index: number) => {
+      // Convert response to LLMPlace format - descriptions now come from backend
+      const allPlaces = tripAdvisorData.places.map((place: any, index: number) => {
         console.log(`=== PROCESSING PLACE ${index + 1} ===`);
         console.log("Raw place data:", JSON.stringify(place, null, 2));
         
@@ -185,71 +185,11 @@ export function useOpenAI() {
         const coordinates: [number, number] | undefined = 
           (lat && lon) ? [lon, lat] : undefined; // [lng, lat] format for Mapbox
         
-        // Validate input data before calling OpenAI
-        const placeName = place.name?.trim();
-        const placeAddress = place.address?.trim();
-        
-        console.log(`=== OpenAI Input Validation for Place ${index + 1} ===`);
-        console.log("Place name:", placeName);
-        console.log("Place address:", placeAddress);
-        console.log("Has valid name:", !!placeName);
-        console.log("Has valid address:", !!placeAddress);
-        
-        // Generate description using edge function
-        let generatedDescription = '';
-        
-        // Only call edge function if we have valid place data
-        if (placeName && placeName !== 'Unknown Place') {
-          try {
-            console.log(`Calling edge function for: ${placeName}`);
-            
-            const { supabase } = await import("@/integrations/supabase/client");
-            const { data: descriptionData, error: descriptionError } = await supabase.functions.invoke('generate-place-description', {
-              body: { 
-                placeName: placeName,
-                placeType: place.type || 'attraction',
-                city: location
-              }
-            });
-
-            if (descriptionError) {
-              console.error(`❌ Edge function error for ${placeName}:`, descriptionError);
-            } else if (descriptionData?.description) {
-              generatedDescription = descriptionData.description.trim();
-              console.log(`✅ Generated description for ${placeName}:`, generatedDescription);
-            } else {
-              console.warn(`⚠️ Empty description returned from edge function for ${placeName}`);
-            }
-          } catch (error) {
-            console.error(`❌ Error calling edge function for ${placeName}:`, error);
-          }
-        } else {
-          console.warn(`⚠️ Skipping edge function call for invalid place data: ${placeName}`);
-        }
-        
-        // Enhanced fallback descriptions based on place type and name
-        if (!generatedDescription) {
-          console.log(`🔄 Using fallback description for ${placeName || 'Unknown Place'}`);
-          
-          const placeType = place.type || 'attraction';
-          const fallbackDescriptions = {
-            'restaurant': `${placeName || 'This restaurant'} offers authentic local cuisine in ${location}. A great spot to experience the local flavors and dining culture. Recommended visit: 20 minutes.`,
-            'museum': `${placeName || 'This museum'} showcases the rich history and culture of ${location}. Visitors can explore fascinating exhibits and learn about the local heritage. Recommended visit: 20 minutes.`,
-            'park': `${placeName || 'This park'} provides a peaceful green space in ${location}. Perfect for a relaxing stroll and enjoying nature in the urban environment. Recommended visit: 20 minutes.`,
-            'shopping': `${placeName || 'This shopping area'} is a popular destination for local goods and souvenirs in ${location}. Ideal for discovering unique items and local crafts. Recommended visit: 20 minutes.`,
-            'attraction': `${placeName || 'This attraction'} is a notable point of interest in ${location}. A must-see destination that offers visitors a unique local experience and cultural insight. Recommended visit: 20 minutes.`,
-            'default': `${placeName || 'This destination'} is a popular spot in ${location} worth visiting. It offers visitors an authentic local experience and insight into the area's character. Recommended visit: 20 minutes.`
-          };
-          
-          generatedDescription = fallbackDescriptions[placeType as keyof typeof fallbackDescriptions] || fallbackDescriptions.default;
-          console.log(`📝 Fallback description applied:`, generatedDescription);
-        }
-        
         const mappedPlace: LLMPlace = {
           name: place.name || 'Unknown Place',
           address: place.address || place.vicinity || 'Address not available',
           walkingTime: place.walkingTime || place.walkingTimeFromPrevious || 5,
-          visitDuration: place.visitDuration || 0, // Time to spend at this location
+          visitDuration: place.visitDuration || 0,
           type: place.type || place.typeNormalized || 'attraction',
           reason: place.reason || `Recommended ${place.type || 'place'}`,
           lat: lat,
@@ -257,38 +197,25 @@ export function useOpenAI() {
           coordinates: coordinates,
           photoUrl: place.photoUrl || place.photo_url,
           photoUrls: Array.isArray(place.photoUrls) ? place.photoUrls : undefined,
-          description: generatedDescription || `A popular ${place.type || 'destination'} that offers a unique local experience.`,
+          description: place.description || `A popular ${place.type || 'destination'} in ${location}.`,
           openingHours: place.openingHours,
           ticketPrice: place.ticketPrice,
           website: place.website,
-          day: place.day, // Preserve day assignment from backend
+          day: place.day,
           rating: typeof place.rating === 'number' ? place.rating : undefined,
           goalMatched: place.goalMatched,
           coolScore: typeof place.coolScore === 'number' ? place.coolScore : undefined,
         };
         
         console.log("=== PLACE MAPPING DEBUG ===");
-        console.log("Raw place from API:", place);
-        console.log("Mapped place data:", {
+        console.log("Mapped place:", {
           name: mappedPlace.name,
-          hasAddress: !!mappedPlace.address,
-          hasCoordinates: !!(mappedPlace.lat && mappedPlace.lon),
-          hasPhotoUrl: !!mappedPlace.photoUrl,
           hasDescription: !!mappedPlace.description,
-          description: mappedPlace.description,
-          rawDescription: place.description,
-          coordinates: mappedPlace.coordinates
+          description: mappedPlace.description
         });
         
-        // Log specific description debugging
-        console.log("=== DESCRIPTION DEBUG ===");
-        console.log("Raw place.description:", place.description);
-        console.log("Mapped description:", mappedPlace.description);
-        console.log("Description exists:", !!mappedPlace.description);
-        console.log("Description length:", mappedPlace.description?.length || 0);
-        
         return mappedPlace;
-      }));
+      });
       
       // Filter places to ensure minimum viable data
       let places = allPlaces.filter(place => place.name && (place.address || (place.lat && place.lon)));

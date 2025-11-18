@@ -1825,6 +1825,64 @@ serve(async (req) => {
     
     console.log(`Final deduplication: ${finalPlaces.length} -> ${uniqueFinalPlaces.length} places`);
     
+    // Batch generate descriptions for all places using OpenAI
+    console.log(`🤖 Generating descriptions for ${uniqueFinalPlaces.length} places in batch...`);
+    let placeDescriptions: Record<string, string> = {};
+    
+    try {
+      const openAiKey = Deno.env.get('OPENAI_API_KEY');
+      if (openAiKey && uniqueFinalPlaces.length > 0) {
+        // Create batch prompt
+        const placesInfo = uniqueFinalPlaces.map((place, idx) => 
+          `${idx + 1}. ${place.name} (${place.types?.[0] || 'attraction'})`
+        ).join('\n');
+        
+        const batchPrompt = `Generate brief, engaging 1-2 sentence descriptions for these places in ${location}. Focus on what makes each place special. Return as JSON array with format: [{"name": "Place Name", "description": "..."}]
+
+Places:
+${placesInfo}`;
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'You are a knowledgeable travel guide. Return valid JSON only.' },
+              { role: 'user', content: batchPrompt }
+            ],
+            max_tokens: uniqueFinalPlaces.length * 80,
+            temperature: 0.7,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.choices[0]?.message?.content?.trim();
+          if (content) {
+            try {
+              const descriptions = JSON.parse(content);
+              if (Array.isArray(descriptions)) {
+                descriptions.forEach((item: any) => {
+                  if (item.name && item.description) {
+                    placeDescriptions[item.name] = item.description;
+                  }
+                });
+                console.log(`✅ Generated ${Object.keys(placeDescriptions).length} descriptions`);
+              }
+            } catch (parseError) {
+              console.error('Failed to parse AI descriptions:', parseError);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error generating batch descriptions:', error);
+    }
+    
     // Format response
     const aiEvaluation: any[] = [];
     const responsePlaces = uniqueFinalPlaces.map(place => {
@@ -1871,7 +1929,7 @@ serve(async (req) => {
         address: place.formatted_address || place.vicinity || place.name,
         walkingTime: 5,
         visitDuration: 30,
-        description: place.editorial_summary || `${place.name} is a notable location in the area.`,
+        description: placeDescriptions[place.name] || place.editorial_summary || `${place.name} is a notable location in the area.`,
         openingHours: place.opening_hours?.weekday_text && place.opening_hours.weekday_text.length > 0 && !place.opening_hours.weekday_text[0].includes('Hours vary') 
           ? place.opening_hours.weekday_text 
           : place.opening_hours?.open_now !== undefined 
