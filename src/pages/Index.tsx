@@ -98,10 +98,10 @@ const Index = () => {
               }}
               variant="ghost"
               size="sm"
-              className="text-gray-600 hover:text-gray-800"
-              title="My Routes"
+              className="flex items-center gap-2"
             >
               <Map className="h-4 w-4" />
+              <span className="hidden sm:inline">My Routes</span>
             </Button>
             
             {/* User email */}
