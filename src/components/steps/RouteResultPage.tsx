@@ -3,7 +3,7 @@ import Map from "../Map";
 import type { LLMPlace } from "@/hooks/useOpenAI";
 import CategoryBadge from "../CategoryBadge";
 import { Button } from "@/components/ui/button";
-import { Play, Square } from "lucide-react";
+import { Play, Square, RefreshCw } from "lucide-react";
 
 type Props = {
   places: LLMPlace[];
@@ -13,6 +13,7 @@ type Props = {
   onSaveRoute: () => void;
   onShareRoute: () => void;
   onStartNew: () => void;
+  onRegenerate: () => void;
 };
 
 const RouteResultPage: React.FC<Props> = ({
@@ -22,7 +23,8 @@ const RouteResultPage: React.FC<Props> = ({
   mapUrl = null,
   onSaveRoute,
   onShareRoute,
-  onStartNew
+  onStartNew,
+  onRegenerate
 }) => {
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -143,6 +145,10 @@ const RouteResultPage: React.FC<Props> = ({
         <div className="p-4 border-t border-gray-100">
           <div className="flex flex-col md:flex-row gap-2">
             <Button className="w-full md:w-auto" onClick={onSaveRoute}>Save route</Button>
+            <Button className="w-full md:w-auto" variant="outline" onClick={onRegenerate}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Regenerate
+            </Button>
             <Button className="w-full md:w-auto" variant="outline" onClick={onShareRoute}>Share</Button>
             <Button className="w-full md:w-auto" variant="secondary" onClick={onStartNew}>Start new</Button>
           </div>
