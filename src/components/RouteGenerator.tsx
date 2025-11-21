@@ -49,7 +49,7 @@ const RouteGenerator: React.FC = () => {
   const FormUI: React.FC = () => (
     <div className="p-6 space-y-4">
       {/* Шаг 1 */}
-      <Button onClick={() => handleClick("I'm already here")}>I'm already here</Button>
+      <Button onClick={() => handleClick("I'm already here")}>I want to explore now</Button>
 
       {/* Шаг 2 */}
       <div className="flex space-x-2">

@@ -25,6 +25,68 @@ interface SavedRoutesModalProps {
   userSessionId: string;
 }
 
+const COORDINATE_REGEX = /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/;
+
+const looksLikeCoordinates = (value?: string | null) => {
+  if (!value) return false;
+  return COORDINATE_REGEX.test(value.trim());
+};
+
+const extractCityFromAddress = (address?: string | null) => {
+  if (!address) return null;
+  const parts = address
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) return null;
+
+  for (let i = parts.length - 2; i >= 0; i--) {
+    const candidate = parts[i];
+    if (/[A-Za-zА-Яа-я]/.test(candidate)) {
+      return candidate;
+    }
+  }
+
+  return parts[0] || null;
+};
+
+const deriveCityFromRouteData = (routeData: any): string => {
+  const primaryLocation =
+    routeData?.routeData?.destination ||
+    routeData?.routeData?.locationName ||
+    routeData?.routeData?.location ||
+    routeData?.location ||
+    null;
+
+  if (primaryLocation && !looksLikeCoordinates(primaryLocation)) {
+    return primaryLocation;
+  }
+
+  const places =
+    routeData?.routeData?.places?.length
+      ? routeData.routeData.places
+      : routeData?.places || [];
+
+  for (const place of places) {
+    if (!place) continue;
+    if (place.city && !looksLikeCoordinates(place.city)) {
+      return place.city;
+    }
+
+    const cityFromAddress =
+      extractCityFromAddress(place.address) ||
+      extractCityFromAddress(place.formatted_address) ||
+      null;
+
+    if (cityFromAddress && !looksLikeCoordinates(cityFromAddress)) {
+      return cityFromAddress;
+    }
+  }
+
+  return primaryLocation || "Unknown city";
+};
+
 const SavedRoutesModal: React.FC<SavedRoutesModalProps> = ({
   open,
   onOpenChange,
@@ -77,10 +139,7 @@ const SavedRoutesModal: React.FC<SavedRoutesModalProps> = ({
         const results = await Promise.all(routesWithoutDetails.map(async (route) => {
           try {
             const routeData = await loadRouteFromStorage(route.path);
-            const city =
-              routeData?.routeData?.location ||
-              routeData?.location ||
-              'Unknown city';
+            const city = deriveCityFromRouteData(routeData);
             const scenario =
               routeData?.routeData?.scenario ||
               routeData?.scenario ||
