@@ -166,7 +166,10 @@ export default function RouteSummaryStep({
           
           {onRegenerate && (
             <Button
-              onClick={onRegenerate}
+              onClick={() => {
+                console.log("🔄 Regenerate button clicked in RouteSummaryStep");
+                onRegenerate();
+              }}
               variant="outline"
               size="lg"
               className="px-8 py-6 text-lg font-semibold border-2"
