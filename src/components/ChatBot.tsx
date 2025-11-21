@@ -1366,6 +1366,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             totalWalkingTime={routeTimeData?.totalWalkingTime}
             totalExploringTime={routeTimeData?.totalExploringTime}
             onContinue={() => setCurrentStep("detailed-map")}
+            onRegenerate={handleRegenerate}
           />
         </div>
       )}
