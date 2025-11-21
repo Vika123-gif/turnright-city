@@ -80,7 +80,7 @@ const Start = () => {
 
         {/* Tagline */}
         <h1 className="text-xl text-foreground font-medium leading-relaxed">
-          Your AI city guide - discover new places in seconds, share and save your adventures!
+          Perfect city routes for your trip - cozy, safe, and full of local hidden gems. No endless planning.
         </h1>
 
         {/* Start Button */}
