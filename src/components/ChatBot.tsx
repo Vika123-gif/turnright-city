@@ -901,7 +901,26 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
   const handleRegenerate = () => {
     console.log("=== DEBUG: Regenerate called ===");
-    setPlaces([]);
+    console.log("Current generation count:", generationCount);
+    console.log("Can generate:", canGenerate());
+    
+    // Check generation limit before regenerating
+    if (!canGenerate()) {
+      console.log("=== DEBUG: Generation limit reached, showing options modal ===");
+      incrementGeneration();
+      return;
+    }
+    
+    // Increment generation count
+    const canProceed = incrementGeneration();
+    if (!canProceed) {
+      console.log("=== DEBUG: incrementGeneration returned false ===");
+      return;
+    }
+    
+    console.log("=== DEBUG: Starting regeneration ===");
+    setPlaces(null);
+    setError(null);
     setCurrentStep("generating");
     generateRoute(collectedData);
   };
