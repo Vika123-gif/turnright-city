@@ -7,6 +7,7 @@ import OnSiteTimeStep from "./steps/OnSiteTimeStep";
 import PlanningTimeStep from "./steps/PlanningTimeStep";
 import LocationStep from "./steps/LocationStep";
 import AdditionalSettingsStep from "./steps/AdditionalSettingsStep";
+import RoutePreferencesStep from "./steps/RoutePreferencesStep";
 import GPTStep from "./steps/GPTStep";
 import RoutePreviewStep from "./steps/RoutePreviewStep";
 import DetailedMapStep from "./steps/DetailedMapStep";
@@ -60,6 +61,7 @@ type ChatStep =
   | "city_dates"
   | "accommodation"
   | "accommodation_input"
+  | "route_preferences"
   | "trip_interests"
   | "trip_settings"
   | "trip_preview"
@@ -139,6 +141,7 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     days?: number;
     accommodation?: string;
     hasAccommodation?: boolean;
+    routePreferences?: string[];
   }>({ scenario: "onsite" });
   
   // Route generation states
@@ -298,8 +301,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
   // Step navigation mapping
   const stepFlow = {
-    onsite: ["travel_type", "scenario_fork", "location", "time", "destination", "destination_input", "interests", "additional_settings"],
-    planning: ["travel_type", "scenario_fork", "city_dates", "accommodation", "accommodation_input", "trip_interests", "trip_settings"]
+    onsite: ["travel_type", "scenario_fork", "location", "time", "destination", "destination_input", "interests"],
+    planning: ["travel_type", "scenario_fork", "city_dates", "accommodation", "accommodation_input", "route_preferences", "trip_interests"]
   };
 
   const handleGoBack = () => {
@@ -448,8 +451,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
 
   const proceedToTripInterests = () => {
     setTimeout(() => {
-      addBotMessage("What interests you for this trip? Select as many as you like:");
-      setCurrentStep("trip_interests");
+      addBotMessage("What kind of route do you prefer?");
+      setCurrentStep("route_preferences");
     }, 1000);
   };
 
@@ -551,13 +554,13 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
     trackFormSubmit('interests_selection', { categories, categoriesCount: categories.length }, 'ChatBot');
     
     addUserMessage(`🎯 ${categories.join(", ")}`);
-    const updatedData = { ...collectedData, categories };
+    const updatedData = { ...collectedData, categories, additionalSettings: [] };
     setCollectedData(updatedData);
     console.log('Categories set in collectedData:', updatedData);
     
+    // Skip additional settings step - go directly to generation
     setTimeout(() => {
-      addBotMessage("Any additional preferences?");
-      setCurrentStep("additional_settings");
+      handleAdditionalSettingsSubmit([]);
     }, 1000);
   };
 
@@ -713,11 +716,15 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
           }
         }
         
-        userPrompt = `Generate a ${days}-day trip plan for ${location} with interests: ${categories.join(", ")}`;
+        const routePrefsText = data.routePreferences && data.routePreferences.length > 0 
+          ? ` Route preferences: ${data.routePreferences.join(", ")}.`
+          : "";
+        userPrompt = `Generate a ${days}-day trip plan for ${location} with interests: ${categories.join(", ")}.${routePrefsText}`;
         
         console.log("Planning scenario - City:", location);
         console.log("Planning scenario - Days:", timeWindow);
         console.log("Planning scenario - Categories:", categories);
+        console.log("Planning scenario - Route preferences:", data.routePreferences);
         console.log("Planning scenario - Origin coordinates:", originForApi);
       } else {
         // Onsite scenario: use location and time in minutes
@@ -1295,7 +1302,8 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         </div>
       )}
 
-      {currentStep === "additional_settings" && (
+      {/* Additional settings step - temporarily hidden */}
+      {false && currentStep === "additional_settings" && (
         <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
@@ -1307,6 +1315,27 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
         </div>
       )}
 
+      {currentStep === "route_preferences" && (
+        <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
+          <div className="flex items-center justify-between mb-4">
+            <BackButton onClick={handleGoBack} />
+          </div>
+          <RoutePreferencesStep onNext={(preferences) => {
+            if (preferences.length > 0) {
+              addUserMessage(`✨ ${preferences.join(", ")}`);
+            } else {
+              addUserMessage("⏭️ Skip preferences");
+            }
+            const updatedData = { ...collectedData, routePreferences: preferences };
+            setCollectedData(updatedData);
+            setTimeout(() => {
+              addBotMessage("What interests you for this trip? Select as many as you like:");
+              setCurrentStep("trip_interests");
+            }, 1000);
+          }} value={collectedData.routePreferences} />
+        </div>
+      )}
+
       {currentStep === "trip_interests" && (
         <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
@@ -1314,17 +1343,18 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
           </div>
           <CategoriesStep onNext={(categories) => {
             addUserMessage(`🎯 ${categories.join(", ")}`);
-            const updatedData = { ...collectedData, categories };
+            const updatedData = { ...collectedData, categories, additionalSettings: [] };
             setCollectedData(updatedData);
+            // Skip trip_settings step - go directly to generation
             setTimeout(() => {
-              addBotMessage("Any additional preferences for your trip?");
-              setCurrentStep("trip_settings");
+              handleAdditionalSettingsSubmit([]);
             }, 1000);
           }} />
         </div>
       )}
 
-      {currentStep === "trip_settings" && (
+      {/* Trip settings step - temporarily hidden */}
+      {false && currentStep === "trip_settings" && (
         <div className="p-4 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <BackButton onClick={handleGoBack} />
@@ -1404,10 +1434,10 @@ const ChatBot: React.FC<Props> = ({ onComplete, onShowMap, isVisible, onToggleVi
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => {
-                  // Go back to settings step based on scenario
-                  const settingsStep = collectedData.scenario === "planning" ? "trip_settings" : "additional_settings";
-                  setCurrentStep(settingsStep);
-              setError(null);
+                  // Go back to interests step (settings step is hidden)
+                  const interestsStep = collectedData.scenario === "planning" ? "trip_interests" : "interests";
+                  setCurrentStep(interestsStep);
+                  setError(null);
                   setPlaces(null);
                 }}
                 className="w-full py-3 px-6 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))] text-white font-semibold rounded-2xl text-base transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
